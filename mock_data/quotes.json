@@ -1,0 +1,112 @@
+[
+  {
+    "id": "Q001",
+    "customerName": "张先生",
+    "address": "雅居乐花园 3栋 402",
+    "area": "120m²",
+    "status": "待确认",
+    "totalAmount": "218,000",
+    "materialsStatus": "选材中",
+    "designer": "李某某",
+    "updateTime": "2026-04-09"
+  },
+  {
+    "id": "Q002",
+    "customerName": "李女士",
+    "address": "保利香槟 5栋 1104",
+    "area": "89m²",
+    "status": "已签约",
+    "totalAmount": "156,000",
+    "materialsStatus": "已确认进场",
+    "designer": "赵某某",
+    "updateTime": "2026-04-08"
+  },
+  {
+    "id": "Q003",
+    "customerName": "王先生",
+    "address": "万科城市之光 12栋 201",
+    "area": "145m²",
+    "status": "修改中",
+    "totalAmount": "285,000",
+    "materialsStatus": "未开始",
+    "designer": "李某某",
+    "updateTime": "2026-04-05"
+  },
+  {
+    "id": "Q004",
+    "customerName": "孙先生",
+    "address": "中海名都 8栋 1503",
+    "area": "110m²",
+    "status": "待确认",
+    "totalAmount": "188,000",
+    "materialsStatus": "未开始",
+    "designer": "钱某某",
+    "updateTime": "2026-04-09"
+  },
+  {
+    "id": "Q005",
+    "customerName": "周女士",
+    "address": "融创半岛 2栋 802",
+    "area": "135m²",
+    "status": "已签约",
+    "totalAmount": "245,000",
+    "materialsStatus": "已确认进场",
+    "designer": "赵某某",
+    "updateTime": "2026-04-07"
+  },
+  {
+    "id": "Q006",
+    "customerName": "吴先生",
+    "address": "碧桂园 15栋 301",
+    "area": "95m²",
+    "status": "修改中",
+    "totalAmount": "165,000",
+    "materialsStatus": "选材中",
+    "designer": "李某某",
+    "updateTime": "2026-04-08"
+  },
+  {
+    "id": "Q007",
+    "customerName": "郑女士",
+    "address": "恒大绿洲 6栋 2205",
+    "area": "160m²",
+    "status": "待确认",
+    "totalAmount": "320,000",
+    "materialsStatus": "未开始",
+    "designer": "钱某某",
+    "updateTime": "2026-04-06"
+  },
+  {
+    "id": "Q008",
+    "customerName": "马先生",
+    "address": "龙湖天宸 1栋 1801",
+    "area": "180m²",
+    "status": "已签约",
+    "totalAmount": "450,000",
+    "materialsStatus": "选材中",
+    "designer": "赵某某",
+    "updateTime": "2026-04-09"
+  },
+  {
+    "id": "Q009",
+    "customerName": "林女士",
+    "address": "绿城玫瑰园 9栋 502",
+    "area": "105m²",
+    "status": "修改中",
+    "totalAmount": "175,000",
+    "materialsStatus": "未开始",
+    "designer": "李某某",
+    "updateTime": "2026-04-04"
+  },
+  {
+    "id": "Q010",
+    "customerName": "郭先生",
+    "address": "金茂府 11栋 1001",
+    "area": "220m²",
+    "status": "已签约",
+    "totalAmount": "580,000",
+    "materialsStatus": "已确认进场",
+    "designer": "钱某某",
+    "updateTime": "2026-04-08"
+  }
+]

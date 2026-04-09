@@ -1,0 +1,112 @@
+[
+  {
+    "id": "L001",
+    "name": "张先生",
+    "phone": "138****1234",
+    "status": "沟通中",
+    "budget": "15-20万",
+    "source": "大众点评",
+    "sales": "王某某",
+    "designer": "未分配",
+    "lastFollowUp": "2026-04-09"
+  },
+  {
+    "id": "L002",
+    "name": "李女士",
+    "phone": "139****5678",
+    "status": "已量房",
+    "budget": "20-30万",
+    "source": "老客户转介绍",
+    "sales": "刘某某",
+    "designer": "赵某某",
+    "lastFollowUp": "2026-04-08"
+  },
+  {
+    "id": "L003",
+    "name": "陈先生",
+    "phone": "150****9012",
+    "status": "方案阶段",
+    "budget": "30万以上",
+    "source": "抖音推广",
+    "sales": "王某某",
+    "designer": "李某某",
+    "lastFollowUp": "2026-04-07"
+  },
+  {
+    "id": "L004",
+    "name": "王女士",
+    "phone": "137****3456",
+    "status": "已签单",
+    "budget": "10-15万",
+    "source": "自然进店",
+    "sales": "刘某某",
+    "designer": "未分配",
+    "lastFollowUp": "2026-04-05"
+  },
+  {
+    "id": "L005",
+    "name": "赵先生",
+    "phone": "186****7890",
+    "status": "已流失",
+    "budget": "未知",
+    "source": "大众点评",
+    "sales": "王某某",
+    "designer": "未分配",
+    "lastFollowUp": "2026-04-01"
+  },
+  {
+    "id": "L006",
+    "name": "孙先生",
+    "phone": "135****4321",
+    "status": "沟通中",
+    "budget": "8-12万",
+    "source": "美团",
+    "sales": "张某某",
+    "designer": "未分配",
+    "lastFollowUp": "2026-04-09"
+  },
+  {
+    "id": "L007",
+    "name": "周女士",
+    "phone": "188****8765",
+    "status": "已量房",
+    "budget": "25-35万",
+    "source": "自然进店",
+    "sales": "王某某",
+    "designer": "钱某某",
+    "lastFollowUp": "2026-04-09"
+  },
+  {
+    "id": "L008",
+    "name": "吴先生",
+    "phone": "158****2468",
+    "status": "方案阶段",
+    "budget": "15-25万",
+    "source": "抖音推广",
+    "sales": "刘某某",
+    "designer": "李某某",
+    "lastFollowUp": "2026-04-08"
+  },
+  {
+    "id": "L009",
+    "name": "郑女士",
+    "phone": "131****1357",
+    "status": "沟通中",
+    "budget": "待确认",
+    "source": "朋友推荐",
+    "sales": "张某某",
+    "designer": "未分配",
+    "lastFollowUp": "2026-04-07"
+  },
+  {
+    "id": "L010",
+    "name": "马先生",
+    "phone": "136****9753",
+    "status": "已签单",
+    "budget": "40万以上",
+    "source": "老客户转介绍",
+    "sales": "王某某",
+    "designer": "赵某某",
+    "lastFollowUp": "2026-04-06"
+  }
+]
