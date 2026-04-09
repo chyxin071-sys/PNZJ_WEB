@@ -117,7 +117,7 @@ export default function LeadsPage() {
           </div>
           {/* 分页区域 (静态占位) */}
           <div className="border-t border-primary-50 p-4 flex items-center justify-between text-sm text-zinc-500 shrink-0">
-            <p>显示 1 至 10 条，共 10 条</p>
+            <p>显示 1 至 {leadsData.length} 条，共 {leadsData.length} 条</p>
             <div className="flex space-x-1">
               <button className="px-3 py-1 border border-primary-100 rounded hover:bg-primary-50 disabled:opacity-50" disabled>上一页</button>
               <button className="px-3 py-1 border border-primary-100 rounded hover:bg-primary-50 disabled:opacity-50" disabled>下一页</button>
