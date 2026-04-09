@@ -3,7 +3,7 @@
 import { LayoutDashboard, Users, FileText, Hammer, Bell, Search, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import dashboardData from "../../../mock_data/dashboard.json";
+import dashboardData from "../../mock_data/dashboard.json";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
