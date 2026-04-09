@@ -1,0 +1,68 @@
+[
+  {
+    "id": "USR-001",
+    "name": "王老板",
+    "username": "13800000001",
+    "role": "admin",
+    "department": "总经办",
+    "status": "active",
+    "joinDate": "2022-01-01",
+    "leadsCount": 0,
+    "projectsCount": 0
+  },
+  {
+    "id": "USR-002",
+    "name": "李销售",
+    "username": "13800000002",
+    "role": "sales",
+    "department": "销售部",
+    "status": "active",
+    "joinDate": "2023-03-15",
+    "leadsCount": 45,
+    "projectsCount": 0
+  },
+  {
+    "id": "USR-003",
+    "name": "张设计",
+    "username": "13800000003",
+    "role": "designer",
+    "department": "设计部",
+    "status": "active",
+    "joinDate": "2023-05-20",
+    "leadsCount": 28,
+    "projectsCount": 0
+  },
+  {
+    "id": "USR-004",
+    "name": "赵工长",
+    "username": "13800000004",
+    "role": "manager",
+    "department": "工程部",
+    "status": "active",
+    "joinDate": "2023-01-10",
+    "leadsCount": 0,
+    "projectsCount": 12
+  },
+  {
+    "id": "USR-005",
+    "name": "孙销售",
+    "username": "13800000005",
+    "role": "sales",
+    "department": "销售部",
+    "status": "inactive",
+    "joinDate": "2023-08-01",
+    "leadsCount": 15,
+    "projectsCount": 0
+  },
+  {
+    "id": "USR-006",
+    "name": "周设计",
+    "username": "13800000006",
+    "role": "designer",
+    "department": "设计部",
+    "status": "active",
+    "joinDate": "2024-02-15",
+    "leadsCount": 8,
+    "projectsCount": 0
+  }
+]
