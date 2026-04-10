@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ChevronLeft, FileText, Upload, Trash2, CheckCircle2, Circle, FileDown, FileSpreadsheet, CreditCard, User, Phone, MapPin } from "lucide-react";
 import MainLayout from "../../../components/MainLayout";
 import leadsData from "../../../../mock_data/leads.json";
+import CustomerDocuments from "../../../../src/components/CustomerDocuments";
 
 export default function ContractDetailPage() {
   const router = useRouter();
@@ -13,12 +14,6 @@ export default function ContractDetailPage() {
   
   const [customer, setCustomer] = useState<any>(null);
   
-  // 模拟文件列表
-  const [files, setFiles] = useState([
-    { id: 'f1', name: '装修施工合同_张三_已签字.pdf', size: '3.2 MB', date: '2024-03-20' },
-    { id: 'f2', name: '设计图纸及施工图.zip', size: '15.6 MB', date: '2024-03-21' }
-  ]);
-
   // 模拟分期付款节点
   const [payments, setPayments] = useState([
     { id: 'p1', stage: '定金 (10%)', amount: 10000, status: '已收', date: '2024-03-20', method: '银行转账', receipt: 'receipt_1.jpg' },
@@ -29,6 +24,7 @@ export default function ContractDetailPage() {
   ]);
 
   const [paymentToConfirm, setPaymentToConfirm] = useState<{id: string, action: '确认' | '撤销'} | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     if (leadId) {
@@ -39,7 +35,6 @@ export default function ContractDetailPage() {
         // 模拟根据实际客户调整合同状态
         const numId = parseInt(leadId.replace(/[^0-9]/g, ''));
         if (numId % 3 === 0) {
-          setFiles([]);
           setPayments(payments.map(p => ({ ...p, status: '待收', date: '', method: '' })));
         }
       }
@@ -80,7 +75,7 @@ export default function ContractDetailPage() {
     <MainLayout>
       <div className="p-8 max-w-[1200px] mx-auto space-y-8 pb-32">
         {/* 顶部标题区 */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative">
           <div>
             <button 
               onClick={() => router.back()}
@@ -89,9 +84,46 @@ export default function ContractDetailPage() {
               <ChevronLeft className="w-4 h-4 mr-1" />
               返回合同管理
             </button>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 relative">
               <h1 className="text-3xl font-bold tracking-tight text-primary-900">合同详情</h1>
               <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-md text-sm font-bold">执行中</span>
+              <button 
+                onClick={() => setDeleteConfirmId(customer.id)}
+                className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex items-center justify-center"
+                title="删除此合同记录"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+              {deleteConfirmId === customer.id && (
+                <div className="absolute left-full ml-2 top-0 w-64 bg-white border border-rose-100 rounded-xl shadow-xl p-4 z-50 animate-in fade-in zoom-in-95">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="p-2 bg-rose-100 text-rose-600 rounded-full shrink-0">
+                      <Trash2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-primary-900 mb-1">确定要删除此合同吗？</h4>
+                      <p className="text-xs text-primary-500 leading-relaxed">删除后将无法恢复，请谨慎操作。</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button 
+                      onClick={() => setDeleteConfirmId(null)} 
+                      className="px-3 py-1.5 border border-primary-200 text-primary-600 rounded-lg text-xs font-medium hover:bg-primary-50 transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setDeleteConfirmId(null);
+                        router.push('/contracts');
+                      }} 
+                      className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-medium hover:bg-rose-600 transition-colors shadow-sm shadow-rose-200"
+                    >
+                      确认删除
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
             <p className="text-primary-600 mt-2 font-mono text-sm">关联客户：{customer.name} ({customer.id})</p>
           </div>
@@ -151,45 +183,16 @@ export default function ContractDetailPage() {
                     <p className="text-sm font-medium text-primary-900">{customer.designer}</p>
                   </div>
                 </div>
+                <div className="pt-4 border-t border-primary-100">
+                  <p className="text-xs text-primary-400 mb-1">签单时间</p>
+                  <p className="text-sm font-medium font-mono text-primary-900">{customer.lastFollowUp}</p>
+                </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-primary-900 flex items-center">
-                  <span className="w-1.5 h-4 bg-primary-900 mr-2 rounded-sm inline-block"></span>
-                  合同文件档案
-                </h2>
-                <button className="text-xs font-medium text-primary-600 hover:text-primary-900 flex items-center">
-                  <Upload className="w-3 h-3 mr-1" /> 上传
-                </button>
-              </div>
-              
-              <div className="space-y-3">
-                {files.length === 0 ? (
-                  <div className="py-8 text-center text-primary-400 text-sm border border-dashed border-primary-200 rounded-lg">
-                    暂未上传合同扫描件
-                  </div>
-                ) : (
-                  files.map(file => (
-                    <div key={file.id} className="flex items-center justify-between p-3 bg-primary-50 rounded-lg group">
-                      <div className="flex items-center text-primary-700 truncate mr-2">
-                        <FileText className="w-4 h-4 mr-2 shrink-0 text-blue-500" />
-                        <div className="truncate">
-                          <p className="text-sm font-medium text-primary-900 truncate" title={file.name}>{file.name}</p>
-                          <p className="text-xs text-primary-500 mt-0.5">{file.date} · {file.size}</p>
-                        </div>
-                      </div>
-                      <button 
-                        className="p-1.5 text-primary-400 hover:text-rose-500 hover:bg-rose-50 rounded transition-colors"
-                        onClick={() => setFiles(files.filter(f => f.id !== file.id))}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
+            {/* 全局同步：客户文件与资料 */}
+            <div className="h-[400px]">
+              <CustomerDocuments customerName={customer.name} />
             </div>
           </div>
 

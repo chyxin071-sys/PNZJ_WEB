@@ -183,28 +183,28 @@ function LeadsContent() {
           ))}
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto relative">
+        <div className="flex items-center gap-2 w-full sm:w-auto relative">
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium w-full sm:w-auto border ${
+            className={`relative flex items-center justify-center min-w-[44px] min-h-[44px] px-3 sm:px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium shrink-0 border ${
               isFilterOpen || Object.values(filters).some(v => v !== "全部" && v !== "")
                 ? "bg-primary-50 border-primary-300 text-primary-900 ring-2 ring-primary-100" 
                 : "bg-white border-primary-100 hover:bg-primary-50 text-primary-900"
             }`}
           >
-            <Filter className="w-4 h-4 mr-2" />
-            高级筛选
+            <Filter className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">高级筛选</span>
             {(filters.sales !== "全部" || filters.designer !== "全部" || filters.status !== "全部" || filters.year !== "全部" || filters.month !== "全部" || filters.day) && (
-              <span className="ml-2 w-2 h-2 rounded-full bg-rose-500"></span>
+              <span className="absolute top-2.5 right-2.5 sm:static sm:ml-2 w-2 h-2 rounded-full bg-rose-500"></span>
             )}
-            <ChevronDown className={`w-4 h-4 ml-1 opacity-50 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`hidden sm:inline-block w-4 h-4 ml-1 opacity-50 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
           </button>
           
           {/* 高级筛选浮层 */}
           {isFilterOpen && (
             <>
-              <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
-              <div className="absolute left-0 top-full mt-2 z-50 w-full sm:w-80 bg-white border border-primary-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setIsFilterOpen(false)} />
+              <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[340px] sm:absolute sm:top-full sm:left-0 sm:-translate-x-0 sm:-translate-y-0 sm:transform-none sm:w-80 sm:max-w-none mt-0 sm:mt-2 z-50 bg-white border border-primary-100 rounded-xl shadow-xl p-4 sm:p-5 animate-in fade-in zoom-in-95 sm:zoom-in-100 slide-in-from-top-2 duration-150">
                 <div className="space-y-4">
                   <div className="relative z-50">
                     <label className="block text-xs font-medium text-primary-600 mb-1">跟进状态</label>
@@ -297,7 +297,7 @@ function LeadsContent() {
                         </div>
                         {openDropdown === 'filter-year' && (
                           <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                            {["全部", "2024", "2023", "2022"].map(option => (
+                            {["全部", "2026", "2025", "2024", "2023", "2022", "2021", "2020"].map(option => (
                               <div 
                                 key={option}
                                 onClick={() => { setFilters({...filters, year: option}); setOpenDropdown(null); }}
@@ -373,8 +373,16 @@ function LeadsContent() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="搜索姓名/电话/地址..."
-              className="w-full min-h-[44px] pl-9 pr-4 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
+              className="w-full min-h-[44px] pl-9 pr-10 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>

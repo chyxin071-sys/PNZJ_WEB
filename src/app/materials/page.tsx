@@ -213,7 +213,7 @@ export default function MaterialsPage() {
   }, []);
 
   if (!mounted) {
-    return <MainLayout><div className="p-8 text-primary-600">加载中...</div></MainLayout>;
+    return <div className="p-8 text-primary-600">加载中...</div>;
   }
 
   const filteredProducts = products.filter(p => {
@@ -269,7 +269,7 @@ export default function MaterialsPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-4 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           {/* 自定义状态筛选器 UI */}
           <div className="relative">
             <button 
@@ -323,8 +323,16 @@ export default function MaterialsPage() {
               placeholder="搜索名称 / 品牌 / 型号..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full min-h-[44px] pl-9 pr-4 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
+              className="w-full min-h-[44px] pl-9 pr-10 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors"
+              >
+                <XCircle className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>

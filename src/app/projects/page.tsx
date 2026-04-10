@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, AlertCircle, CheckCircle2, Clock, Camera, ChevronRight, HardHat, AlertTriangle, PlayCircle, X, ChevronDown } from "lucide-react";
+import { Search, Filter, AlertCircle, CheckCircle2, Clock, Camera, HardHat, AlertTriangle, PlayCircle, X, ChevronDown } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
 import projectsData from "../../../mock_data/projects.json";
+import { useRouter } from "next/navigation";
 
 export default function ProjectsPage() {
+  const router = useRouter();
   const [activeStatus, setActiveStatus] = useState("全部");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -40,6 +42,19 @@ export default function ProjectsPage() {
       case "严重延期": return <AlertTriangle className="w-4 h-4 mr-1.5" />;
       default: return null;
     }
+  };
+
+  // 动态计算已耗时
+  const calculateDaysElapsed = (startDateStr: string) => {
+    if (!startDateStr) return 0;
+    const start = new Date(startDateStr);
+    const now = new Date();
+    // 去除时分秒的差异，只计算天数差
+    start.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+    const diffTime = Math.abs(now.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   };
 
   const statuses = ["全部", "未开工", "施工中", "已竣工", "已停工"];
@@ -77,12 +92,6 @@ export default function ProjectsPage() {
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-900">施工管理</h1>
             <p className="text-primary-600 mt-2">8个标准施工节点管控，异常工地自动置顶预警</p>
           </div>
-          <div className="flex space-x-3 w-full sm:w-auto">
-            <button className="flex flex-1 sm:flex-none items-center justify-center min-h-[44px] px-4 py-2.5 bg-white border border-primary-100 text-primary-900 rounded-lg hover:bg-primary-50 transition-colors shadow-sm font-medium">
-              <HardHat className="w-5 h-5 mr-2" />
-              工长排班
-            </button>
-          </div>
         </div>
 
         {/* 筛选与搜索 - 融合风格 */}
@@ -99,33 +108,33 @@ export default function ProjectsPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto relative">
+          <div className="flex items-center gap-2 w-full sm:w-auto relative">
             {/* 高级筛选按钮 */}
             <button 
               onClick={() => setIsAdvancedFilterOpen(!isAdvancedFilterOpen)}
-              className={`flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium w-full sm:w-auto border ${
+              className={`relative flex items-center justify-center min-w-[44px] min-h-[44px] px-3 sm:px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium shrink-0 border ${
                 isAdvancedFilterOpen || filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterManager !== '全部' || filterHealth !== '全部'
                   ? "bg-primary-50 border-primary-300 text-primary-900 ring-2 ring-primary-100" 
                   : "bg-white border-primary-100 hover:bg-primary-50 text-primary-900"
               }`}
             >
-              <Filter className="w-4 h-4 mr-2" />
-              高级筛选
+              <Filter className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">高级筛选</span>
               {/* 如果有筛选条件，显示小红点 */}
               {(filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterManager !== '全部' || filterHealth !== '全部') && (
-                <span className="ml-2 w-2 h-2 bg-rose-500 rounded-full"></span>
+                <span className="absolute top-2.5 right-2.5 sm:static sm:ml-2 w-2 h-2 bg-rose-500 rounded-full"></span>
               )}
-              <ChevronDown className={`hidden sm:block w-4 h-4 ml-1 opacity-50 transition-transform ${isAdvancedFilterOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`hidden sm:inline-block w-4 h-4 ml-1 opacity-50 transition-transform ${isAdvancedFilterOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* 高级筛选浮层 */}
             {isAdvancedFilterOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsAdvancedFilterOpen(false)} />
-                <div className="absolute left-0 top-full mt-2 z-50 w-full sm:w-80 bg-white border border-primary-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setIsAdvancedFilterOpen(false)} />
+                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[340px] sm:absolute sm:top-full sm:left-0 sm:-translate-x-0 sm:-translate-y-0 sm:transform-none sm:w-80 sm:max-w-none mt-0 sm:mt-2 z-50 bg-white border border-primary-100 rounded-xl shadow-xl p-4 sm:p-5 animate-in fade-in zoom-in-95 sm:zoom-in-100 slide-in-from-top-2 duration-150">
                   <div className="space-y-4">
                     {/* 开工时间范围 */}
-                    <div className="space-y-2 relative z-30">
+                    <div className="space-y-2 relative z-50">
                       <label className="block text-xs font-medium text-primary-600 mb-1">开工时间</label>
                       <div className="flex items-center gap-2">
                         <div className="relative z-30 w-1/3">
@@ -138,7 +147,7 @@ export default function ProjectsPage() {
                           </div>
                           {openDropdown === 'filter-year' && (
                             <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                              {["全部", "2024", "2023", "2022"].map(option => (
+                              {["全部", "2026", "2025", "2024", "2023", "2022", "2021", "2020"].map(option => (
                                 <div 
                                   key={option}
                                   onClick={() => { setFilterYear(option); setOpenDropdown(null); }}
@@ -194,7 +203,7 @@ export default function ProjectsPage() {
                     <div className="space-y-2 relative z-40">
                       <label className="block text-xs font-medium text-primary-600">负责工长</label>
                       <div 
-                        onClick={(e) => { e.stopPropagation(); setIsManagerDropdownOpen(!isManagerDropdownOpen); setIsDateRangeDropdownOpen(false); setIsHealthDropdownOpen(false); }}
+                        onClick={(e) => { e.stopPropagation(); setIsManagerDropdownOpen(!isManagerDropdownOpen); setIsHealthDropdownOpen(false); }}
                         className={`w-full px-3 py-2 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${isManagerDropdownOpen ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
                       >
                         <span className="text-primary-900 text-xs">
@@ -228,7 +237,7 @@ export default function ProjectsPage() {
                     <div className="space-y-2 relative z-10">
                       <label className="block text-xs font-medium text-primary-600">健康度</label>
                       <div 
-                        onClick={(e) => { e.stopPropagation(); setIsHealthDropdownOpen(!isHealthDropdownOpen); setIsDateRangeDropdownOpen(false); setIsManagerDropdownOpen(false); }}
+                        onClick={(e) => { e.stopPropagation(); setIsHealthDropdownOpen(!isHealthDropdownOpen); setIsManagerDropdownOpen(false); }}
                         className={`w-full px-3 py-2 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${isHealthDropdownOpen ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
                       >
                         <span className="text-primary-900 text-xs">
@@ -290,8 +299,16 @@ export default function ProjectsPage() {
                 placeholder="搜索客户 / 工长..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full min-h-[44px] pl-9 pr-4 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
+                className="w-full min-h-[44px] pl-9 pr-10 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -301,7 +318,8 @@ export default function ProjectsPage() {
           {filteredProjects.map((project) => (
             <div 
               key={project.id} 
-              className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-colors hover:border-primary-900/30 ${project.health === "严重延期" ? "border-rose-300" : "border-primary-100"}`}
+              onClick={() => router.push(`/projects/${project.id}`)}
+              className={`bg-white rounded-xl border shadow-sm overflow-hidden transition-colors cursor-pointer hover:border-primary-900/50 hover:shadow-md ${project.health === "严重延期" ? "border-rose-300" : "border-primary-100"}`}
             >
               {/* 卡片头部信息 */}
               <div className="p-5 border-b border-primary-50 flex flex-wrap gap-4 items-center justify-between bg-primary-50/20">
@@ -323,20 +341,27 @@ export default function ProjectsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                  <div className="text-right">
-                    <p className="text-xs text-primary-600 mb-1">开工时间 / 耗时</p>
-                    <p className="text-sm font-medium text-primary-900">{project.startDate} · <span className="font-mono">{project.daysElapsed}天</span></p>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6">
+                  <div className="flex gap-6 w-full sm:w-auto">
+                    <div>
+                      <p className="text-xs text-primary-600 mb-1">开工时间</p>
+                      <p className="text-sm font-medium text-primary-900">{project.startDate}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-primary-600 mb-1">{project.status === '已竣工' ? '完工时间' : '预计完工时间'}</p>
+                      <p className="text-sm font-medium text-primary-900">{project.endDate || "未定"}</p>
+                    </div>
+                    <div className="hidden sm:block">
+                      <p className="text-xs text-primary-600 mb-1">已耗时</p>
+                      <p className="text-sm font-medium text-primary-900 font-mono">{calculateDaysElapsed(project.startDate)}天</p>
+                    </div>
                   </div>
                   <div className="h-8 w-px bg-primary-100 hidden sm:block"></div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
                     <span className={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium border ${getHealthColor(project.health)}`}>
                       {getHealthIcon(project.health)}
                       {project.health}
                     </span>
-                    <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg border border-primary-100 text-primary-600 hover:bg-primary-50 hover:text-primary-900 transition-colors">
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
                   </div>
                 </div>
               </div>
@@ -391,8 +416,7 @@ export default function ProjectsPage() {
                     </div>
                   ) : (
                     <button className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-900 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium w-full sm:w-auto">
-                      <Camera className="w-4 h-4 mr-2" />
-                      现场验收打卡
+                      查看详情
                     </button>
                   )}
                 </div>

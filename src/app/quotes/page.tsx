@@ -78,30 +78,30 @@ export default function QuotesPage() {
               ))}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto relative">
+          <div className="flex items-center gap-2 w-full sm:w-auto relative">
             {/* 高级筛选按钮 */}
             <button 
               onClick={() => setIsAdvancedFilterOpen(!isAdvancedFilterOpen)}
-              className={`flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium w-full sm:w-auto border ${
+              className={`relative flex items-center justify-center min-w-[44px] min-h-[44px] px-3 sm:px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium shrink-0 border ${
                 isAdvancedFilterOpen || filterMinAmount || filterMaxAmount || filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterPersonnel !== '全部'
                   ? "bg-primary-50 border-primary-300 text-primary-900 ring-2 ring-primary-100" 
                   : "bg-white border-primary-100 hover:bg-primary-50 text-primary-900"
               }`}
             >
-              <Filter className="w-4 h-4 mr-2" />
-              高级筛选
+              <Filter className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">高级筛选</span>
               {/* 如果有筛选条件，显示小红点 */}
               {(filterMinAmount || filterMaxAmount || filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterPersonnel !== '全部') && (
-                <span className="ml-2 w-2 h-2 bg-rose-500 rounded-full"></span>
+                <span className="absolute top-2.5 right-2.5 sm:static sm:ml-2 w-2 h-2 bg-rose-500 rounded-full"></span>
               )}
-              <ChevronDown className={`hidden sm:block w-4 h-4 ml-1 opacity-50 transition-transform ${isAdvancedFilterOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`hidden sm:inline-block w-4 h-4 ml-1 opacity-50 transition-transform ${isAdvancedFilterOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* 高级筛选浮层 */}
             {isAdvancedFilterOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsAdvancedFilterOpen(false)} />
-                <div className="absolute left-0 top-full mt-2 z-50 w-full sm:w-80 bg-white border border-primary-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setIsAdvancedFilterOpen(false)} />
+                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[340px] sm:absolute sm:top-full sm:left-0 sm:-translate-x-0 sm:-translate-y-0 sm:transform-none sm:w-80 sm:max-w-none mt-0 sm:mt-2 z-50 bg-white border border-primary-100 rounded-xl shadow-xl p-4 sm:p-5 animate-in fade-in zoom-in-95 sm:zoom-in-100 slide-in-from-top-2 duration-150">
                   <div className="space-y-4">
                     {/* 报价金额范围 */}
                     <div className="space-y-2">
@@ -126,7 +126,7 @@ export default function QuotesPage() {
                     </div>
 
                     {/* 创建时间范围 */}
-                    <div>
+                    <div className="relative z-50">
                       <label className="block text-xs font-medium text-primary-600 mb-1">创建时间</label>
                       <div className="flex items-center gap-2">
                         <div className="relative z-50 w-1/3">
@@ -139,7 +139,7 @@ export default function QuotesPage() {
                           </div>
                           {openDropdown === 'filter-year' && (
                             <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                              {["全部", "2024", "2023", "2022"].map(option => (
+                              {["全部", "2026", "2025", "2024", "2023", "2022", "2021", "2020"].map(option => (
                                 <div 
                                   key={option}
                                   onClick={() => { setFilterYear(option); setOpenDropdown(null); }}
@@ -195,7 +195,7 @@ export default function QuotesPage() {
                     <div className="space-y-2 relative z-20">
                       <label className="block text-xs font-medium text-primary-600">负责销售</label>
                       <div 
-                        onClick={(e) => { e.stopPropagation(); setIsPersonnelDropdownOpen(!isPersonnelDropdownOpen); setIsDateRangeDropdownOpen(false); }}
+                        onClick={(e) => { e.stopPropagation(); setIsPersonnelDropdownOpen(!isPersonnelDropdownOpen); }}
                         className={`w-full px-3 py-2 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${isPersonnelDropdownOpen ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
                       >
                         <span className="text-primary-900 text-xs">
@@ -230,7 +230,7 @@ export default function QuotesPage() {
                         onClick={() => {
                           setFilterMinAmount("");
                           setFilterMaxAmount("");
-                          setFilterDateRange("all");
+
                           setFilterPersonnel("全部");
                         }}
                         className="flex-1 px-3 py-2 border border-primary-200 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors text-sm font-medium"
@@ -256,8 +256,16 @@ export default function QuotesPage() {
                 placeholder="搜索客户 / 手机号 / 编号..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full min-h-[44px] pl-9 pr-4 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
+                className="w-full min-h-[44px] pl-9 pr-10 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -317,13 +325,15 @@ export default function QuotesPage() {
                       </div>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        <span className="text-sm font-medium text-primary-900">{quote.address || "暂无地址"}</span>
-                        <div className="flex items-center gap-2 text-xs text-primary-500">
-                          {quote.requirementType && <span className="bg-primary-50 px-1.5 py-0.5 rounded">{quote.requirementType}</span>}
-                          {quote.area && <span>{quote.area}m²</span>}
-                          {quote.budget && <span>预算: {quote.budget}</span>}
-                        </div>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-sm font-medium text-primary-900 truncate max-w-[200px]" title={quote.address || "暂无地址"}>{quote.address || "暂无地址"}</span>
+                        <span className="text-xs text-primary-600">
+                          {(quote as any).requirementType && <span>{(quote as any).requirementType}</span>}
+                          {((quote as any).requirementType && (quote as any).area) && <span> · </span>}
+                          {(quote as any).area && <span>{(quote as any).area}m²</span>}
+                          {((quote as any).area && (quote as any).budget) && <span> · </span>}
+                          {(quote as any).budget && <span>预算: {(quote as any).budget}</span>}
+                        </span>
                       </div>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap min-w-[200px]">

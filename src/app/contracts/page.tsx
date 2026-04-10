@@ -26,8 +26,10 @@ export default function ContractsPage() {
 
   const statuses = ["全部", "待上传", "执行中", "已结项"];
 
-  // 从客户线索中提取“已签单”状态的客户作为合同管理的底层数据
-  const contractLeads = leadsData.filter(lead => lead.status === "已签单");
+  // 从客户线索中提取“已签单”状态的客户作为合同管理的底层数据，并按签单时间（这里用lastFollowUp模拟或createdAt）倒序排列
+  const contractLeads = leadsData
+    .filter(lead => lead.status === "已签单")
+    .sort((a, b) => new Date(b.lastFollowUp).getTime() - new Date(a.lastFollowUp).getTime());
 
   // 模拟分配状态，前几个待上传，后面执行中
   // 为了能演示“新建合同”效果，我们在组件内部维护一个已创建合同的列表（实际中由后端提供）
@@ -105,30 +107,30 @@ export default function ContractsPage() {
               ))}
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto relative">
+          <div className="flex items-center gap-2 w-full sm:w-auto relative">
             {/* 高级筛选按钮 */}
             <button 
               onClick={() => setIsAdvancedFilterOpen(!isAdvancedFilterOpen)}
-              className={`flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium w-full sm:w-auto border ${
-                isAdvancedFilterOpen || filterMinArea || filterMaxArea || filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterPersonnel !== '全部'
+              className={`relative flex items-center justify-center min-w-[44px] min-h-[44px] px-3 sm:px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium shrink-0 border ${
+                isAdvancedFilterOpen || filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterPersonnel !== '全部'
                   ? "bg-primary-50 border-primary-300 text-primary-900 ring-2 ring-primary-100" 
                   : "bg-white border-primary-100 hover:bg-primary-50 text-primary-900"
               }`}
             >
-              <Filter className="w-4 h-4 mr-2" />
-              高级筛选
+              <Filter className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">高级筛选</span>
               {/* 如果有筛选条件，显示小红点 */}
-              {(filterMinArea || filterMaxArea || filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterPersonnel !== '全部') && (
-                <span className="ml-2 w-2 h-2 bg-rose-500 rounded-full"></span>
+              {(filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterPersonnel !== '全部') && (
+                <span className="absolute top-2.5 right-2.5 sm:static sm:ml-2 w-2 h-2 bg-rose-500 rounded-full"></span>
               )}
-              <ChevronDown className={`hidden sm:block w-4 h-4 ml-1 opacity-50 transition-transform ${isAdvancedFilterOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`hidden sm:inline-block w-4 h-4 ml-1 opacity-50 transition-transform ${isAdvancedFilterOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* 高级筛选浮层 */}
             {isAdvancedFilterOpen && (
               <>
-                <div className="fixed inset-0 z-40" onClick={() => setIsAdvancedFilterOpen(false)} />
-                <div className="absolute left-0 top-full mt-2 z-50 w-[calc(100vw-2rem)] sm:w-80 bg-white border border-primary-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="fixed inset-0 z-40 bg-black/20 sm:bg-transparent" onClick={() => setIsAdvancedFilterOpen(false)} />
+                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[340px] sm:absolute sm:top-full sm:left-0 sm:-translate-x-0 sm:-translate-y-0 sm:transform-none sm:w-80 sm:max-w-none mt-0 sm:mt-2 z-50 bg-white border border-primary-100 rounded-xl shadow-xl p-4 sm:p-5 animate-in fade-in zoom-in-95 sm:zoom-in-100 slide-in-from-top-2 duration-150">
                   <div className="space-y-4">
                     {/* 房屋面积范围 */}
                     <div className="space-y-2">
@@ -153,7 +155,7 @@ export default function ContractsPage() {
                     </div>
 
                     {/* 签订时间范围 */}
-                    <div>
+                    <div className="relative z-50">
                       <label className="block text-xs font-medium text-primary-600 mb-1">签订时间</label>
                       <div className="flex items-center gap-2">
                         <div className="relative z-50 w-1/3">
@@ -166,7 +168,7 @@ export default function ContractsPage() {
                           </div>
                           {openDropdown === 'filter-year' && (
                             <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                              {["全部", "2024", "2023", "2022"].map(option => (
+                              {["全部", "2026", "2025", "2024", "2023", "2022", "2021", "2020"].map(option => (
                                 <div 
                                   key={option}
                                   onClick={() => { setFilterYear(option); setOpenDropdown(null); }}
@@ -222,7 +224,7 @@ export default function ContractsPage() {
                     <div className="space-y-2 relative z-20">
                       <label className="block text-xs font-medium text-primary-600">负责销售 / 设计</label>
                       <div 
-                        onClick={(e) => { e.stopPropagation(); setIsPersonnelDropdownOpen(!isPersonnelDropdownOpen); setIsDateRangeDropdownOpen(false); }}
+                        onClick={(e) => { e.stopPropagation(); setIsPersonnelDropdownOpen(!isPersonnelDropdownOpen); }}
                         className={`w-full px-3 py-2 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${isPersonnelDropdownOpen ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
                       >
                         <span className="text-primary-900 text-xs">
@@ -257,7 +259,7 @@ export default function ContractsPage() {
                         onClick={() => {
                           setFilterMinArea("");
                           setFilterMaxArea("");
-                          setFilterDateRange("all");
+
                           setFilterPersonnel("全部");
                         }}
                         className="flex-1 px-3 py-2 border border-primary-200 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors text-sm font-medium"
@@ -283,8 +285,16 @@ export default function ContractsPage() {
                 placeholder="搜索客户姓名 / 手机号..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full min-h-[44px] pl-9 pr-4 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
+                className="w-full min-h-[44px] pl-9 pr-10 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -298,6 +308,7 @@ export default function ContractsPage() {
                   <th className="py-4 px-6 font-medium whitespace-nowrap">客户编号 / 姓名</th>
                   <th className="py-4 px-6 font-medium whitespace-nowrap">房屋信息</th>
                   <th className="py-4 px-6 font-medium whitespace-nowrap">负责销售 / 设计</th>
+                  <th className="py-4 px-6 font-medium whitespace-nowrap">签单时间</th>
                   <th className="py-4 px-6 font-medium whitespace-nowrap">合同状态</th>
                   <th className="py-4 px-6 font-medium whitespace-nowrap text-right">收款进度</th>
                 </tr>
@@ -332,6 +343,9 @@ export default function ContractsPage() {
                       </td>
                       <td className="py-4 px-6 whitespace-nowrap">
                         <p className="text-sm text-primary-900">{lead.sales} / {lead.designer}</p>
+                      </td>
+                      <td className="py-4 px-6 whitespace-nowrap">
+                        <p className="text-sm font-mono text-primary-900">{lead.lastFollowUp}</p>
                       </td>
                       <td className="py-4 px-6 whitespace-nowrap">
                         {getStatusBadge(lead.id)}

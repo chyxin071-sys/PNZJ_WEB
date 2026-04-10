@@ -49,6 +49,7 @@ export default function QuoteDetailPage() {
   
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
   const [itemToRemove, setItemToRemove] = useState<string | null>(null); // 新增：用于在弹窗中移除材料的二次确认状态
   const [customItem, setCustomItem] = useState({ name: "", unit: "项", price: 0, quantity: 1, category: "杂项" });
@@ -161,7 +162,7 @@ export default function QuoteDetailPage() {
     <MainLayout>
       <div className="p-8 max-w-[1200px] mx-auto space-y-8 pb-32">
         {/* 顶部面包屑与标题 */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative">
           <div>
             <button 
               onClick={() => router.back()}
@@ -198,35 +199,48 @@ export default function QuoteDetailPage() {
 
         {/* 客户信息卡片 */}
         <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-6">
-          <h2 className="text-lg font-bold text-primary-900 mb-4 flex items-center">
+          <h2 className="text-lg font-bold text-primary-900 mb-6 flex items-center">
             <span className="w-1.5 h-4 bg-primary-900 mr-2 rounded-sm inline-block"></span>
             关联客户信息
           </h2>
           {customer ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div>
-                <p className="text-xs text-primary-400 mb-1">客户姓名</p>
-                <p className="text-sm font-medium text-primary-900">{customer.name}</p>
+            <div className="flex flex-col md:flex-row justify-between gap-8">
+              {/* 左侧：客户与房屋核心信息 (两两一行排列) */}
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
+                <div>
+                  <p className="text-xs text-primary-400 mb-1">客户姓名</p>
+                  <p className="text-base font-bold text-primary-900">{customer.name}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-primary-400 mb-1">联系电话</p>
+                  <p className="text-base font-bold text-primary-900 font-mono">{customer.phone}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-primary-400 mb-1">房屋信息</p>
+                  <p className="text-sm font-medium text-primary-900 leading-relaxed">
+                    {customer.address || "暂无地址"} 
+                    <span className="mx-2 text-primary-200">|</span> 
+                    {customer.requirementType} 
+                    <span className="mx-2 text-primary-200">|</span> 
+                    {customer.area ? `${customer.area}m²` : "面积未知"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-primary-400 mb-1">意向预算</p>
+                  <p className="text-sm font-medium text-primary-900">{customer.budget || "未填写"}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-primary-400 mb-1">联系电话</p>
-                <p className="text-sm font-medium text-primary-900">{customer.phone}</p>
-              </div>
-              <div>
-                <p className="text-xs text-primary-400 mb-1">房屋信息</p>
-                <p className="text-sm font-medium text-primary-900">{customer.address || "暂无地址"} · {customer.requirementType} · {customer.area ? `${customer.area}m²` : "面积未知"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-primary-400 mb-1">意向预算</p>
-                <p className="text-sm font-medium text-primary-900">{customer.budget || "未填写"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-primary-400 mb-1">销售负责</p>
-                <p className="text-sm font-medium text-primary-900">{customer.sales || "未分配"}</p>
-              </div>
-              <div>
-                <p className="text-xs text-primary-400 mb-1">主案设计</p>
-                <p className="text-sm font-medium text-primary-900">{customer.designer || "未分配"}</p>
+
+              {/* 右侧：内部负责人信息 */}
+              <div className="md:w-64 shrink-0 bg-primary-50/50 rounded-xl p-5 border border-primary-100 flex flex-col justify-center gap-6">
+                <div>
+                  <p className="text-xs text-primary-500 mb-1">销售负责</p>
+                  <p className="text-sm font-bold text-primary-900">{customer.sales || "未分配"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-primary-500 mb-1">主案设计</p>
+                  <p className="text-sm font-bold text-primary-900">{customer.designer || "未分配"}</p>
+                </div>
               </div>
             </div>
           ) : null}
@@ -415,9 +429,50 @@ export default function QuoteDetailPage() {
               </div>
             </div>
             <div className="w-px h-6 bg-primary-200 mx-2"></div>
-            <button onClick={() => router.back()} className="px-6 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium">
-              取消
-            </button>
+            
+            {/* 删除报价单操作 */}
+            <div className="relative">
+              <button 
+                onClick={() => setDeleteConfirmId(quote.id)}
+                className="px-6 py-2.5 border border-rose-200 text-rose-600 rounded-lg hover:bg-rose-50 transition-colors font-medium flex items-center group"
+                title="删除此报价单"
+              >
+                <Trash2 className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+                删除
+              </button>
+              {deleteConfirmId === quote.id && (
+                <div className="absolute bottom-full mb-3 right-0 w-64 bg-white border border-rose-100 rounded-xl shadow-xl p-4 z-50 animate-in fade-in slide-in-from-bottom-2">
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="p-2 bg-rose-100 text-rose-600 rounded-full shrink-0">
+                      <Trash2 className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-primary-900 mb-1">确定要删除此报价单吗？</h4>
+                      <p className="text-xs text-primary-500 leading-relaxed whitespace-normal text-left">删除后，该报价明细及相关记录将无法恢复，请谨慎操作。</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button 
+                      onClick={() => setDeleteConfirmId(null)} 
+                      className="px-3 py-1.5 border border-primary-200 text-primary-600 rounded-lg text-xs font-medium hover:bg-primary-50 transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setDeleteConfirmId(null);
+                        // 模拟删除操作，实际应调用API
+                        router.push('/quotes');
+                      }} 
+                      className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-medium hover:bg-rose-600 transition-colors shadow-sm shadow-rose-200"
+                    >
+                      确认删除
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button onClick={handleSave} className="flex items-center px-8 py-2.5 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors shadow-sm font-medium">
               <Save className="w-5 h-5 mr-2" />
               保存修改

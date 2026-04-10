@@ -4,6 +4,9 @@
     "customer": "马先生",
     "phone": "13633619618",
     "address": "保利滨湖 8栋 1单元 3003",
+    "requirementType": "毛坯",
+    "area": 108,
+    "budget": "17万左右",
     "status": "已确认",
     "total": 155304,
     "discount": 7765,
@@ -21,7 +24,10 @@
     "discount": 4500,
     "final": 85500,
     "date": "2024-04-05",
-    "sales": "李销售"
+    "sales": "李销售",
+    "requirementType": "精装微调",
+    "area": 128,
+    "budget": "19万左右"
   },
   {
     "id": "P20240003",
@@ -33,7 +39,10 @@
     "discount": 5650,
     "final": 107363,
     "date": "2024-03-14",
-    "sales": "李销售"
+    "sales": "李销售",
+    "requirementType": "旧改",
+    "area": 108,
+    "budget": "16万左右"
   },
   {
     "id": "P20240007",
@@ -45,7 +54,10 @@
     "discount": 4502,
     "final": 85546,
     "date": "2024-03-14",
-    "sales": "王销售"
+    "sales": "王销售",
+    "requirementType": "旧改",
+    "area": 146,
+    "budget": "21万左右"
   },
   {
     "id": "P20240013",
@@ -57,7 +69,10 @@
     "discount": 4002,
     "final": 76038,
     "date": "2024-02-21",
-    "sales": "刘销售"
+    "sales": "刘销售",
+    "requirementType": "旧改",
+    "area": 131,
+    "budget": "19万左右"
   },
   {
     "id": "P20240002",
@@ -69,7 +84,10 @@
     "discount": 7536,
     "final": 143193,
     "date": "2024-02-04",
-    "sales": "王销售"
+    "sales": "王销售",
+    "requirementType": "毛坯",
+    "area": 126,
+    "budget": "18万左右"
   },
   {
     "id": "P20240028",
@@ -81,7 +99,10 @@
     "discount": 6275,
     "final": 119239,
     "date": "2024-01-15",
-    "sales": "李销售"
+    "sales": "李销售",
+    "requirementType": "毛坯",
+    "area": 99,
+    "budget": "14万左右"
   },
   {
     "id": "P20240005",
@@ -93,7 +114,10 @@
     "discount": 6133,
     "final": 116537,
     "date": "2023-12-31",
-    "sales": "王销售"
+    "sales": "王销售",
+    "requirementType": "精装微调",
+    "area": 151,
+    "budget": "22万左右"
   },
   {
     "id": "P20240010",
@@ -105,7 +129,10 @@
     "discount": 6308,
     "final": 119869,
     "date": "2023-12-13",
-    "sales": "王销售"
+    "sales": "王销售",
+    "requirementType": "旧改",
+    "area": 117,
+    "budget": "17万左右"
   },
   {
     "id": "P20240027",
@@ -117,7 +144,10 @@
     "discount": 9472,
     "final": 179968,
     "date": "2023-12-07",
-    "sales": "刘销售"
+    "sales": "刘销售",
+    "requirementType": "旧改",
+    "area": 62,
+    "budget": "9万左右"
   },
   {
     "id": "P20240001",
@@ -129,7 +159,10 @@
     "discount": 4403,
     "final": 83657,
     "date": "2023-11-07",
-    "sales": "李销售"
+    "sales": "李销售",
+    "requirementType": "毛坯",
+    "area": 148,
+    "budget": "22万左右"
   },
   {
     "id": "P20240021",
@@ -141,7 +174,10 @@
     "discount": 4212,
     "final": 80040,
     "date": "2023-11-06",
-    "sales": "刘销售"
+    "sales": "刘销售",
+    "requirementType": "毛坯",
+    "area": 120,
+    "budget": "18万左右"
   },
   {
     "id": "P20240022",
@@ -153,7 +189,10 @@
     "discount": 4067,
     "final": 77273,
     "date": "2023-10-21",
-    "sales": "刘销售"
+    "sales": "刘销售",
+    "requirementType": "毛坯",
+    "area": 143,
+    "budget": "21万左右"
   },
   {
     "id": "P20240025",
@@ -165,7 +204,10 @@
     "discount": 10655,
     "final": 202457,
     "date": "2023-08-24",
-    "sales": "李销售"
+    "sales": "李销售",
+    "requirementType": "旧改",
+    "area": 80,
+    "budget": "12万左右"
   },
   {
     "id": "P20240024",
@@ -177,7 +219,10 @@
     "discount": 9741,
     "final": 185095,
     "date": "2023-08-11",
-    "sales": "李销售"
+    "sales": "李销售",
+    "requirementType": "精装微调",
+    "area": 119,
+    "budget": "17万左右"
   },
   {
     "id": "P20240009",
@@ -189,7 +234,10 @@
     "discount": 9399,
     "final": 178593,
     "date": "2023-05-28",
-    "sales": "王销售"
+    "sales": "王销售",
+    "requirementType": "旧改",
+    "area": 105,
+    "budget": "15万左右"
   },
   {
     "id": "P20240012",
@@ -201,7 +249,10 @@
     "discount": 5746,
     "final": 109176,
     "date": "2023-05-15",
-    "sales": "李销售"
+    "sales": "李销售",
+    "requirementType": "旧改",
+    "area": 145,
+    "budget": "21万左右"
   },
   {
     "id": "P20240023",
@@ -213,7 +264,10 @@
     "discount": 4171,
     "final": 79255,
     "date": "2023-04-24",
-    "sales": "王销售"
+    "sales": "王销售",
+    "requirementType": "旧改",
+    "area": 111,
+    "budget": "16万左右"
   },
   {
     "id": "P20240030",
@@ -225,6 +279,9 @@
     "discount": 5811,
     "final": 110421,
     "date": "2023-03-19",
-    "sales": "刘销售"
+    "sales": "刘销售",
+    "requirementType": "旧改",
+    "area": 77,
+    "budget": "11万左右"
   }
 ]
