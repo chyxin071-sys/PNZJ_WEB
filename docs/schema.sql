@@ -93,7 +93,7 @@ CREATE TABLE projects (
     contract_id UUID NOT NULL REFERENCES contracts(id) ON DELETE CASCADE, -- 关联的合同
     lead_id UUID NOT NULL REFERENCES leads(id),   -- 冗余关联客户，方便查询
     manager_id UUID REFERENCES users(id),         -- 老板指派的工长
-    current_node_index INTEGER DEFAULT 1,         -- 当前进行到的节点索引 (1-11)
+    current_node_index INTEGER DEFAULT 1,         -- 当前进行到的节点索引 (1-8)
     status VARCHAR(20) NOT NULL DEFAULT '未开工' CHECK (status IN ('未开工', '施工中', '已竣工', '已停工')), 
     health_status VARCHAR(20) DEFAULT '正常' CHECK (health_status IN ('正常', '预警', '严重延期')), -- 新增: 项目健康度
     start_date DATE,                              -- 实际开工日期
@@ -102,12 +102,12 @@ CREATE TABLE projects (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. 施工节点打卡记录表 (project_nodes) - 记录11个节点的详细流水
+-- 7. 施工节点打卡记录表 (project_nodes) - 记录8个标准节点的详细流水
 CREATE TABLE project_nodes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
-    node_name VARCHAR(50) NOT NULL,       -- 节点名称 ('拆除', '水电交底', '水电' 等)
-    node_index INTEGER NOT NULL,          -- 节点顺序 (1-11)
+    node_name VARCHAR(50) NOT NULL,       -- 节点名称 ('开工交底', '水电交底', '木工' 等)
+    node_index INTEGER NOT NULL,          -- 节点顺序 (1-8)
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed')),
     completed_at TIMESTAMP WITH TIME ZONE, -- 工长打卡确认完成的时间
     photo_urls JSONB,                     -- 存储打卡照片的 URL 数组 (JSON 格式)
@@ -115,7 +115,18 @@ CREATE TABLE project_nodes (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 8. 跟进日志表 (follow_ups) - 记录销售和设计师的沟通流水
+-- 8. 客户文件与资料表 (customer_documents) - 贯穿全链路的共享附件池
+CREATE TABLE customer_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE, -- 绑定客户线索
+    file_name VARCHAR(255) NOT NULL,      -- 文件名
+    file_type VARCHAR(20) NOT NULL CHECK (file_type IN ('合同', '图纸', '其他')), -- 资料分类
+    file_url TEXT NOT NULL,               -- 文件存储地址 (如 OSS 链接)
+    uploaded_by UUID REFERENCES users(id),-- 上传人
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 9. 跟进日志表 (follow_ups) - 记录销售和设计师的沟通流水
 CREATE TABLE follow_ups (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lead_id UUID NOT NULL REFERENCES leads(id) ON DELETE CASCADE,
@@ -128,5 +139,5 @@ CREATE TABLE follow_ups (
 -- ==============================================================================
 -- 触发器/函数 (预留):
 -- 1. 当 leads 表的 status 变为 '已签单' 时，自动在 projects 表创建一条新记录。
--- 2. 创建 project 时，自动在 project_nodes 表插入 11 条初始状态(pending)的节点数据。
+-- 2. 创建 project 时，自动在 project_nodes 表插入 8 条初始状态(pending)的节点数据。
 -- ==============================================================================

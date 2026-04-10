@@ -1,3 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>品诺筑家 (PNZJ) - 系统 PRD (V2.0)</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Mermaid.js for Flowcharts -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #F7F5F2; /* 暖米灰 */
+            --text-color: #2C2825; /* 深炭咖 */
+            --accent-color: #D4B895; /* 品牌强调色 */
+            --border-color: #E5E0D8;
+            --sidebar-width: 300px;
+            --font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.7;
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar / TOC */
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: #ffffff;
+            border-right: 1px solid var(--border-color);
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
+            overflow-y: auto;
+            padding: 2rem 1.5rem;
+            transition: transform 0.3s ease;
+            z-index: 100;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.03);
+        }
+
+        #sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        #sidebar h3 {
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-color);
+            font-weight: 700;
+            border-bottom: 2px solid var(--accent-color);
+            display: inline-block;
+            padding-bottom: 0.5rem;
+        }
+
+        #toc ul {
+            list-style: none;
+        }
+
+        #toc ul ul {
+            padding-left: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        #toc li {
+            margin-bottom: 0.8rem;
+        }
+
+        #toc a {
+            text-decoration: none;
+            color: #6b6661;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+            display: block;
+        }
+
+        #toc a:hover {
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        /* Main Content */
+        #main-content {
+            margin-left: var(--sidebar-width);
+            padding: 3rem 4rem;
+            max-width: 1000px;
+            width: 100%;
+            transition: margin-left 0.3s ease;
+            background-color: var(--bg-color);
+        }
+
+        #main-content.expanded {
+            margin-left: 0;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Toggle Button */
+        #toggle-sidebar {
+            position: fixed;
+            left: 20px;
+            top: 20px;
+            z-index: 200;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: none; /* Only show when collapsed or on mobile */
+        }
+
+        /* Typography inside Content */
+        #content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        #content h2 {
+            font-size: 1.8rem;
+            margin-top: 3.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 700;
+        }
+
+        #content h3 {
+            font-size: 1.3rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        #content p {
+            margin-bottom: 1.2rem;
+            color: #4a4542;
+        }
+
+        #content ul, #content ol {
+            margin-bottom: 1.2rem;
+            padding-left: 1.5rem;
+            color: #4a4542;
+        }
+
+        #content li {
+            margin-bottom: 0.5rem;
+        }
+
+        #content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: #fff;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+        }
+
+        #content th, #content td {
+            padding: 1rem 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        #content th {
+            background-color: #fcfbf9;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        #content strong {
+            color: var(--text-color);
+            font-weight: 700;
+        }
+
+        #content code:not(.language-mermaid) {
+            background: #eae6df;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #d9480f;
+        }
+
+        /* Mermaid container styling */
+        .mermaid {
+            background: #fff;
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+            margin: 2.5rem 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 1024px) {
+            #sidebar {
+                transform: translateX(-100%);
+            }
+            #main-content {
+                margin-left: 0;
+                padding: 4rem 2rem;
+            }
+            #toggle-sidebar {
+                display: block;
+            }
+            #sidebar.mobile-open {
+                transform: translateX(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <button id="toggle-sidebar">☰ 目录</button>
+
+    <aside id="sidebar">
+        <h3>PRD 目录</h3>
+        <nav id="toc"></nav>
+    </aside>
+
+    <main id="main-content">
+        <div id="content"></div>
+    </main>
+
+    <!-- 动态读取 Markdown 内容 -->
+    <script>
+        // Mermaid 配置，使其风格符合我们系统的主题
+        mermaid.initialize({ 
+            startOnLoad: false,
+            theme: 'base',
+            themeVariables: {
+                primaryColor: '#F7F5F2',
+                primaryTextColor: '#2C2825',
+                primaryBorderColor: '#D4B895',
+                lineColor: '#D4B895',
+                secondaryColor: '#ffffff',
+                tertiaryColor: '#fcfbf9'
+            },
+            flowchart: {
+                curve: 'basis'
+            }
+        });
+
+        // 尝试通过 Fetch 读取本地 PRD.md (需要运行在本地服务器环境下)
+        // 为了兼容直接双击打开 HTML，这里加入一个 Fallback 机制
+        async function loadMarkdown() {
+            try {
+                const response = await fetch('PRD.md');
+                if (!response.ok) throw new Error('Failed to fetch');
+                const markdownText = await response.text();
+                renderContent(markdownText);
+            } catch (e) {
+                console.log('Fetch failed, possibly due to CORS on file:// protocol. Using embedded fallback.');
+                // 由于不能使用 fetch，使用内置的备用文本。
+                // 实际在Trae中生成时，直接将 PRD 内容嵌入在 script 中更稳妥
+            }
+        }
+    </script>
+    
+    <script type="text/markdown" id="prd-markdown">
 # 品诺筑家 (PNZJ) - 轻量化整装全链路管理系统 PRD (V2.0)
 
 ## 1. 执行摘要 (Executive Summary)
@@ -227,3 +509,83 @@ graph TD
 
 ### 遗留问题与风险 (Open Questions)
 *   **遗留问题**：照片存储容量（8个节点的工地照片可能会大量占用对象存储空间，需制定图片压缩上传策略）。
+    </script>
+
+    <script>
+        async function renderContent(markdownText) {
+            // 使用 marked 默认解析
+            const html = marked.parse(markdownText);
+            document.getElementById('content').innerHTML = html;
+
+            // 手动查找所有的 language-mermaid code 块并替换为 div.mermaid
+            const mermaidCodes = document.querySelectorAll('code.language-mermaid');
+            mermaidCodes.forEach(codeBlock => {
+                const pre = codeBlock.parentElement;
+                const div = document.createElement('div');
+                div.className = 'mermaid';
+                div.textContent = codeBlock.textContent; // 提取纯文本内容
+                pre.replaceWith(div); // 替换掉整个 <pre>
+            });
+
+            // 等待DOM更新后，执行mermaid渲染
+            try {
+                mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+            } catch (err) {
+                console.error('Mermaid render error:', err);
+            }
+
+            // 生成目录 (TOC)
+            generateTOC();
+        }
+
+        function generateTOC() {
+            const content = document.getElementById('content');
+            const headings = content.querySelectorAll('h2, h3');
+            const toc = document.getElementById('toc');
+            const ul = document.createElement('ul');
+            let currentH2Li = null;
+            let currentH2Ul = null;
+
+            headings.forEach((heading, index) => {
+                const id = `heading-${index}`;
+                heading.id = id;
+
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = heading.textContent;
+                li.appendChild(a);
+
+                if (heading.tagName.toLowerCase() === 'h2') {
+                    ul.appendChild(li);
+                    currentH2Li = li;
+                    currentH2Ul = document.createElement('ul');
+                    currentH2Li.appendChild(currentH2Ul);
+                } else if (heading.tagName.toLowerCase() === 'h3' && currentH2Ul) {
+                    currentH2Ul.appendChild(li);
+                }
+            });
+
+            toc.appendChild(ul);
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            const rawMarkdown = document.getElementById('prd-markdown').textContent;
+            await renderContent(rawMarkdown);
+
+            // Sidebar Toggle
+            const toggleBtn = document.getElementById('toggle-sidebar');
+            const sidebar = document.getElementById('sidebar');
+            
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('mobile-open');
+                if (window.innerWidth > 1024) {
+                    sidebar.classList.toggle('collapsed');
+                    document.getElementById('main-content').classList.toggle('expanded');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
