@@ -254,10 +254,10 @@ export default function MaterialsPage() {
         </button>
       </div>
 
-        {/* 筛选与搜索 - 融合风格：留白背景 + 精致边框 */}
+      {/* 筛选与搜索 - 融合风格 */}
       <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
         {/* 分类标签 */}
-        <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar flex-1">
+        <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
           {categories.map((cat) => (
             <button
               key={cat}
@@ -316,7 +316,7 @@ export default function MaterialsPage() {
           </div>
 
           {/* 搜索框 */}
-          <div className="relative w-full sm:w-72">
+          <div className="relative flex-1 sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-600" />
             <input
               type="text"

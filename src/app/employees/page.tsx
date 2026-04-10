@@ -111,9 +111,9 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        {/* 搜索与筛选区 */}
+        {/* 筛选与搜索 - 融合风格 */}
         <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
+        <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
             {["all", "sales", "designer", "manager", "admin"].map((tab) => (
               <button
                 key={tab}
@@ -129,13 +129,13 @@ export default function EmployeesPage() {
             ))}
           </div>
 
-          <div className="relative w-full sm:w-72">
+          <div className="relative flex-1 sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-600" />
             <input
               type="text"
+              placeholder="搜索员工姓名 / 手机号..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索员工姓名 / 手机号..."
               className="w-full min-h-[44px] pl-9 pr-4 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
             />
           </div>

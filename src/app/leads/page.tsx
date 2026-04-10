@@ -40,13 +40,13 @@ function LeadsContent() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isModalOpen || isFilterOpen) {
+    if (isModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
     return () => { document.body.style.overflow = 'unset'; };
-  }, [isModalOpen, isFilterOpen]);
+  }, [isModalOpen]);
 
   const handleAddLead = (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,7 +204,7 @@ function LeadsContent() {
           {isFilterOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setIsFilterOpen(false)} />
-              <div className="absolute right-0 top-full mt-2 z-50 w-80 bg-white border border-primary-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute left-0 top-full mt-2 z-50 w-full sm:w-80 bg-white border border-primary-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="space-y-4">
                   <div className="relative z-50">
                     <label className="block text-xs font-medium text-primary-600 mb-1">跟进状态</label>

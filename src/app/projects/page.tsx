@@ -20,14 +20,7 @@ export default function ProjectsPage() {
   const [filterHealth, setFilterHealth] = useState("全部");
   const [isHealthDropdownOpen, setIsHealthDropdownOpen] = useState(false);
 
-  useEffect(() => {
-    if (isAdvancedFilterOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => { document.body.style.overflow = 'unset'; };
-  }, [isAdvancedFilterOpen]);
+  // 移除 body scroll lock，允许筛选框滚动
 
   const nodesList = ["开工", "水电", "木工", "瓦工", "墙面", "定制", "软装", "交付"];
 
@@ -92,9 +85,9 @@ export default function ProjectsPage() {
           </div>
         </div>
 
-        {/* 筛选与搜索 */}
-        <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
+        {/* 筛选与搜索 - 融合风格 */}
+      <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
             {statuses.map((status) => (
               <button
                 key={status}
@@ -106,18 +99,18 @@ export default function ProjectsPage() {
             ))}
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto relative">
+          <div className="flex items-center gap-3 w-full sm:w-auto relative">
             {/* 高级筛选按钮 */}
             <button 
               onClick={() => setIsAdvancedFilterOpen(!isAdvancedFilterOpen)}
-              className={`flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-lg transition-colors font-medium relative shrink-0 border ${
+              className={`flex items-center justify-center min-h-[44px] px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium w-full sm:w-auto border ${
                 isAdvancedFilterOpen || filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterManager !== '全部' || filterHealth !== '全部'
                   ? "bg-primary-50 border-primary-300 text-primary-900 ring-2 ring-primary-100" 
                   : "bg-white border-primary-100 hover:bg-primary-50 text-primary-900"
               }`}
             >
-              <Filter className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">高级筛选</span>
+              <Filter className="w-4 h-4 mr-2" />
+              高级筛选
               {/* 如果有筛选条件，显示小红点 */}
               {(filterYear !== '全部' || filterMonth !== '全部' || filterDay || filterManager !== '全部' || filterHealth !== '全部') && (
                 <span className="ml-2 w-2 h-2 bg-rose-500 rounded-full"></span>
@@ -129,7 +122,7 @@ export default function ProjectsPage() {
             {isAdvancedFilterOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setIsAdvancedFilterOpen(false)} />
-                <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 z-50 w-[calc(100vw-2rem)] sm:w-80 bg-white border border-primary-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="absolute left-0 top-full mt-2 z-50 w-full sm:w-80 bg-white border border-primary-100 rounded-xl shadow-xl p-4 animate-in fade-in slide-in-from-top-2 duration-150">
                   <div className="space-y-4">
                     {/* 开工时间范围 */}
                     <div className="space-y-2 relative z-30">
@@ -290,14 +283,14 @@ export default function ProjectsPage() {
               </>
             )}
 
-            <div className="relative w-full sm:w-80">
+            <div className="relative flex-1 sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-600" />
               <input
                 type="text"
                 placeholder="搜索客户 / 工长..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full min-h-[44px] pl-9 pr-4 py-2.5 bg-white border border-primary-100 rounded-lg text-sm focus:ring-2 focus:ring-primary-900 transition-all outline-none text-primary-900 placeholder:text-primary-400"
+                className="w-full min-h-[44px] pl-9 pr-4 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
               />
             </div>
           </div>

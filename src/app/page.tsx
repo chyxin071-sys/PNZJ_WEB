@@ -284,40 +284,40 @@ export default function Dashboard() {
         {/* 第一排：线索转化率、本月光荣榜 */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* 转化率柱状图 */}
-          <div className="lg:col-span-2 bg-white rounded-xl border border-primary-100 shadow-sm p-6 h-[400px] flex flex-col">
-            <div className="flex justify-between items-start mb-6">
-              <h3 className="text-base font-bold text-primary-900 flex items-center">
+          <div className="lg:col-span-2 bg-white rounded-xl border border-primary-100 shadow-sm p-4 sm:p-6 min-h-[450px] lg:h-[400px] flex flex-col">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-6 gap-4">
+              <h3 className="text-base font-bold text-primary-900 flex items-center shrink-0">
                 <span className="w-1.5 h-4 bg-primary-900 mr-2 rounded-sm inline-block"></span>  
                 线索转化率分析
               </h3>
-              <div className="flex flex-col items-end gap-2 relative z-20">
-                <div className="flex bg-primary-50 rounded-lg p-1 mt-1">
+              <div className="flex flex-col sm:items-end gap-2 relative z-20 w-full sm:w-auto">
+                <div className="flex bg-primary-50 rounded-lg p-1 w-full sm:w-auto overflow-x-auto hide-scrollbar">
                   <button 
                     onClick={() => setConversionView('monthly')}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${conversionView === 'monthly' ? 'bg-white shadow-sm text-primary-900' : 'text-primary-600'}`}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${conversionView === 'monthly' ? 'bg-white shadow-sm text-primary-900' : 'text-primary-600'}`}
                   >
                     月度趋势
                   </button>
                   <button 
                     onClick={() => setConversionView('weekly')}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${conversionView === 'weekly' ? 'bg-white shadow-sm text-primary-900' : 'text-primary-600'}`}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${conversionView === 'weekly' ? 'bg-white shadow-sm text-primary-900' : 'text-primary-600'}`}
                   >
                     周度趋势
                   </button>
                   <button 
                     onClick={() => setConversionView('personnel')}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${conversionView === 'personnel' ? 'bg-white shadow-sm text-primary-900' : 'text-primary-600'}`}
+                    className={`flex-1 sm:flex-none px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap ${conversionView === 'personnel' ? 'bg-white shadow-sm text-primary-900' : 'text-primary-600'}`}
                   >
                     人员对比
                   </button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   {/* 自定义时间下拉菜单 (动态切换 年/月) */}
                   {conversionView === 'monthly' ? (
-                    <div className="relative">
+                    <div className="relative flex-1 sm:flex-none">
                       <button 
                         onClick={() => setIsYearDropdownOpen(!isYearDropdownOpen)}
-                        className="px-3 py-1.5 bg-primary-50 hover:bg-primary-100 rounded-lg text-xs font-medium text-primary-900 transition-colors flex items-center justify-between min-w-[80px]"
+                        className="px-3 py-1.5 bg-primary-50 hover:bg-primary-100 rounded-lg text-xs font-medium text-primary-900 transition-colors flex items-center justify-between flex-1 sm:flex-none min-w-[80px]"
                       >
                         {conversionYear}
                         <ChevronDown className="w-3 h-3 ml-1 text-primary-600" />
@@ -343,10 +343,10 @@ export default function Dashboard() {
                       )}
                     </div>
                   ) : (
-                    <div className="relative">
+                    <div className="relative flex-1 sm:flex-none">
                       <button 
                         onClick={() => setIsMonthDropdownOpen(!isMonthDropdownOpen)}
-                        className="px-3 py-1.5 bg-primary-50 hover:bg-primary-100 rounded-lg text-xs font-medium text-primary-900 transition-colors flex items-center justify-between min-w-[80px]"
+                        className="px-3 py-1.5 bg-primary-50 hover:bg-primary-100 rounded-lg text-xs font-medium text-primary-900 transition-colors flex items-center justify-between flex-1 sm:flex-none min-w-[80px]"
                       >
                         {conversionMonth}
                         <ChevronDown className="w-3 h-3 ml-1 text-primary-600" />
@@ -374,10 +374,10 @@ export default function Dashboard() {
                   )}
 
                   {/* 自定义销售下拉菜单 (移到右侧) */}
-                  <div className="relative">
+                  <div className="relative flex-1 sm:flex-none">
                     <button 
                       onClick={() => setIsSalesDropdownOpen(!isSalesDropdownOpen)}
-                      className="px-3 py-1.5 bg-primary-50 hover:bg-primary-100 rounded-lg text-xs font-medium text-primary-900 transition-colors flex items-center justify-between min-w-[90px]"
+                      className="px-3 py-1.5 bg-primary-50 hover:bg-primary-100 rounded-lg text-xs font-medium text-primary-900 transition-colors flex items-center justify-between flex-1 sm:flex-none min-w-[90px]"
                     >
                       {conversionSales}
                       <ChevronDown className="w-3 h-3 ml-1 text-primary-600" />
@@ -423,7 +423,7 @@ export default function Dashboard() {
           </div>
 
           {/* 签单光荣榜 */}
-          <div className="lg:col-span-1 bg-white rounded-xl border border-primary-100 shadow-sm p-6 flex flex-col">
+          <div className="lg:col-span-1 bg-white rounded-xl border border-primary-100 shadow-sm p-4 sm:p-6 flex flex-col min-h-[400px] lg:h-[400px]">
             <h3 className="text-base font-bold text-primary-900 mb-6 flex items-center">
               <span className="w-1.5 h-4 bg-primary-900 mr-2 rounded-sm inline-block"></span>  
               本月光荣榜 (动态签单榜)

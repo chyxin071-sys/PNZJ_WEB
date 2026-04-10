@@ -44,7 +44,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         
         <nav className="flex-1 py-6 px-3 space-y-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link 
                 key={item.name} 
@@ -93,7 +93,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
         <nav className="flex-1 py-8 px-4 space-y-2">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link
                 key={item.name} 
@@ -138,7 +138,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
               </button>
 
               {isNotifOpen && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute right-0 sm:right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 -mr-12 sm:mr-0 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="p-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/30">
                     <h3 className="font-bold text-primary-900">通知消息</h3>
                     <button className="text-xs font-medium text-primary-600 hover:text-primary-900">全部已读</button>

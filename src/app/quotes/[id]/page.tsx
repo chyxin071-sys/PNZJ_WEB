@@ -213,12 +213,8 @@ export default function QuoteDetailPage() {
                 <p className="text-sm font-medium text-primary-900">{customer.phone}</p>
               </div>
               <div>
-                <p className="text-xs text-primary-400 mb-1">项目地址</p>
-                <p className="text-sm font-medium text-primary-900">{customer.address || "暂无"}</p>
-              </div>
-              <div>
                 <p className="text-xs text-primary-400 mb-1">房屋信息</p>
-                <p className="text-sm font-medium text-primary-900">{customer.requirementType} · {customer.area}m²</p>
+                <p className="text-sm font-medium text-primary-900">{customer.address || "暂无地址"} · {customer.requirementType} · {customer.area ? `${customer.area}m²` : "面积未知"}</p>
               </div>
               <div>
                 <p className="text-xs text-primary-400 mb-1">意向预算</p>
