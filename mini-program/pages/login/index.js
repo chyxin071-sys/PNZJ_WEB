@@ -1,11 +1,12 @@
 // pages/login/index.js
 Page({
   data: {
-    // any state needed
+    username: '',
+    password: ''
   },
 
-  onLoad(options) {
-    // Check if already logged in
+  onLoad() {
+    // 检查是否已登录
     const userInfo = wx.getStorageSync('userInfo');
     if (userInfo) {
       wx.switchTab({
@@ -14,51 +15,52 @@ Page({
     }
   },
 
-  handleGetPhoneNumber(e) {
-    if (e.detail.errMsg === "getPhoneNumber:ok") {
-      // User allowed getting phone number
-      // In real app, we send e.detail.code to our backend
-      wx.showLoading({ title: '登录中...' });
-      
-      setTimeout(() => {
-        wx.hideLoading();
-        this.doLoginSuccess({
-          name: '微信用户',
-          role: '未知角色',
-          phone: '138****8888'
-        });
-      }, 800);
-    } else {
-      wx.showToast({
-        title: '需要授权才能提供完整服务哦',
-        icon: 'none'
-      });
-    }
+  onInput(e) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({
+      [field]: e.detail.value
+    });
   },
 
-  handleMockLogin() {
-    wx.showLoading({ title: '免密登录中...' });
+  handleLogin() {
+    const { username, password } = this.data;
+    
+    if (!username.trim()) {
+      return wx.showToast({ title: '请输入账号', icon: 'none' });
+    }
+    if (!password.trim()) {
+      return wx.showToast({ title: '请输入密码', icon: 'none' });
+    }
+
+    wx.showLoading({ title: '登录中...' });
+    
+    // 模拟账号密码登录校验
     setTimeout(() => {
       wx.hideLoading();
+      
+      // 简单模拟：如果账号是 admin，则认为是老板
+      let role = 'sales';
+      let name = '测试员工';
+      
+      if (username === 'admin' || username === '老板') {
+        role = 'admin';
+        name = '老板';
+      }
+
       this.doLoginSuccess({
-        id: 'user_1',
-        name: '测试用户(老板)',
-        role: 'admin',
-        phone: '13800138000',
+        id: `user_${new Date().getTime()}`,
+        name: name,
+        role: role,
+        phone: username,
         avatarUrl: ''
       });
-    }, 500);
+    }, 800);
   },
 
   doLoginSuccess(userInfo) {
-    // Save to storage
     wx.setStorageSync('userInfo', userInfo);
-    wx.showToast({
-      title: '登录成功',
-      icon: 'success'
-    });
-    
-    // Redirect to home page
+    wx.showToast({ title: '登录成功', icon: 'success' });
+
     setTimeout(() => {
       wx.switchTab({
         url: '/pages/index/index'

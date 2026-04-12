@@ -2,6 +2,8 @@ const employeesData = require('../../mock/employees.js');
 
 Page({
   data: {
+    id: null,
+    isEdit: false,
     formData: {
       name: '',
       phone: '',
@@ -11,14 +13,16 @@ Page({
       status: '待分配',
       requirementType: '全案',
       budget: '暂无',
+      source: '自然进店',
       salesId: '',
       designerId: ''
     },
     
     ratingOptions: ['A', 'B', 'C', 'D'],
-    statusOptions: ['待分配', '跟进中', '已量房', '已出图', '已报预估', '已签单', '已流失'],
+    statusOptions: ['沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'],
     reqOptions: ['全案', '半包', '局改', '软装'],
     budgetOptions: ['暂无', '10-20万', '20-30万', '30-50万', '50万以上'],
+    sourceOptions: ['自然进店', '老介新', '抖音', '小红书', '大众点评', '自有关系', '其他'],
     
     salesList: [],
     designerList: [],
@@ -26,10 +30,43 @@ Page({
     designerIndex: -1
   },
 
-  onLoad() {
+  onLoad(options) {
     const sales = employeesData.filter(e => e.role === 'sales' || e.role === 'admin');
     const designers = employeesData.filter(e => e.role === 'designer' || e.role === 'admin');
     this.setData({ salesList: sales, designerList: designers });
+
+    if (options.id) {
+      wx.setNavigationBarTitle({ title: '编辑客户' });
+      this.setData({ id: options.id, isEdit: true });
+      this.loadLeadData(options.id);
+    }
+  },
+
+  loadLeadData(id) {
+    const leadsData = require('../../mock/leads.js');
+    const lead = leadsData.find(l => l.id === id);
+    if (lead) {
+      const salesIdx = this.data.salesList.findIndex(s => s.name === lead.sales);
+      const designerIdx = this.data.designerList.findIndex(d => d.name === lead.designer);
+      
+      this.setData({
+        formData: {
+          name: lead.name,
+          phone: lead.phone,
+          address: lead.address,
+          area: lead.area || '',
+          rating: lead.rating,
+          status: lead.status,
+          requirementType: lead.requirementType,
+          budget: lead.budget || '暂无',
+          source: lead.source || '自然进店',
+          salesId: salesIdx !== -1 ? this.data.salesList[salesIdx].id : '',
+          designerId: designerIdx !== -1 ? this.data.designerList[designerIdx].id : ''
+        },
+        salesIndex: salesIdx,
+        designerIndex: designerIdx
+      });
+    }
   },
 
   onInput(e) {
@@ -71,7 +108,7 @@ Page({
     wx.showLoading({ title: '保存中...' });
     setTimeout(() => {
       wx.hideLoading();
-      wx.showToast({ title: '客户已创建', icon: 'success' });
+      wx.showToast({ title: this.data.isEdit ? '修改成功' : '客户已创建', icon: 'success' });
       setTimeout(() => {
         wx.navigateBack();
       }, 1000);

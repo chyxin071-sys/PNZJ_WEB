@@ -38,11 +38,10 @@
       <view class="form-group half" wx:if="{{formData.relatedType !== 'none'}}">
         <view class="label" style="display:flex; justify-content:space-between; align-items:center;">
           <text>关联{{formData.relatedType === 'lead' ? '客户' : '工地'}}</text>
-          <text class="jump-link" wx:if="{{isEdit && formData.relatedId}}" bindtap="goToRelated">查看详情 ></text>
         </view>
         <picker bindchange="onRelatedChange" value="{{relatedIndex}}" range="{{relatedOptions}}" range-key="name" disabled="{{mode === 'view'}}">
-          <view class="picker-box">
-            <text class="{{relatedIndex === -1 ? 'ph' : 'ellipsis'}}">{{relatedIndex !== -1 ? relatedOptions[relatedIndex].name : '请选择'}}</text>
+          <view class="picker-box" bindtap="{{mode === 'view' && formData.relatedId ? 'goToRelated' : ''}}">
+            <text class="{{!formData.relatedId ? 'ph' : ''}}">{{relatedIndex !== -1 ? relatedOptions[relatedIndex].name : '请选择'}}</text>
             <view class="arrow-down" wx:if="{{mode !== 'view'}}"></view>
           </view>
         </picker>

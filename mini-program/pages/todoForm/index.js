@@ -229,10 +229,49 @@ Page({
     if (d.relatedType !== 'none' && !d.relatedId) return wx.showToast({ title: '请选择关联对象', icon: 'none' });
 
     wx.showLoading({ title: '保存中...' });
+    
+    // 更新本地 mock 数据，保证返回列表能看到最新数据
+    const todosData = require('../../mock/todos.js');
+    const assignees = this.data.employees.filter(e => d.assignedToIds.includes(e.id)).map(e => ({ id: e.id, name: e.name, role: e.role }));
+    
+    if (this.data.isEdit) {
+      const idx = todosData.findIndex(t => t.id === this.data.id);
+      if (idx > -1) {
+        todosData[idx] = {
+          ...todosData[idx],
+          title: d.title,
+          priority: d.priority,
+          relatedTo: { type: d.relatedType, id: d.relatedId },
+          dueDate: d.dueDate,
+          description: d.description,
+          assignees: assignees
+        };
+      }
+    } else {
+      const relatedName = d.relatedType === 'none' ? '' : (this.data.relatedOptions[this.data.relatedIndex]?.name || '');
+      todosData.unshift({
+        id: 'T' + Date.now(),
+        title: d.title,
+        priority: d.priority,
+        relatedTo: { type: d.relatedType, id: d.relatedId, name: relatedName },
+        dueDate: d.dueDate,
+        description: d.description,
+        assignees: assignees,
+        status: 'pending',
+        createdAt: new Date().toISOString().split('T')[0]
+      });
+    }
+
     setTimeout(() => {
       wx.hideLoading();
       wx.showToast({ title: '保存成功', icon: 'success' });
-      setTimeout(() => wx.navigateBack(), 800);
+      setTimeout(() => {
+        if (this.data.isEdit) {
+          this.setData({ mode: 'view' });
+        } else {
+          wx.navigateBack();
+        }
+      }, 800);
     }, 600);
   }
 });

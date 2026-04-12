@@ -7,9 +7,7 @@
 .dashboard-title { font-size: 44rpx; font-weight: 800; color: var(--primary-900); letter-spacing: 2rpx; }
 .date-display { font-size: 26rpx; color: var(--primary-400); font-weight: 500; }
 
-/* 标题右侧的时间筛选红框样式 */
-.date-filter-box { border: 2rpx solid #ef4444; padding: 4rpx 16rpx; border-radius: 8rpx; display: inline-flex; align-items: center; justify-content: center; }
-.date-filter-box text { font-size: 26rpx; color: var(--primary-400); font-weight: 500; }
+/* 标题右侧的时间筛选样式已移至全局 app.wxss */
 
 
 /* 新版 Web 风格数据卡片 */
@@ -18,21 +16,21 @@
 .stat-card.active-card { border-color: var(--primary-400); box-shadow: 0 8rpx 24rpx rgba(74, 64, 58, 0.08); background: var(--primary-50); }
 
 /* 卡片内图标 */
-.icon-box { width: 64rpx; height: 64rpx; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.icon-box { width: 44rpx; height: 44rpx; border-radius: 10rpx; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .bg-orange-50 { background: #fffbeb; }
 .bg-emerald-50 { background: #ecfdf5; }
 
 /* 纯 CSS 绘制的精致时钟图标 */
-.icon-clock { width: 28rpx; height: 28rpx; border: 4rpx solid #d97706; border-radius: 50%; position: relative; }
-.icon-clock::before { content: ''; position: absolute; top: 6rpx; left: 10rpx; width: 4rpx; height: 8rpx; background: #d97706; border-radius: 2rpx; }
-.icon-clock::after { content: ''; position: absolute; top: 10rpx; left: 10rpx; width: 8rpx; height: 4rpx; background: #d97706; border-radius: 2rpx; }
+.icon-clock { width: 18rpx; height: 18rpx; border: 3rpx solid #d97706; border-radius: 50%; position: relative; }
+.icon-clock::before { content: ''; position: absolute; top: 2rpx; left: 6rpx; width: 3rpx; height: 6rpx; background: #d97706; border-radius: 2rpx; }
+.icon-clock::after { content: ''; position: absolute; top: 6rpx; left: 6rpx; width: 6rpx; height: 3rpx; background: #d97706; border-radius: 2rpx; }
 
 /* 纯 CSS 绘制的精致大勾图标 */
-.icon-check { width: 14rpx; height: 24rpx; border: 4rpx solid #059669; border-top: none; border-left: none; transform: rotate(45deg); margin-top: -6rpx; }
+.icon-check { width: 8rpx; height: 14rpx; border: 3rpx solid #059669; border-top: none; border-left: none; transform: rotate(45deg); margin-top: -2rpx; }
 
 .stat-info { display: flex; flex-direction: column; justify-content: center; flex: 1; }
 .stat-label { font-size: 24rpx; color: var(--primary-600); margin-bottom: 2rpx; white-space: nowrap; }
-.stat-num { font-size: 48rpx; font-weight: 800; color: var(--primary-900); line-height: 1.1; }
+.stat-num { font-size: 40rpx; font-weight: 800; color: var(--primary-900); line-height: 1.1; }
 
 /* 操作栏 (搜索+新建) */
 .action-bar { display: flex; gap: 20rpx; padding: 32rpx 32rpx 10rpx; flex-shrink: 0; align-items: center; }
@@ -41,12 +39,7 @@
 .search-wrap input { flex: 1; margin-left: 16rpx; font-size: 28rpx; color: var(--primary-900); }
 .ph { color: var(--primary-400); }
 
-/* 时间筛选按钮 */
-.btn-filter { background: #fff; border-radius: 20rpx; width: 80rpx; height: 80rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.02); border: 1rpx solid transparent; flex-shrink: 0; position: relative; transition: all 0.15s; }
-.icon-filter { width: 36rpx; height: 36rpx; position: relative; display: flex; justify-content: center; }
-.icon-filter::before { content: ''; position: absolute; top: 0; left: 0; border-top: 14rpx solid var(--primary-900); border-left: 14rpx solid transparent; border-right: 14rpx solid transparent; width: 8rpx; height: 0; }
-.icon-filter::after { content: ''; position: absolute; top: 14rpx; width: 8rpx; height: 16rpx; background: var(--primary-900); border-radius: 0 0 4rpx 4rpx; }
-.filter-badge { position: absolute; top: 16rpx; right: 16rpx; width: 12rpx; height: 12rpx; background: #ef4444; border-radius: 50%; border: 2rpx solid #fff; }
+/* 筛选按钮样式已移至全局 app.wxss */
 
 .btn-create-small { background: var(--primary-900); color: #fff; border-radius: 20rpx; height: 80rpx; padding: 0 32rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: bold; box-shadow: 0 6rpx 16rpx rgba(74, 64, 58, 0.2); transition: all 0.15s; flex-shrink: 0; }
 .btn-create-hover { background: #3d342f !important; transform: scale(0.96); opacity: 0.95; }

@@ -24,15 +24,15 @@
         </view>
       </view>
       <!-- A级卡片 -->
-      <view class="stat-card {{activeTab === 'A级' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="A级">
-        <view class="icon-box bg-orange-50">
-          <view class="icon-star"></view>
+        <view class="stat-card {{activeTab === 'A级' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="A级">
+          <view class="icon-box bg-orange-50">
+            <text class="icon-star">★</text>
+          </view>
+          <view class="stat-info">
+            <text class="stat-label">A级客户</text>
+            <text class="stat-num">{{aRatingCount}}</text>
+          </view>
         </view>
-        <view class="stat-info">
-          <text class="stat-label">A级客户</text>
-          <text class="stat-num">{{aRatingCount}}</text>
-        </view>
-      </view>
       <!-- 已签单卡片 -->
       <view class="stat-card {{activeTab === '已签单' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="已签单">
         <view class="icon-box bg-emerald-50">
@@ -52,12 +52,12 @@
       <icon type="search" size="16" color="#b5a49a" />
       <input placeholder="搜索客户/电话/小区..." placeholder-class="ph" bindinput="onSearch" />
     </view>
-    <!-- 人员高级筛选器 (三横线图标) -->
+    <!-- 高级筛选器 (三横线图标) -->
     <view class="btn-filter hover-scale" bindtap="openAdvancedFilter">
       <view class="icon-filter">
         <view class="line-mid"></view>
       </view>
-      <view class="filter-badge" wx:if="{{selectedEmployeeIds.length > 0}}"></view>
+      <view class="filter-badge" wx:if="{{selectedEmployeeIds.length > 0 || selectedRatings.length > 0 || selectedSources.length > 0}}"></view>
     </view>
     <view class="btn-create-small" hover-class="btn-create-hover" bindtap="createLead">
       <view class="plus-icon"></view>
@@ -92,7 +92,7 @@
           <text class="address">{{item.address}}</text>
         </view>
         <view class="info-row mt-2">
-          <text class="meta-text">{{item.requirementType}} · {{item.area}}m²  · {{item.budget}}</text>
+          <text class="meta-text">{{item.requirementType}} · {{item.area}}m² · {{item.budget}} · {{item.source}}</text>
         </view>
       </view>
 
@@ -119,19 +119,42 @@
     <view class="bottom-padding"></view>
   </scroll-view>
 
-  <!-- 高级人员筛选弹窗 -->
+  <!-- 高级筛选弹窗 -->
   <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
   <view class="modal-content" wx:if="{{showFilterModal}}">
     <view class="modal-header">
-      <text>人员高级筛选</text>
+      <text>高级筛选</text>
       <view class="btn-close" bindtap="applyFilter">确定</view>
     </view>
     <scroll-view scroll-y class="modal-list">
-      <view class="employee-item" wx:for="{{filterEmployees}}" wx:key="id" bindtap="toggleFilterEmployee" data-id="{{item.id}}">
-        <view class="checkbox {{item.selected ? 'checked' : ''}}">
-          <view wx:if="{{item.selected}}" class="checkmark"></view>
+      <!-- 评级 -->
+      <view class="filter-section">
+        <view class="filter-title">评级</view>
+        <view class="filter-tags">
+          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterRatings}}" wx:key="name" bindtap="toggleFilterRating" data-name="{{item.name}}">
+            {{item.name}}级
+          </view>
         </view>
-        <text class="emp-name">{{item.name}}</text>
+      </view>
+
+      <!-- 来源 -->
+      <view class="filter-section">
+        <view class="filter-title">来源</view>
+        <view class="filter-tags">
+          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterSources}}" wx:key="name" bindtap="toggleFilterSource" data-name="{{item.name}}">
+            {{item.name}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 人员 -->
+      <view class="filter-section">
+        <view class="filter-title">人员</view>
+        <view class="filter-tags">
+          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterEmployees}}" wx:key="id" bindtap="toggleFilterEmployee" data-id="{{item.id}}">
+            {{item.name}}
+          </view>
+        </view>
       </view>
     </scroll-view>
   </view>

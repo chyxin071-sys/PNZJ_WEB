@@ -1,0 +1,68 @@
+<view class="page-container">
+  
+  <!-- 头部统计与操作 -->
+  <view class="header-section">
+    <view class="header-left">
+      <view class="title">组织架构</view>
+      <view class="subtitle">共 {{allEmployees.length}} 名员工</view>
+    </view>
+    <!-- <view class="btn-add hover-scale" bindtap="addEmployee">
+      <text>+</text> 添加
+    </view> -->
+  </view>
+
+  <!-- 搜索与筛选区 -->
+  <view class="filter-section">
+    <view class="tabs">
+      <view 
+        class="tab {{activeTab === item.key ? 'active' : ''}}" 
+        wx:for="{{tabs}}" 
+        wx:key="key" 
+        bindtap="switchTab" 
+        data-tab="{{item.key}}"
+      >
+        {{item.name}}
+      </view>
+    </view>
+    
+    <view class="search-wrap">
+      <icon type="search" size="16" color="#b5a49a" />
+      <input placeholder="搜索员工姓名/手机号..." placeholder-class="ph" bindinput="onSearch" />
+    </view>
+  </view>
+
+  <!-- 员工列表 -->
+  <scroll-view scroll-y class="list-scroll">
+    <view class="employee-card hover-scale" wx:for="{{filteredEmployees}}" wx:key="id">
+      <view class="card-left">
+        <!-- 头像取名字第一个字 -->
+        <view class="avatar {{item.role}}">{{item.name[0]}}</view>
+        <view class="info">
+          <view class="name-row">
+            <text class="name">{{item.name}}</text>
+            <view class="role-badge role-{{item.role}}">
+              {{item.role === 'admin' ? '管理员' : item.role === 'designer' ? '设计师' : item.role === 'sales' ? '销售' : item.role === 'manager' ? '项目经理' : '员工'}}
+            </view>
+            <view class="status-badge {{item.status === 'active' ? 'active' : 'inactive'}}">
+              {{item.status === 'active' ? '在职' : '离职'}}
+            </view>
+          </view>
+          <view class="meta-row">
+            <text class="meta-item">{{item.username}}</text>
+            <text class="divider">|</text>
+            <text class="meta-item">{{item.department}}</text>
+            <text class="divider">|</text>
+            <text class="meta-item">入职: {{item.joinDate}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 空状态 -->
+    <view class="empty-state" wx:if="{{filteredEmployees.length === 0}}">
+      <text>暂无相关人员</text>
+    </view>
+    
+    <view class="bottom-padding"></view>
+  </scroll-view>
+</view>

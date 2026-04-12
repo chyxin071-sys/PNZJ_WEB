@@ -1,26 +1,26 @@
-<view class="container">
-  <view class="header">
-    <view class="logo-placeholder">品</view>
-    <view class="brand-name">品诺筑家</view>
-    <view class="slogan">品诺有心，筑家有道</view>
+<view class="login-container">
+  <view class="brand">
+    <view class="logo-wrap">
+      <view class="logo"></view>
+    </view>
+    <view class="title">品诺筑家</view>
+    <view class="slogan">品诺有心，筑家有道。</view>
+  </view>
+  
+  <view class="form">
+    <view class="input-wrap">
+      <view class="icon-user"></view>
+      <input class="input" placeholder="请输入手机号/账号" placeholder-class="ph" value="{{username}}" bindinput="onInput" data-field="username" />
+    </view>
+    <view class="input-wrap">
+      <view class="icon-lock"></view>
+      <input class="input" type="password" placeholder="请输入密码" placeholder-class="ph" value="{{password}}" bindinput="onInput" data-field="password" />
+    </view>
+    
+    <view class="btn-login hover-scale" bindtap="handleLogin">登 录</view>
   </view>
 
-  <view class="main">
-    <button class="btn-login-wechat" open-type="getPhoneNumber" bindgetphonenumber="handleGetPhoneNumber" hover-class="btn-hover">
-      <view class="wechat-icon"></view>
-      <text>手机号快捷登录</text>
-    </button>
-    <view class="login-tip">推荐使用微信绑定的手机号一键登录</view>
-
-    <!-- Mock Login Button for development -->
-    <view class="mock-login" bindtap="handleMockLogin" hover-class="mock-hover">
-      <text>开发环境：点此免密体验</text>
-    </view>
-  </view>
-
-  <view class="footer">
-    <view class="agreement">
-      登录即代表您同意 <text class="link">《用户服务协议》</text> 及 <text class="link">《隐私政策》</text>
-    </view>
+  <view class="bottom-tips">
+    <text>账号由管理员统一分配</text>
   </view>
 </view>

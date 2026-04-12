@@ -15,6 +15,9 @@ Page({
    * 生命周期函数--监听页面显示
    */
   onShow() {
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 3 });
+    }
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) {
       wx.reLaunch({
@@ -34,7 +37,7 @@ Page({
   },
 
   goToTeam() {
-    wx.showToast({ title: '组织架构开发中', icon: 'none' });
+    wx.navigateTo({ url: '/pages/employees/index' });
   },
 
   handleLogout() {

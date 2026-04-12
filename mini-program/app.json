@@ -7,7 +7,9 @@
     "pages/profile/index",
     "pages/todoForm/index",
     "pages/leadForm/index",
-    "pages/leadDetail/index"
+    "pages/leadDetail/index",
+    "pages/addFollowUp/index",
+    "pages/employees/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
@@ -17,6 +19,7 @@
     "backgroundTextStyle": "light"
   },
   "tabBar": {
+    "custom": true,
     "color": "#999999",
     "selectedColor": "#4a403a",
     "backgroundColor": "#ffffff",
@@ -24,27 +27,19 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "",
-        "iconPath": "/assets/icons/todo.png",
-        "selectedIconPath": "/assets/icons/todo-active.png"
+        "text": ""
       },
       {
         "pagePath": "pages/leads/index",
-        "text": "",
-        "iconPath": "/assets/icons/leads.png",
-        "selectedIconPath": "/assets/icons/leads-active.png"
+        "text": ""
       },
       {
         "pagePath": "pages/projects/index",
-        "text": "",
-        "iconPath": "/assets/icons/projects.png",
-        "selectedIconPath": "/assets/icons/projects-active.png"
+        "text": ""
       },
       {
         "pagePath": "pages/profile/index",
-        "text": "",
-        "iconPath": "/assets/icons/profile.png",
-        "selectedIconPath": "/assets/icons/profile-active.png"
+        "text": ""
       }
     ]
   },

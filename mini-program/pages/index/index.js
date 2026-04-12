@@ -36,6 +36,9 @@ Page({
     }
     // 每次显示时重新过滤，以防全局状态被其他页面改变（如果有）
     this.filterTodos();
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 0 });
+    }
   },
   onLoad() {
     // 恢复筛选状态
@@ -78,8 +81,12 @@ Page({
     
     // 搜索过滤
     if (this.data.searchQuery) {
-      const q = this.data.searchQuery.toLowerCase();
-      filtered = filtered.filter(t => t.title.toLowerCase().includes(q) || (t.description && t.description.toLowerCase().includes(q)));
+      const q = this.data.searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(t => {
+        const titleMatch = t.title ? String(t.title).toLowerCase().includes(q) : false;
+        const descMatch = t.description ? String(t.description).toLowerCase().includes(q) : false;
+        return titleMatch || descMatch;
+      });
     }
 
     // 时间范围过滤 (以 dueDate 为主，如果没有则以 createdAt 为主)
@@ -106,7 +113,7 @@ Page({
       
       let assignedNames = '待指派';
       if (t.assignees && t.assignees.length > 0) {
-        assignedNames = t.assignees.map(a => a.name).join('、');
+        assignedNames = t.assignees.map(a => a.name).join(' | ');
       } else if (t.assignedTo) {
         // Fallback for any unmigrated mock data
         assignedNames = t.assignedTo.name;
@@ -149,17 +156,24 @@ Page({
     }
 
     // 计算到期状态
-    const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
-    const todayTime = new Date(today).getTime();
+    const today = new Date();
+    // 清零时分秒，仅比较日期
+    today.setHours(0, 0, 0, 0);
+    const todayTime = today.getTime();
 
     filtered = filtered.map(t => {
       let dueStatus = 'future';
       if (t.dueDate) {
-        const dueTime = new Date(t.dueDate.replace(/-/g, '/')).getTime();
+        const dueObj = new Date(t.dueDate.replace(/-/g, '/'));
+        dueObj.setHours(0, 0, 0, 0);
+        const dueTime = dueObj.getTime();
+        
         if (dueTime < todayTime) {
           dueStatus = 'overdue';
         } else if (dueTime === todayTime) {
           dueStatus = 'today';
+        } else {
+          dueStatus = 'future';
         }
       }
       return { ...t, dueStatus };

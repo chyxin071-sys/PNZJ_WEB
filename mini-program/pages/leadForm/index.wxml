@@ -52,14 +52,25 @@
       </view>
     </view>
 
-    <view class="form-group">
-      <view class="label">装修预算</view>
-      <picker bindchange="onPickerChange" data-field="budget" data-options="budgetOptions" value="{{budgetOptions.indexOf(formData.budget)}}" range="{{budgetOptions}}">
-        <view class="picker-box">
-          <text>{{formData.budget}}</text>
-          <view class="arrow-down"></view>
-        </view>
-      </picker>
+    <view class="form-row-group">
+      <view class="form-group half">
+        <view class="label">装修预算</view>
+        <picker bindchange="onPickerChange" data-field="budget" data-options="budgetOptions" value="{{budgetOptions.indexOf(formData.budget)}}" range="{{budgetOptions}}">
+          <view class="picker-box">
+            <text>{{formData.budget}}</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
+      <view class="form-group half">
+        <view class="label">客户来源</view>
+        <picker bindchange="onPickerChange" data-field="source" data-options="sourceOptions" value="{{sourceOptions.indexOf(formData.source)}}" range="{{sourceOptions}}">
+          <view class="picker-box">
+            <text>{{formData.source}}</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
     </view>
 
     <view class="form-group">

@@ -20,7 +20,26 @@ Page({
       { id: 2, name: '设计师B', selected: false },
       { id: 3, name: '项目经理C', selected: false }
     ],
-    selectedEmployeeIds: []
+    selectedEmployeeIds: [],
+
+    filterRatings: [
+      { name: 'A', selected: false },
+      { name: 'B', selected: false },
+      { name: 'C', selected: false },
+      { name: 'D', selected: false }
+    ],
+    selectedRatings: [],
+
+    filterSources: [
+      { name: '自然进店', selected: false },
+      { name: '老介新', selected: false },
+      { name: '抖音', selected: false },
+      { name: '小红书', selected: false },
+      { name: '大众点评', selected: false },
+      { name: '自有关系', selected: false },
+      { name: '其他', selected: false }
+    ],
+    selectedSources: []
   },
 
   onShow() {
@@ -32,6 +51,9 @@ Page({
       return;
     }
     this.initData();
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 1 });
+    }
   },
 
   initData() {
@@ -65,12 +87,13 @@ Page({
     }
     
     if (this.data.searchQuery) {
-      const q = this.data.searchQuery.toLowerCase();
-      filtered = filtered.filter(l => 
-        l.name.toLowerCase().includes(q) || 
-        l.phone.includes(q) ||
-        l.address.toLowerCase().includes(q)
-      );
+      const q = this.data.searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(l => {
+        const nameMatch = l.name ? String(l.name).toLowerCase().includes(q) : false;
+        const phoneMatch = l.phone ? String(l.phone).includes(q) : false;
+        const addressMatch = l.address ? String(l.address).toLowerCase().includes(q) : false;
+        return nameMatch || phoneMatch || addressMatch;
+      });
     }
 
     // 时间范围过滤 (以 lastFollowUp 为主)
@@ -88,6 +111,16 @@ Page({
         const diff = now.getTime() - new Date(l.lastFollowUp.replace(/-/g, '/')).getTime();
         return Math.abs(diff) <= limitMs;
       });
+    }
+
+    // 评级过滤
+    if (this.data.selectedRatings && this.data.selectedRatings.length > 0) {
+      filtered = filtered.filter(l => this.data.selectedRatings.includes(l.rating));
+    }
+
+    // 来源过滤
+    if (this.data.selectedSources && this.data.selectedSources.length > 0) {
+      filtered = filtered.filter(l => this.data.selectedSources.includes(l.source));
     }
 
     // 人员高级筛选过滤
@@ -118,10 +151,14 @@ Page({
     if (app.globalData && app.globalData.leadFilters) {
       const f = app.globalData.leadFilters;
       this.setData({
-        timeFilterIndex: f.timeFilterIndex,
-        timeFilterLabel: f.timeFilterLabel,
+        timeFilterIndex: f.timeFilterIndex !== undefined ? f.timeFilterIndex : 2,
+        timeFilterLabel: f.timeFilterLabel || '最近一月',
         filterEmployees: f.filterEmployees || this.data.filterEmployees,
-        selectedEmployeeIds: f.selectedEmployeeIds || []
+        selectedEmployeeIds: f.selectedEmployeeIds || [],
+        filterRatings: f.filterRatings || this.data.filterRatings,
+        selectedRatings: f.selectedRatings || [],
+        filterSources: f.filterSources || this.data.filterSources,
+        selectedSources: f.selectedSources || []
       });
     }
 
@@ -136,7 +173,11 @@ Page({
       timeFilterIndex: this.data.timeFilterIndex,
       timeFilterLabel: this.data.timeFilterLabel,
       filterEmployees: this.data.filterEmployees,
-      selectedEmployeeIds: this.data.selectedEmployeeIds
+      selectedEmployeeIds: this.data.selectedEmployeeIds,
+      filterRatings: this.data.filterRatings,
+      selectedRatings: this.data.selectedRatings,
+      filterSources: this.data.filterSources,
+      selectedSources: this.data.selectedSources
     };
   },
 
@@ -214,10 +255,35 @@ Page({
     });
     this.setData({ filterEmployees: employees });
   },
+  toggleFilterRating(e) {
+    const name = e.currentTarget.dataset.name;
+    const ratings = this.data.filterRatings.map(r => {
+      if (r.name === name) {
+        return { ...r, selected: !r.selected };
+      }
+      return r;
+    });
+    this.setData({ filterRatings: ratings });
+  },
+  toggleFilterSource(e) {
+    const name = e.currentTarget.dataset.name;
+    const sources = this.data.filterSources.map(s => {
+      if (s.name === name) {
+        return { ...s, selected: !s.selected };
+      }
+      return s;
+    });
+    this.setData({ filterSources: sources });
+  },
   applyFilter() {
-    const selected = this.data.filterEmployees.filter(e => e.selected).map(e => e.id);
+    const selectedEmps = this.data.filterEmployees.filter(e => e.selected).map(e => e.id);
+    const selectedRats = this.data.filterRatings.filter(r => r.selected).map(r => r.name);
+    const selectedSrcs = this.data.filterSources.filter(s => s.selected).map(s => s.name);
+
     this.setData({ 
-      selectedEmployeeIds: selected,
+      selectedEmployeeIds: selectedEmps,
+      selectedRatings: selectedRats,
+      selectedSources: selectedSrcs,
       showFilterModal: false 
     }, () => {
       this.saveFilterState();

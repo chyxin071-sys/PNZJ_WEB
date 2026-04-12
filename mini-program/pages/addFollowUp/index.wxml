@@ -1,0 +1,18 @@
+<view class="page-container">
+  <view class="form-group">
+    <view class="label">跟进方式</view>
+    <view class="method-tags">
+      <view class="tag {{activeMethod === item ? 'active' : ''}}" wx:for="{{methods}}" wx:key="*this" bindtap="selectMethod" data-method="{{item}}">{{item}}</view>
+    </view>
+  </view>
+
+  <view class="form-group mt-4">
+    <view class="label">跟进内容 <text class="required">*</text></view>
+    <textarea class="textarea-box" placeholder="记录本次沟通的详细内容、客户意向及下一步计划..." auto-focus value="{{content}}" bindinput="onInput" maxlength="500"></textarea>
+    <view class="char-count">{{content.length}}/500</view>
+  </view>
+  
+  <view class="bottom-bar">
+    <view class="btn-save hover-scale" bindtap="saveFollowUp">保存</view>
+  </view>
+</view>

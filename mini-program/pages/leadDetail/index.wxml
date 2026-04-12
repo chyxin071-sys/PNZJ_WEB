@@ -8,18 +8,26 @@
         <view class="rating-badge rating-{{lead.rating}}">{{lead.rating}}级</view>
         <view class="status-badge {{lead.status === '已签单' ? 'status-signed' : 'status-default'}}">{{lead.status}}</view>
       </view>
+      <view class="btn-edit-icon hover-scale" bindtap="goToEdit">
+        <text>编辑</text>
+      </view>
     </view>
     <view class="address mt-2">{{lead.address}}</view>
     
-    <!-- 快捷操作区 -->
-    <view class="action-icons mt-4">
-      <view class="action-btn" bindtap="goToQuote">
-        <view class="icon-quote"></view>
-        <text>关联报价单</text>
+    <!-- 快捷操作区 (Web风格卡片) -->
+    <view class="action-cards mt-4 {{lead.status === '已签单' ? 'two-cards' : 'one-card'}}">
+      <view class="action-card quote-card hover-scale" bindtap="goToQuote">     
+        <view class="ac-left">
+          <view class="icon-doc"></view>
+          <text>查看报价单</text>
+        </view>
       </view>
-      <view class="action-btn" wx:if="{{lead.status === '已签单'}}" bindtap="goToProject">
-        <view class="icon-project"></view>
-        <text>关联工地</text>
+
+      <view class="action-card project-card hover-scale" wx:if="{{lead.status === '已签单'}}" bindtap="goToProject">
+        <view class="ac-left">
+          <view class="icon-folder"></view>
+          <text>工地管理</text>
+        </view>
       </view>
     </view>
   </view>
@@ -57,6 +65,10 @@
           <text class="info-value">{{lead.budget}}</text>
         </view>
         <view class="info-item">
+          <text class="info-label">客户来源</text>
+          <text class="info-value">{{lead.source}}</text>
+        </view>
+        <view class="info-item">
           <text class="info-label">指派销售</text>
           <text class="info-value">{{lead.sales}}</text>
         </view>
@@ -86,6 +98,6 @@
   </scroll-view>
 
   <view class="bottom-action-bar">
-    <view class="btn-primary hover-scale">添加跟进</view>
+    <view class="btn-primary hover-scale" bindtap="addFollowUp">添加跟进</view>
   </view>
 </view>

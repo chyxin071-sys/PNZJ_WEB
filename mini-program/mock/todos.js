@@ -5,18 +5,11 @@ module.exports = [
     "status": "pending",
     "dueDate": "2024-04-13",
     "priority": "high",
-    "assignees": [
-      {
-        "id": "USR-002",
-        "name": "李销售",
-        "role": "sales"
-      },
-      {
-        "id": "USR-003",
-        "name": "陈设计",
-        "role": "designer"
-      }
-    ],
+    "assignedTo": {
+      "id": "USR-002",
+      "name": "李销售",
+      "role": "sales"
+    },
     "createdBy": {
       "id": "USR-001",
       "name": "蒋经理",
@@ -37,18 +30,11 @@ module.exports = [
     "status": "pending",
     "dueDate": "2024-04-14",
     "priority": "high",
-    "assignees": [
-      {
-        "id": "USR-003",
-        "name": "陈设计",
-        "role": "designer"
-      },
-      {
-        "id": "USR-004",
-        "name": "王工地",
-        "role": "manager"
-      }
-    ],
+    "assignedTo": {
+      "id": "USR-003",
+      "name": "陈设计",
+      "role": "designer"
+    },
     "createdBy": {
       "id": "USR-004",
       "name": "王工地",
@@ -71,15 +57,12 @@ module.exports = [
     "title": "整理出具全屋主材报价单",
     "status": "completed",
     "dueDate": "2024-04-11",
-    "completedAt": "2024-04-10 16:30",
     "priority": "medium",
-    "assignees": [
-      {
-        "id": "USR-003",
-        "name": "陈设计",
-        "role": "designer"
-      }
-    ],
+    "assignedTo": {
+      "id": "USR-003",
+      "name": "陈设计",
+      "role": "designer"
+    },
     "createdBy": {
       "id": "USR-002",
       "name": "李销售",
@@ -100,18 +83,11 @@ module.exports = [
     "status": "pending",
     "dueDate": "2024-04-12",
     "priority": "medium",
-    "assignees": [
-      {
-        "id": "USR-004",
-        "name": "王工地",
-        "role": "manager"
-      },
-      {
-        "id": "USR-001",
-        "name": "蒋经理",
-        "role": "admin"
-      }
-    ],
+    "assignedTo": {
+      "id": "USR-004",
+      "name": "王工地",
+      "role": "manager"
+    },
     "createdBy": {
       "id": "USR-001",
       "name": "蒋经理",

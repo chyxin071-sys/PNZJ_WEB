@@ -2,10 +2,11 @@
 
 /* 客户页专有样式补充 */
 .bg-blue-50 { background: #eff6ff; }
-.icon-users { width: 32rpx; height: 32rpx; border: 4rpx solid #3b82f6; border-radius: 50%; position: relative; }
-.icon-users::after { content: ''; position: absolute; top: 18rpx; left: 50%; transform: translateX(-50%); width: 44rpx; height: 20rpx; border: 4rpx solid #3b82f6; border-bottom: none; border-radius: 20rpx 20rpx 0 0; }
+.icon-users { width: 20rpx; height: 20rpx; border: 3rpx solid #3b82f6; border-radius: 50%; position: relative; }
+.icon-users::after { content: ''; position: absolute; top: 10rpx; left: 50%; transform: translateX(-50%); width: 28rpx; height: 14rpx; border: 3rpx solid #3b82f6; border-bottom: none; border-radius: 14rpx 14rpx 0 0; }
 
-.icon-star { width: 36rpx; height: 36rpx; background: #f59e0b; clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%); }
+/* 五角星使用文本形式，更稳定美观 */
+.icon-star { font-size: 24rpx; color: #f59e0b; line-height: 1; font-weight: normal; margin-top: -2rpx; }
 
 /* 列表区 */
 .title-wrap { display: flex; align-items: baseline; gap: 16rpx; flex: 1; }
