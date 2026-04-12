@@ -1,0 +1,183 @@
+module.exports = [
+  {
+    "id": "t1",
+    "title": "催交首期设计定金",
+    "status": "pending",
+    "dueDate": "2024-04-13",
+    "priority": "high",
+    "assignees": [
+      {
+        "id": "USR-002",
+        "name": "李销售",
+        "role": "sales"
+      },
+      {
+        "id": "USR-003",
+        "name": "陈设计",
+        "role": "designer"
+      }
+    ],
+    "createdBy": {
+      "id": "USR-001",
+      "name": "蒋经理",
+      "role": "admin"
+    },
+    "relatedTo": {
+      "type": "lead",
+      "id": "1",
+      "name": "张先生 (万科星城)"
+    },
+    "description": "客户对方案满意，需要抓紧时间催促定金落定。",
+    "attachments": [],
+    "createdAt": "2024-04-12 09:30"
+  },
+  {
+    "id": "t2",
+    "title": "现场复核水电点位，图纸与现场有出入",
+    "status": "pending",
+    "dueDate": "2024-04-14",
+    "priority": "high",
+    "assignees": [
+      {
+        "id": "USR-003",
+        "name": "陈设计",
+        "role": "designer"
+      },
+      {
+        "id": "USR-004",
+        "name": "王工地",
+        "role": "manager"
+      }
+    ],
+    "createdBy": {
+      "id": "USR-004",
+      "name": "王工地",
+      "role": "manager"
+    },
+    "relatedTo": {
+      "type": "project",
+      "id": "p1",
+      "name": "香蜜湖1号 3栋2单元"
+    },
+    "description": "现场主卧插座位置因为承重墙的问题没法按图纸开槽，请设计师明天下工地看一眼怎么改方案，这几张是现场拍的墙面图。",
+    "attachments": [
+      { "type": "image", "url": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=400&q=80", "name": "现场墙面1.jpg" },
+      { "type": "image", "url": "https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=400&q=80", "name": "现场墙面2.jpg" }
+    ],
+    "createdAt": "2024-04-12 11:15"
+  },
+  {
+    "id": "t3",
+    "title": "整理出具全屋主材报价单",
+    "status": "completed",
+    "dueDate": "2024-04-11",
+    "completedAt": "2024-04-10 16:30",
+    "priority": "medium",
+    "assignees": [
+      {
+        "id": "USR-003",
+        "name": "陈设计",
+        "role": "designer"
+      }
+    ],
+    "createdBy": {
+      "id": "USR-002",
+      "name": "李销售",
+      "role": "sales"
+    },
+    "relatedTo": {
+      "type": "lead",
+      "id": "2",
+      "name": "王女士 (华润城)"
+    },
+    "description": "客户本周末要来看报价，请在周五前整理好。特别注意客户指定的马可波罗地砖型号。",
+    "attachments": [],
+    "createdAt": "2024-04-10 14:20"
+  },
+  {
+    "id": "t4",
+    "title": "泥瓦阶段材料进场验收",
+    "status": "pending",
+    "dueDate": "2024-04-12",
+    "priority": "medium",
+    "assignees": [
+      {
+        "id": "USR-004",
+        "name": "王工地",
+        "role": "manager"
+      },
+      {
+        "id": "USR-001",
+        "name": "蒋经理",
+        "role": "admin"
+      }
+    ],
+    "createdBy": {
+      "id": "USR-001",
+      "name": "蒋经理",
+      "role": "admin"
+    },
+    "relatedTo": {
+      "type": "project",
+      "id": "p2",
+      "name": "半岛城邦 1期"
+    },
+    "description": "瓷砖今天下午送到，请务必仔细核对品牌和数量是否与合同一致，如果有破损的当场拍照留证退回。",
+    "attachments": [
+      { "type": "file", "url": "#", "name": "材料发货清单.pdf" }
+    ],
+    "createdAt": "2024-04-12 08:00"
+  },
+  {
+    "id": "t5",
+    "title": "物业报建资料盖章审批",
+    "status": "pending",
+    "dueDate": "2024-04-15",
+    "priority": "high",
+    "assignedTo": {
+      "id": "USR-002",
+      "name": "李销售",
+      "role": "sales"
+    },
+    "createdBy": {
+      "id": "USR-004",
+      "name": "王工地",
+      "role": "manager"
+    },
+    "relatedTo": {
+      "type": "project",
+      "id": "p3",
+      "name": "天鹅堡 2栋"
+    },
+    "description": "物业那边说之前的图纸少盖了一个公章，导致现在没法办理开工许可证，麻烦销售赶紧联系公司内勤盖章并闪送过来，附件里是缺印章的图纸！",
+    "attachments": [
+      { "type": "image", "url": "https://images.unsplash.com/photo-1618090584126-129cd1f3f317?w=400&q=80", "name": "物业要求通知单.jpg" }
+    ],
+    "createdAt": "2024-04-12 13:20"
+  },
+  {
+    "id": "t6",
+    "title": "陪同客户去材料大厅选软装",
+    "status": "completed",
+    "dueDate": "2024-04-10",
+    "priority": "medium",
+    "assignedTo": {
+      "id": "USR-003",
+      "name": "陈设计",
+      "role": "designer"
+    },
+    "createdBy": {
+      "id": "USR-001",
+      "name": "蒋经理",
+      "role": "admin"
+    },
+    "relatedTo": {
+      "type": "lead",
+      "id": "4",
+      "name": "赵先生 (中信红树湾)"
+    },
+    "description": "客户这周末有空，约了下午2点到公司材料大厅选窗帘和沙发，设计师请提前准备好三套备选方案。",
+    "attachments": [],
+    "createdAt": "2024-04-08 10:00"
+  }
+];

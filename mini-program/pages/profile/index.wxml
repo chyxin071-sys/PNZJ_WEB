@@ -1,0 +1,85 @@
+<view class="page-container">
+  
+  <!-- 头部用户信息卡片 -->
+  <view class="profile-header">
+    <view class="user-card">
+      <view class="avatar-wrap">
+        <image class="avatar" src="{{userInfo.avatarUrl || '/assets/icons/profile-active.png'}}" mode="aspectFill"></image>
+      </view>
+      <view class="user-info">
+        <view class="name">{{userInfo.name || '未登录'}}</view>
+        <view class="role-badge">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'designer' ? '设计师' : userInfo.role === 'sales' ? '销售' : userInfo.role === 'manager' ? '项目经理' : '员工'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 数据概览模块 -->
+  <view class="stats-section">
+    <view class="stat-item">
+      <view class="stat-val">{{myTodosCount || 0}}</view>
+      <view class="stat-label">我的待办</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-val">{{myLeadsCount || 0}}</view>
+      <view class="stat-label">跟进客户</view>
+    </view>
+    <view class="stat-item">
+      <view class="stat-val">{{myProjectsCount || 0}}</view>
+      <view class="stat-label">负责工地</view>
+    </view>
+  </view>
+
+  <!-- 功能菜单列表 -->
+  <view class="menu-list">
+    <view class="menu-item" hover-class="menu-hover">
+      <view class="menu-left">
+        <view class="icon-menu icon-phone"></view>
+        <text>绑定手机</text>
+      </view>
+      <view class="menu-right">
+        <text class="menu-val">{{userInfo.phone || '未绑定'}}</text>
+      </view>
+    </view>
+
+    <view class="menu-item" hover-class="menu-hover" bindtap="goToQuote">
+      <view class="menu-left">
+        <view class="icon-menu icon-quote"></view>
+        <text>我的报价</text>
+      </view>
+      <view class="menu-right">
+        <view class="arrow-right"></view>
+      </view>
+    </view>
+
+    <view class="menu-item" hover-class="menu-hover" bindtap="goToMaterials">
+      <view class="menu-left">
+        <view class="icon-menu icon-material"></view>
+        <text>材料大厅</text>
+      </view>
+      <view class="menu-right">
+        <view class="arrow-right"></view>
+      </view>
+    </view>
+
+    <view class="menu-item" hover-class="menu-hover" wx:if="{{userInfo.role === 'admin'}}" bindtap="goToTeam">
+      <view class="menu-left">
+        <view class="icon-menu icon-team"></view>
+        <text>组织架构</text>
+      </view>
+      <view class="menu-right">
+        <view class="arrow-right"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 退出登录 -->
+  <view class="logout-btn hover-scale" bindtap="handleLogout">
+    <text>退出登录</text>
+  </view>
+
+  <!-- 底部品牌信息 -->
+  <view class="brand-info">
+    <view class="brand-name">品诺筑家</view>
+    <view class="brand-slogan">品诺有心，筑家有道。</view>
+  </view>
+</view>

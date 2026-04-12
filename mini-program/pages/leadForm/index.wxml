@@ -1,0 +1,92 @@
+<view class="page-container">
+  <scroll-view scroll-y class="form-scroll">
+    <view class="form-group">
+      <view class="label">客户姓名 <text class="required">*</text></view>    
+      <input class="input-box" placeholder="输入客户姓名..." placeholder-class="ph" value="{{formData.name}}" bindinput="onInput" data-field="name" />
+    </view>
+
+    <view class="form-group">
+      <view class="label">联系电话 <text class="required">*</text></view>    
+      <input type="number" class="input-box" placeholder="输入11位手机号..." placeholder-class="ph" value="{{formData.phone}}" bindinput="onInput" data-field="phone" />
+    </view>
+
+    <view class="form-group">
+      <view class="label">小区地址 <text class="required">*</text></view>    
+      <input class="input-box" placeholder="如：恒大绿洲3栋201..." placeholder-class="ph" value="{{formData.address}}" bindinput="onInput" data-field="address" />
+    </view>
+
+    <view class="form-row-group">
+      <view class="form-group half">
+        <view class="label">房屋面积</view>
+        <input type="number" class="input-box" placeholder="面积 (m²)" placeholder-class="ph" value="{{formData.area}}" bindinput="onInput" data-field="area" />
+      </view>
+      <view class="form-group half">
+        <view class="label">需求类型</view>
+        <picker bindchange="onPickerChange" data-field="requirementType" data-options="reqOptions" value="{{reqOptions.indexOf(formData.requirementType)}}" range="{{reqOptions}}">
+          <view class="picker-box">
+            <text>{{formData.requirementType}}</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="form-row-group">
+      <view class="form-group half">
+        <view class="label">客户评级</view>
+        <picker bindchange="onPickerChange" data-field="rating" data-options="ratingOptions" value="{{ratingOptions.indexOf(formData.rating)}}" range="{{ratingOptions}}">
+          <view class="picker-box">
+            <text>{{formData.rating}}级</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
+      <view class="form-group half">
+        <view class="label">当前状态</view>
+        <picker bindchange="onPickerChange" data-field="status" data-options="statusOptions" value="{{statusOptions.indexOf(formData.status)}}" range="{{statusOptions}}">
+          <view class="picker-box">
+            <text>{{formData.status}}</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="form-group">
+      <view class="label">装修预算</view>
+      <picker bindchange="onPickerChange" data-field="budget" data-options="budgetOptions" value="{{budgetOptions.indexOf(formData.budget)}}" range="{{budgetOptions}}">
+        <view class="picker-box">
+          <text>{{formData.budget}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-group">
+      <view class="label">指派销售</view>
+      <picker bindchange="onEmpChange" data-field="salesId" data-list="salesList" data-index="salesIndex" value="{{salesIndex}}" range="{{salesList}}" range-key="name">
+        <view class="picker-box">
+          <text class="{{salesIndex === -1 ? 'ph' : ''}}">{{salesIndex !== -1 ? salesList[salesIndex].name : '请选择销售人员'}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-group">
+      <view class="label">指派设计师</view>
+      <picker bindchange="onEmpChange" data-field="designerId" data-list="designerList" data-index="designerIndex" value="{{designerIndex}}" range="{{designerList}}" range-key="name">
+        <view class="picker-box">
+          <text class="{{designerIndex === -1 ? 'ph' : ''}}">{{designerIndex !== -1 ? designerList[designerIndex].name : '请选择设计师'}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+
+    <view class="bottom-padding"></view>
+  </scroll-view>
+
+  <view class="bottom-bar">
+    <view class="btn-cancel hover-scale" bindtap="goBack">取消</view>
+    <view class="btn-save hover-scale" bindtap="saveLead">保存客户</view>
+  </view>
+</view>

@@ -1,0 +1,63 @@
+page {
+  --primary-50: #faf9f8;
+  --primary-100: #f5f4f2;
+  --primary-200: #eaddd7;
+  --primary-400: #b5a49a;
+  --primary-600: #8c7a6e;
+  --primary-900: #4a403a;
+  
+  background-color: var(--primary-50);
+  font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', sans-serif;
+  color: var(--primary-900);
+  font-size: 28rpx;
+  box-sizing: border-box;
+}
+
+/* 基础通用类，类似 Tailwind */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-2 { gap: 16rpx; }
+.gap-3 { gap: 24rpx; }
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+
+.text-xs { font-size: 24rpx; }
+.text-sm { font-size: 28rpx; }
+.text-base { font-size: 32rpx; }
+.font-bold { font-weight: bold; }
+.font-medium { font-weight: 500; }
+.text-primary-400 { color: var(--primary-400); }
+.text-primary-600 { color: var(--primary-600); }
+.text-primary-900 { color: var(--primary-900); }
+
+/* 全局多选弹窗样式 */
+.modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+.modal-content { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 40rpx 40rpx 0 0; z-index: 101; padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; max-height: 70vh; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 40rpx; font-size: 34rpx; font-weight: bold; border-bottom: 1rpx solid #f1f5f9; }
+.btn-close { color: #3b82f6; font-size: 32rpx; font-weight: normal; }
+.modal-list { flex: 1; padding: 20rpx 40rpx; }
+.employee-item { display: flex; align-items: center; padding: 24rpx 0; border-bottom: 1rpx solid #f8fafc; }
+.employee-item:last-child { border-bottom: none; }
+.emp-name { font-size: 30rpx; margin-left: 20rpx; }
+
+/* 复用 Checkbox 样式 */
+.checkbox { width: 44rpx; height: 44rpx; border-radius: 12rpx; border: 3rpx solid #cbd5e1; display: flex; align-items: center; justify-content: center; transition: all 0.2s; background: #f8fafc; }
+.checkbox.checked { background: var(--primary-900); border-color: var(--primary-900); }
+.checkmark { width: 12rpx; height: 22rpx; border: 4rpx solid #fff; border-top: none; border-left: none; transform: rotate(45deg); margin-top: -4rpx; }
+
+/* 高级感人员筛选图标 (三横线) */
+.btn-filter { background: #fff; border-radius: 20rpx; width: 80rpx; height: 80rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.02); border: 1rpx solid transparent; flex-shrink: 0; position: relative; transition: all 0.15s; }
+.icon-filter { width: 32rpx; height: 32rpx; display: flex; flex-direction: column; justify-content: space-evenly; align-items: center; }
+.icon-filter::before { content: ''; width: 32rpx; height: 4rpx; background: var(--primary-900); border-radius: 2rpx; }
+.icon-filter .line-mid { width: 24rpx; height: 4rpx; background: var(--primary-900); border-radius: 2rpx; }
+.icon-filter::after { content: ''; width: 16rpx; height: 4rpx; background: var(--primary-900); border-radius: 2rpx; }
+.filter-badge { position: absolute; top: 16rpx; right: 16rpx; width: 14rpx; height: 14rpx; background: #ef4444; border-radius: 50%; border: 3rpx solid #fff; }
+
+/* 顶部时间筛选器 */
+.date-filter-box { background: #f5f4f2; padding: 8rpx 24rpx; border-radius: 30rpx; display: inline-flex; align-items: center; justify-content: center; border: 1rpx solid #eaddd7; transition: all 0.2s; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); }
+.date-filter-box:active { transform: scale(0.96); background: #eaddd7; }
+.date-filter-box text { font-size: 26rpx; color: var(--primary-600); font-weight: bold; }
+.date-filter-box::after { content: ''; width: 0; height: 0; border-left: 8rpx solid transparent; border-right: 8rpx solid transparent; border-top: 10rpx solid var(--primary-600); margin-left: 10rpx; border-radius: 2rpx; }

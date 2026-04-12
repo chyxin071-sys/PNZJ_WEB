@@ -1,0 +1,139 @@
+<view class="page-container">
+
+  <!-- 顶部数据看板 -->
+  <view class="dashboard">
+    <view class="dashboard-header">
+      <text class="dashboard-title">客户管理</text>
+      
+      <!-- 标题右侧：时间筛选器 (带红框样式) -->
+      <picker mode="selector" range="{{timeFilterOptions}}" value="{{timeFilterIndex}}" bindchange="onTimeFilterChange">
+        <view class="date-filter-box">
+          <text>{{timeFilterLabel}}</text>
+        </view>
+      </picker>
+    </view>
+    <view class="dashboard-cards">
+      <!-- 全部卡片 -->
+      <view class="stat-card {{activeTab === '全部' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="全部">
+        <view class="icon-box bg-blue-50">
+          <view class="icon-users"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-label">全部客户</text>
+          <text class="stat-num">{{totalCount}}</text>
+        </view>
+      </view>
+      <!-- A级卡片 -->
+      <view class="stat-card {{activeTab === 'A级' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="A级">
+        <view class="icon-box bg-orange-50">
+          <view class="icon-star"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-label">A级客户</text>
+          <text class="stat-num">{{aRatingCount}}</text>
+        </view>
+      </view>
+      <!-- 已签单卡片 -->
+      <view class="stat-card {{activeTab === '已签单' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="已签单">
+        <view class="icon-box bg-emerald-50">
+          <view class="icon-check"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-label">已签单</text>
+          <text class="stat-num">{{signedCount}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作栏 (搜索+新建) -->
+  <view class="action-bar">
+    <view class="search-wrap">
+      <icon type="search" size="16" color="#b5a49a" />
+      <input placeholder="搜索客户/电话/小区..." placeholder-class="ph" bindinput="onSearch" />
+    </view>
+    <!-- 人员高级筛选器 (三横线图标) -->
+    <view class="btn-filter hover-scale" bindtap="openAdvancedFilter">
+      <view class="icon-filter">
+        <view class="line-mid"></view>
+      </view>
+      <view class="filter-badge" wx:if="{{selectedEmployeeIds.length > 0}}"></view>
+    </view>
+    <view class="btn-create-small" hover-class="btn-create-hover" bindtap="createLead">
+      <view class="plus-icon"></view>
+      <text>新建</text>
+    </view>
+  </view>
+
+  <!-- 客户列表区 -->
+  <scroll-view scroll-y class="list-container">
+    <view class="todo-card" hover-class="card-hover" hover-stay-time="100" wx:for="{{leads}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
+      
+      <!-- 头部：姓名、电话、状态下拉标签 -->
+      <view class="card-header">
+        <view class="title-wrap">
+          <text class="title">{{item.name}}</text>
+          <text class="phone">{{item.phone}}</text>
+        </view>
+        <view class="status-picker-wrap" catchtap="preventTap">
+          <picker mode="selector" range="{{['待分配', '跟进中', '已量房', '已出图', '已报预估', '已签单', '已流失']}}" bindchange="onStatusChange" data-id="{{item.id}}">
+            <view class="status-badge {{item.status === '已签单' ? 'status-signed' : 'status-default'}}">
+              <text>{{item.status}}</text>
+              <view class="icon-arrow-down"></view>
+            </view>
+          </picker>
+        </view>
+      </view>
+
+      <!-- 主体：级别、房产信息 -->
+      <view class="card-body">
+        <view class="info-row">
+          <view class="rating-badge rating-{{item.rating}}">{{item.rating}}级</view>
+          <text class="address">{{item.address}}</text>
+        </view>
+        <view class="info-row mt-2">
+          <text class="meta-text">{{item.requirementType}} · {{item.area}}m²  · {{item.budget}}</text>
+        </view>
+      </view>
+
+      <!-- 底部：最新跟进、人员信息 -->
+      <view class="card-footer meta-stack">
+        <view class="meta-badge meta-related">
+          <view class="icon-calendar"></view>
+          <text>最新跟进: {{item.lastFollowUp}}</text>
+        </view>
+
+        <view class="meta-assignee">
+          <view class="icon-user"></view>
+          <text>{{item.sales}} | {{item.designer}}</text>
+        </view>
+      </view>
+
+    </view>
+    
+    <view class="empty-state" wx:if="{{leads.length === 0}}">
+      <view class="empty-icon"></view>
+      <text>暂无相关客户</text>
+    </view>
+    
+    <view class="bottom-padding"></view>
+  </scroll-view>
+
+  <!-- 高级人员筛选弹窗 -->
+  <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
+  <view class="modal-content" wx:if="{{showFilterModal}}">
+    <view class="modal-header">
+      <text>人员高级筛选</text>
+      <view class="btn-close" bindtap="applyFilter">确定</view>
+    </view>
+    <scroll-view scroll-y class="modal-list">
+      <view class="employee-item" wx:for="{{filterEmployees}}" wx:key="id" bindtap="toggleFilterEmployee" data-id="{{item.id}}">
+        <view class="checkbox {{item.selected ? 'checked' : ''}}">
+          <view wx:if="{{item.selected}}" class="checkmark"></view>
+        </view>
+        <text class="emp-name">{{item.name}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+</view>

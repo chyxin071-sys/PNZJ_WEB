@@ -1,0 +1,95 @@
+<view class="page-container" wx:if="{{lead}}">
+  
+  <!-- 顶部简要信息卡片 -->
+  <view class="top-card">
+    <view class="flex justify-between items-center">
+      <view class="flex items-center gap-3">
+        <text class="name">{{lead.name}}</text>
+        <view class="rating-badge rating-{{lead.rating}}">{{lead.rating}}级</view>
+        <view class="status-badge {{lead.status === '已签单' ? 'status-signed' : 'status-default'}}">{{lead.status}}</view>
+      </view>
+    </view>
+    <view class="address mt-2">{{lead.address}}</view>
+    
+    <!-- 快捷操作区 -->
+    <view class="action-icons mt-4">
+      <view class="action-btn" bindtap="callPhone">
+        <view class="icon-phone"></view>
+        <text>拨打</text>
+      </view>
+      <view class="action-btn" bindtap="goToQuote">
+        <view class="icon-quote"></view>
+        <text>报价(待开发)</text>
+      </view>
+      <view class="action-btn" wx:if="{{lead.status === '已签单'}}" bindtap="goToProject">
+        <view class="icon-project"></view>
+        <text>关联工地</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 选项卡 -->
+  <view class="tabs">
+    <view class="tab {{activeTab === 'info' ? 'active' : ''}}" bindtap="switchTab" data-tab="info">详情信息</view>
+    <view class="tab {{activeTab === 'follow' ? 'active' : ''}}" bindtap="switchTab" data-tab="follow">跟进记录</view>
+  </view>
+
+  <scroll-view scroll-y class="tab-content">
+    
+    <!-- 详情信息 Tab -->
+    <view wx:if="{{activeTab === 'info'}}" class="info-section">
+      <view class="section-title">客户资料</view>
+      <view class="info-list">
+        <view class="info-item">
+          <text class="info-label">联系电话</text>
+          <text class="info-value">{{lead.phone}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">小区地址</text>
+          <text class="info-value">{{lead.address}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">需求类型</text>
+          <text class="info-value">{{lead.requirementType}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">房屋面积</text>
+          <text class="info-value">{{lead.area}} m²</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">装修预算</text>
+          <text class="info-value">{{lead.budget}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">指派销售</text>
+          <text class="info-value">{{lead.sales}}</text>
+        </view>
+        <view class="info-item">
+          <text class="info-label">指派设计师</text>
+          <text class="info-value">{{lead.designer}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 跟进记录 Tab -->
+    <view wx:if="{{activeTab === 'follow'}}" class="follow-section">
+      <!-- 模拟一条最新跟进记录 -->
+      <view class="follow-item">
+        <view class="timeline-dot"></view>
+        <view class="follow-time">{{lead.lastFollowUp}}</view>
+        <view class="follow-content">最新跟进：与客户电话沟通了初步需求，客户对全案设计比较感兴趣，计划本周末去现场量房。</view>
+        <view class="follow-user">记录人: {{lead.sales}}</view>
+      </view>
+      
+      <view class="empty-state" wx:if="{{!lead.lastFollowUp}}">
+        <text>暂无跟进记录</text>
+      </view>
+    </view>
+
+    <view class="bottom-padding"></view>
+  </scroll-view>
+
+  <view class="bottom-action-bar">
+    <view class="btn-primary hover-scale">添加跟进</view>
+  </view>
+</view>

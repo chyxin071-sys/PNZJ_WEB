@@ -1,0 +1,46 @@
+.page-container { background: #faf9f8; min-height: 100vh; padding-bottom: 60rpx; }
+
+/* 头部卡片 */
+.profile-header { background: #4a403a; padding: 40rpx 40rpx 80rpx; border-bottom-left-radius: 60rpx; border-bottom-right-radius: 60rpx; }
+.user-card { display: flex; align-items: center; gap: 32rpx; }
+.avatar-wrap { width: 140rpx; height: 140rpx; border-radius: 70rpx; border: 6rpx solid rgba(255,255,255,0.2); overflow: hidden; }
+.avatar { width: 100%; height: 100%; background: #fff; }
+.user-info { display: flex; flex-direction: column; gap: 12rpx; }
+.name { font-size: 40rpx; font-weight: bold; color: #fff; }
+.role-badge { display: inline-flex; padding: 4rpx 16rpx; border-radius: 8rpx; font-size: 24rpx; font-weight: bold; background: rgba(255,255,255,0.15); color: #fff; max-width: fit-content; }
+
+/* 数据概览 */
+.stats-section { background: #fff; margin: -40rpx 40rpx 40rpx; padding: 32rpx 0; border-radius: 24rpx; display: flex; justify-content: space-around; box-shadow: 0 10rpx 30rpx rgba(74, 64, 58, 0.05); position: relative; z-index: 10; }
+.stat-item { display: flex; flex-direction: column; align-items: center; gap: 8rpx; }
+.stat-val { font-size: 40rpx; font-weight: bold; color: var(--primary-900); }
+.stat-label { font-size: 26rpx; color: var(--primary-600); }
+
+/* 菜单列表 */
+.menu-list { background: #fff; margin: 0 40rpx 40rpx; border-radius: 24rpx; overflow: hidden; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.02); }
+.menu-item { display: flex; justify-content: space-between; align-items: center; padding: 32rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; background: #fff; transition: background 0.2s; }
+.menu-item:last-child { border-bottom: none; }
+.menu-hover { background: #f8fafc; }
+.menu-left { display: flex; align-items: center; gap: 20rpx; font-size: 30rpx; color: var(--primary-900); font-weight: 500; }
+.menu-right { display: flex; align-items: center; }
+.menu-val { font-size: 28rpx; color: var(--primary-400); }
+.arrow-right { width: 14rpx; height: 14rpx; border-top: 4rpx solid #cbd5e1; border-right: 4rpx solid #cbd5e1; transform: rotate(45deg); margin-left: 8rpx; }
+
+/* 图标样式 */
+.icon-menu { width: 40rpx; height: 40rpx; border-radius: 8rpx; position: relative; display: flex; align-items: center; justify-content: center; }
+.icon-phone { background: #eff6ff; }
+.icon-phone::before { content: ''; width: 14rpx; height: 22rpx; border: 4rpx solid #3b82f6; border-radius: 4rpx; }
+.icon-quote { background: #fff7ed; }
+.icon-quote::before { content: ''; width: 16rpx; height: 20rpx; border: 4rpx solid #f97316; border-radius: 4rpx; }
+.icon-material { background: #ecfdf5; }
+.icon-material::before { content: ''; width: 16rpx; height: 16rpx; border: 4rpx solid #10b981; transform: rotate(45deg); }
+.icon-team { background: #fef2f2; }
+.icon-team::before { content: ''; width: 12rpx; height: 12rpx; border: 4rpx solid #ef4444; border-radius: 50%; box-shadow: -10rpx 10rpx 0 #ef4444, 10rpx 10rpx 0 #ef4444; margin-bottom: 8rpx; }
+
+/* 退出登录 */
+.logout-btn { background: #fff; margin: 0 40rpx; padding: 32rpx; border-radius: 24rpx; text-align: center; color: #ef4444; font-size: 32rpx; font-weight: bold; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.02); transition: transform 0.2s; }
+.hover-scale:active { transform: scale(0.96); }
+
+/* 品牌信息 */
+.brand-info { margin-top: 60rpx; text-align: center; display: flex; flex-direction: column; gap: 12rpx; }
+.brand-name { font-size: 32rpx; font-weight: 800; color: #d6d3d1; letter-spacing: 2rpx; }
+.brand-slogan { font-size: 24rpx; color: #cbd5e1; letter-spacing: 4rpx; }

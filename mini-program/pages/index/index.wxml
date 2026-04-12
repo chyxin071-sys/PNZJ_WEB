@@ -1,0 +1,143 @@
+<view class="page-container">
+
+  
+  <!-- 顶部数据看板 -->
+  <view class="dashboard">
+    <view class="dashboard-header">
+      <text class="dashboard-title">团队协同</text>
+      
+      <!-- 标题右侧：时间筛选器 (带红框样式) -->
+      <picker mode="selector" range="{{timeFilterOptions}}" value="{{timeFilterIndex}}" bindchange="onTimeFilterChange">
+        <view class="date-filter-box">
+          <text>{{timeFilterLabel}}</text>
+        </view>
+      </picker>
+    </view>
+    <view class="dashboard-cards">
+      <!-- 待处理卡片 -->
+      <view class="stat-card {{activeTab === 'pending' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="pending">
+        <view class="icon-box bg-orange-50">
+          <view class="icon-clock"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-label">待处理</text>
+          <text class="stat-num">{{pendingCount}}</text>
+        </view>
+      </view>
+      <!-- 已完成卡片 -->
+      <view class="stat-card {{activeTab === 'completed' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="completed">
+        <view class="icon-box bg-emerald-50">
+          <view class="icon-check"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-label">已完成</text>
+          <text class="stat-num">{{completedCount}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 新建按钮 & 搜索过滤 (固定在看板下方) -->
+  <view class="action-bar">
+    <view class="search-wrap">
+      <icon type="search" size="16" color="#b5a49a" />
+      <input placeholder="搜索待办..." placeholder-class="ph" bindinput="onSearch" />
+    </view>
+    <!-- 人员高级筛选器 (三横线图标) -->
+    <view class="btn-filter hover-scale" bindtap="openAdvancedFilter">
+      <view class="icon-filter">
+        <view class="line-mid"></view>
+      </view>
+      <view class="filter-badge" wx:if="{{selectedEmployeeIds.length > 0}}"></view>
+    </view>
+    <view class="btn-create-small" hover-class="btn-create-hover" bindtap="createTodo">
+      <view class="plus-icon"></view>
+      <text>新建</text>
+    </view>
+  </view>
+
+  <!-- 待办列表区 -->
+  <scroll-view scroll-y class="list-container">
+    <view class="todo-card {{item.status === 'completed' ? 'opacity-60' : ''}}" hover-class="card-hover" hover-stay-time="100" wx:for="{{todos}}" wx:key="id" bindtap="onTodoTap" data-id="{{item.id}}">
+      
+      <!-- 头部：标题与打勾 -->
+      <view class="card-header">
+        <view class="checkbox {{item.status === 'completed' ? 'checked' : ''}}" catchtap="toggleTodo" data-id="{{item.id}}">
+          <view wx:if="{{item.status === 'completed'}}" class="checkmark"></view>
+        </view>
+        <view class="title-wrap">
+          <text class="title {{item.status === 'completed' ? 'line-through' : ''}}">{{item.title}}</text>
+          
+          <!-- 标题下方：优先级与截止日期并排 (圆角框) -->
+          <view class="meta-tags-row mt-1">
+            <view class="meta-badge priority-badge-{{item.priority}}">
+              <view class="priority-dot priority-bg-{{item.priority}}"></view>  
+              <text>{{item.priorityText}}</text>
+            </view>
+            <view class="meta-badge meta-date date-{{item.dueStatus}}" wx:if="{{item.dueDate && item.status !== 'completed'}}">
+              <view class="icon-calendar"></view>
+              <text>{{item.dueDate}} 截止</text>
+            </view>
+            <view class="meta-badge meta-completed-date" wx:if="{{item.status === 'completed' && item.completedAt}}">
+              <view class="icon-check-circle"></view>
+              <text>{{item.completedAt}} 完成</text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 主体：描述、附件 -->
+      <view class="card-body">
+        <text class="desc" wx:if="{{item.description}}">{{item.description}}</text>
+        
+        <view class="attachments" wx:if="{{item.attachments && item.attachments.length > 0}}">
+          <view class="att-pill" wx:for="{{item.attachments}}" wx:key="name" wx:for-item="att">
+            <view class="icon-clip"></view>
+            <text>{{att.name}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 底部：关联对象、执行人 -->
+      <view class="card-footer meta-stack">
+        <!-- 关联对象标签 (带图标) -->
+        <view class="meta-badge meta-related" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
+          <view class="icon-target"></view>
+          <text>{{item.relatedTo.type === 'lead' ? '线索' : '工地'}} {{item.relatedTo.name}}</text>
+        </view>
+        
+        <!-- 执行人多选展示 (隐藏派发人) -->
+        <view class="meta-assignee">
+          <view class="icon-user"></view>
+          <text>{{item.assignedNames}}</text>
+        </view>
+      </view>
+
+    </view>
+    
+    <view class="empty-state" wx:if="{{todos.length === 0}}">
+      <view class="empty-icon"></view>
+      <text>暂无相关待办</text>
+    </view>
+    
+    <view class="bottom-padding"></view>
+  </scroll-view>
+
+  <!-- 高级人员筛选弹窗 -->
+  <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
+  <view class="modal-content" wx:if="{{showFilterModal}}">
+    <view class="modal-header">
+      <text>人员高级筛选</text>
+      <view class="btn-close" bindtap="applyFilter">确定</view>
+    </view>
+    <scroll-view scroll-y class="modal-list">
+      <view class="employee-item" wx:for="{{filterEmployees}}" wx:key="id" bindtap="toggleFilterEmployee" data-id="{{item.id}}">
+        <view class="checkbox {{item.selected ? 'checked' : ''}}">
+          <view wx:if="{{item.selected}}" class="checkmark"></view>
+        </view>
+        <text class="emp-name">{{item.name}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+</view>

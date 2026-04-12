@@ -1,0 +1,104 @@
+
+<view class="page-container">
+  <scroll-view scroll-y class="form-scroll">
+    <!-- 标题 -->
+    <view class="form-group">
+      <view class="label">任务标题 <text class="required">*</text></view>
+      <input class="input-box" placeholder="输入待办任务标题..." placeholder-class="ph" value="{{formData.title}}" bindinput="onInput" data-field="title" />
+    </view>
+
+    <!-- 优先级 -->
+    <view class="form-group">
+      <view class="label">优先级 <text class="required">*</text></view>
+      <view class="priority-selector">
+        <view class="p-btn {{formData.priority === 'low' ? 'p-active-low' : ''}}" bindtap="setPriority" data-value="low">
+          <view class="p-dot bg-emerald-500"></view>普通
+        </view>
+        <view class="p-btn {{formData.priority === 'medium' ? 'p-active-medium' : ''}}" bindtap="setPriority" data-value="medium">
+          <view class="p-dot bg-amber-500"></view>重要
+        </view>
+        <view class="p-btn {{formData.priority === 'high' ? 'p-active-high' : ''}}" bindtap="setPriority" data-value="high">
+          <view class="p-dot bg-rose-500"></view>紧急
+        </view>
+      </view>
+    </view>
+
+    <!-- 关联类型与对象 -->
+    <view class="form-row-group">
+      <view class="form-group half">
+        <view class="label">关联类型</view>
+        <picker bindchange="onTypeChange" value="{{typeIndex}}" range="{{typeOptions}}">
+          <view class="picker-box">
+            <text class="{{!formData.relatedType ? 'ph' : ''}}">{{typeOptions[typeIndex] || '请选择'}}</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
+
+      <view class="form-group half" wx:if="{{formData.relatedType !== 'none'}}">
+        <view class="label" style="display:flex; justify-content:space-between; align-items:center;">
+          <text>关联{{formData.relatedType === 'lead' ? '客户' : '工地'}}</text>
+          <text class="jump-link" wx:if="{{isEdit && formData.relatedId}}" bindtap="goToRelated">查看详情 ></text>
+        </view>
+        <picker bindchange="onRelatedChange" value="{{relatedIndex}}" range="{{relatedOptions}}" range-key="name">
+          <view class="picker-box">
+            <text class="{{relatedIndex === -1 ? 'ph' : 'ellipsis'}}">{{relatedIndex !== -1 ? relatedOptions[relatedIndex].name : '请选择'}}</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
+    </view>
+
+    <!-- 截止日期 -->
+    <view class="form-group">
+      <view class="label">截止日期 <text class="required">*</text></view>
+      <picker mode="date" value="{{formData.dueDate}}" bindchange="onDateChange">
+        <view class="picker-box">
+          <text class="{{!formData.dueDate ? 'ph' : ''}}">{{formData.dueDate || '选择截止日期'}}</text>
+          <view class="icon-calendar"></view>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 执行人 (多选) -->
+    <view class="form-group">
+      <view class="label">指派给谁 (执行人可多选) <text class="required">*</text></view>
+      <view class="multi-select-box" bindtap="showAssigneeModal">
+        <text class="{{selectedEmployeeNames ? '' : 'ph'}}">{{selectedEmployeeNames || '请选择执行人'}}</text>
+        <view class="arrow-down"></view>
+      </view>
+    </view>
+
+    <!-- 详细描述 -->
+    <view class="form-group">
+      <view class="label">详细描述</view>
+      <textarea class="textarea-box" placeholder="添加更详细的任务描述（选填）..." placeholder-class="ph" value="{{formData.description}}" bindinput="onInput" data-field="description" auto-height maxlength="500"></textarea>
+    </view>
+    
+    <view class="bottom-padding"></view>
+  </scroll-view>
+
+  <!-- 底部固定按钮区 -->
+  <view class="bottom-bar">
+    <view class="btn-delete hover-scale" wx:if="{{isEdit}}" bindtap="deleteTodo">删除</view>
+    <view class="btn-cancel hover-scale" bindtap="goBack">取消</view>
+    <view class="btn-save hover-scale" bindtap="saveTodo">保存</view>
+  </view>
+
+  <!-- 执行人多选弹窗 -->
+  <view class="modal-mask" wx:if="{{showAssigneeModal}}" bindtap="hideAssigneeModal"></view>
+  <view class="modal-content" wx:if="{{showAssigneeModal}}">
+    <view class="modal-header">
+      <text>选择执行人</text>
+      <view class="btn-close" bindtap="hideAssigneeModal">完成</view>
+    </view>
+    <scroll-view scroll-y class="modal-list">
+      <view class="employee-item" wx:for="{{employees}}" wx:key="id" bindtap="toggleAssignee" data-id="{{item.id}}">
+        <view class="checkbox {{item.selected ? 'checked' : ''}}">
+          <view wx:if="{{item.selected}}" class="checkmark"></view>
+        </view>
+        <text class="emp-name">{{item.displayName}}</text>
+      </view>
+    </scroll-view>
+  </view>
+</view>

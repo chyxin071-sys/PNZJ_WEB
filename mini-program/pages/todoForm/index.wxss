@@ -1,0 +1,69 @@
+
+.page-container { height: 100vh; display: flex; flex-direction: column; background: #faf9f8; }
+
+.form-scroll { flex: 1; padding: 32rpx; box-sizing: border-box; }
+
+.form-group { margin-bottom: 40rpx; }
+.form-row-group { display: flex; gap: 24rpx; }
+.half { flex: 1; min-width: 0; }
+
+.label { font-size: 28rpx; font-weight: bold; color: #4a403a; margin-bottom: 16rpx; display: flex; align-items: center; }
+.required { color: #e11d48; margin-left: 8rpx; }
+.jump-link { color: #3b82f6; font-size: 24rpx; font-weight: normal; }
+
+.input-box, .picker-box, .textarea-box { background: #fff; border: 2rpx solid #eaddd7; border-radius: 16rpx; font-size: 28rpx; color: #4a403a; transition: all 0.2s; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.01); }
+.input-box:focus, .textarea-box:focus { border-color: #b5a49a; box-shadow: 0 4rpx 12rpx rgba(74, 64, 58, 0.05); }
+
+.input-box { height: 96rpx; padding: 0 24rpx; }
+.picker-box { height: 96rpx; padding: 0 24rpx; display: flex; align-items: center; justify-content: space-between; }
+.textarea-box { padding: 24rpx; min-height: 200rpx; width: 100%; box-sizing: border-box; }
+
+.ph { color: #b5a49a; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 85%; }
+
+/* 箭头和图标 */
+.arrow-down { width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 12rpx solid #b5a49a; border-radius: 2rpx; flex-shrink: 0; }
+.icon-calendar { width: 28rpx; height: 28rpx; border: 4rpx solid #b5a49a; border-radius: 6rpx; position: relative; flex-shrink: 0; }
+.icon-calendar::before { content: ''; position: absolute; top: -6rpx; left: 4rpx; width: 4rpx; height: 8rpx; background: #b5a49a; border-radius: 2rpx; box-shadow: 12rpx 0 0 #b5a49a; }
+.icon-calendar::after { content: ''; position: absolute; top: 8rpx; left: 0; width: 100%; height: 4rpx; background: #b5a49a; }
+
+/* 优先级选择器 */
+.priority-selector { display: flex; gap: 20rpx; }
+.p-btn { flex: 1; height: 88rpx; background: #fff; border: 2rpx solid #eaddd7; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; font-size: 26rpx; font-weight: bold; color: #8c7a6e; transition: all 0.2s; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.01); }
+.p-dot { width: 12rpx; height: 12rpx; border-radius: 50%; margin-right: 12rpx; }
+
+.bg-emerald-500 { background: #10b981; }
+.bg-amber-500 { background: #f59e0b; }
+.bg-rose-500 { background: #e11d48; }
+
+.p-active-low { background: #ecfdf5; border-color: #34d399; color: #059669; }
+.p-active-medium { background: #fffbeb; border-color: #fbbf24; color: #d97706; }
+.p-active-high { background: #fff1f2; border-color: #fb7185; color: #e11d48; }
+
+.bottom-padding { height: 180rpx; }
+
+/* 底部操作栏 */
+.bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 24rpx 40rpx 60rpx; border-top: 1rpx solid rgba(0,0,0,0.05); display: flex; gap: 24rpx; z-index: 100; }
+.btn-cancel { flex: 1; height: 96rpx; background: #f5f4f2; color: #4a403a; border-radius: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; }
+.btn-save { flex: 2; height: 96rpx; background: #4a403a; color: #fff; border-radius: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74, 64, 58, 0.2); }
+.btn-delete { flex: 1; height: 96rpx; background: #fee2e2; color: #ef4444; border-radius: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; }
+
+/* 全局点击动效 */
+.hover-scale { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
+.hover-scale:active { transform: scale(0.96); }
+
+/* 多选弹窗 */
+.multi-select-box { display: flex; justify-content: space-between; align-items: center; }
+.modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+.modal-content { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 40rpx 40rpx 0 0; z-index: 101; padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; max-height: 70vh; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 40rpx; font-size: 34rpx; font-weight: bold; border-bottom: 1rpx solid #f1f5f9; }
+.btn-close { color: #3b82f6; font-size: 32rpx; font-weight: normal; }
+.modal-list { flex: 1; padding: 20rpx 40rpx; }
+.employee-item { display: flex; align-items: center; padding: 24rpx 0; border-bottom: 1rpx solid #f8fafc; }
+.employee-item:last-child { border-bottom: none; }
+.emp-name { font-size: 30rpx; margin-left: 20rpx; }
+
+/* 复用 Checkbox 样式 */
+.checkbox { width: 44rpx; height: 44rpx; border-radius: 12rpx; border: 3rpx solid #cbd5e1; display: flex; align-items: center; justify-content: center; transition: all 0.2s; background: #f8fafc; }
+.checkbox.checked { background: var(--primary-900); border-color: var(--primary-900); }
+.checkmark { width: 12rpx; height: 22rpx; border: 4rpx solid #fff; border-top: none; border-left: none; transform: rotate(45deg); margin-top: -4rpx; }

@@ -1,0 +1,54 @@
+// pages/profile/index.js
+Page({
+
+  /**
+   * 页面的初始数据
+   */
+  data: {
+    userInfo: null,
+    myTodosCount: 12,
+    myLeadsCount: 56,
+    myProjectsCount: 8
+  },
+
+  /**
+   * 生命周期函数--监听页面显示
+   */
+  onShow() {
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo) {
+      wx.reLaunch({
+        url: '/pages/login/index'
+      });
+    } else {
+      this.setData({ userInfo });
+    }
+  },
+
+  goToQuote() {
+    wx.showToast({ title: '我的报价开发中', icon: 'none' });
+  },
+
+  goToMaterials() {
+    wx.showToast({ title: '材料大厅开发中', icon: 'none' });
+  },
+
+  goToTeam() {
+    wx.showToast({ title: '组织架构开发中', icon: 'none' });
+  },
+
+  handleLogout() {
+    wx.showModal({
+      title: '提示',
+      content: '确定要退出登录吗？',
+      success(res) {
+        if (res.confirm) {
+          wx.removeStorageSync('userInfo');
+          wx.reLaunch({
+            url: '/pages/login/index'
+          });
+        }
+      }
+    });
+  }
+})

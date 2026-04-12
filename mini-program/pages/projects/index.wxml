@@ -1,0 +1,139 @@
+<view class="page-container">
+
+  <!-- 顶部数据看板 -->
+  <view class="dashboard">
+    <view class="dashboard-header">
+      <text class="dashboard-title">工地管理</text>
+      <!-- 标题右侧：时间筛选器 (带红框样式) -->
+      <picker mode="selector" range="{{timeFilterOptions}}" value="{{timeFilterIndex}}" bindchange="onTimeFilterChange">
+        <view class="date-filter-box">
+          <text>{{timeFilterLabel}}</text>
+        </view>
+      </picker>
+    </view>
+    <view class="dashboard-cards">
+      <!-- 全部卡片 -->
+      <view class="stat-card {{activeTab === '全部' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="全部">
+        <view class="icon-box bg-blue-50">
+          <view class="icon-home"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-label">全部工地</text>
+          <text class="stat-num">{{totalCount}}</text>
+        </view>
+      </view>
+      <!-- 施工中卡片 -->
+      <view class="stat-card {{activeTab === '施工中' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="施工中">
+        <view class="icon-box bg-orange-50">
+          <view class="icon-hammer"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-label">施工中</text>
+          <text class="stat-num">{{activeCount}}</text>
+        </view>
+      </view>
+      <!-- 已竣工卡片 -->
+      <view class="stat-card {{activeTab === '已竣工' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="已竣工">
+        <view class="icon-box bg-emerald-50">
+          <view class="icon-check"></view>
+        </view>
+        <view class="stat-info">
+          <text class="stat-label">已竣工</text>
+          <text class="stat-num">{{completedCount}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 操作栏 (搜索+新建) -->
+  <view class="action-bar">
+    <view class="search-wrap">
+      <icon type="search" size="16" color="#b5a49a" />
+      <input placeholder="搜索小区/客户/项目经理..." placeholder-class="ph" bindinput="onSearch" />
+    </view>
+    <!-- 人员高级筛选器 (三横线图标) -->
+    <view class="btn-filter hover-scale" bindtap="openAdvancedFilter">
+      <view class="icon-filter">
+        <view class="line-mid"></view>
+      </view>
+      <view class="filter-badge" wx:if="{{selectedEmployeeIds.length > 0}}"></view>
+    </view>
+    <view class="btn-create-small" hover-class="btn-create-hover" bindtap="createProject">
+      <view class="plus-icon"></view>
+      <text>新建</text>
+    </view>
+  </view>
+
+  <!-- 工地列表区 -->
+  <scroll-view scroll-y class="list-container">
+    <view class="todo-card" hover-class="card-hover" hover-stay-time="100" wx:for="{{projects}}" wx:key="id" bindtap="goToDetail">
+      
+      <!-- 头部：地址与状态 -->
+      <view class="card-header">
+        <view class="title-wrap">
+          <text class="title">{{item.address}}</text>
+        </view>
+        <view class="status-badge {{item.status === '施工中' ? 'status-active' : (item.status === '已竣工' ? 'status-done' : 'status-stop')}}">
+          {{item.status}}
+        </view>
+      </view>
+
+      <!-- 主体：客户信息与进度条 -->
+      <view class="card-body">
+        <view class="info-row">
+          <text class="customer-name">{{item.customer}}</text>
+          <view class="rating-badge rating-{{item.rating}}">{{item.rating}}级</view>
+        </view>
+        
+        <view class="progress-wrap mt-3">
+          <view class="progress-header">
+            <text class="stage-text">当前阶段: {{item.currentStage || '已竣工'}}</text>
+            <text class="progress-pct {{item.status === '已竣工' ? 'progress-pct-done' : ''}}">{{item.progress}}%</text>
+          </view>
+          <view class="progress-bar">
+            <view class="progress-inner {{item.status === '已竣工' ? 'progress-inner-done' : ''}}" style="width: {{item.progress}}%"></view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 底部：人员分配与开工时间 -->
+      <view class="card-footer meta-stack">
+        <view class="meta-badge meta-related">
+          <view class="icon-calendar"></view>
+          <text>开工: {{item.startDate}}</text>
+        </view>
+
+        <view class="meta-assignee">
+          <view class="icon-user"></view>
+          <text>项目经理: {{item.manager}} | 设计: {{item.designer}}</text>
+        </view>
+      </view>
+
+    </view>
+    
+    <view class="empty-state" wx:if="{{projects.length === 0}}">
+      <view class="empty-icon"></view>
+      <text>暂无相关工地</text>
+    </view>
+    
+    <view class="bottom-padding"></view>
+  </scroll-view>
+
+  <!-- 高级人员筛选弹窗 -->
+  <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
+  <view class="modal-content" wx:if="{{showFilterModal}}">
+    <view class="modal-header">
+      <text>人员高级筛选</text>
+      <view class="btn-close" bindtap="applyFilter">确定</view>
+    </view>
+    <scroll-view scroll-y class="modal-list">
+      <view class="employee-item" wx:for="{{filterEmployees}}" wx:key="id" bindtap="toggleFilterEmployee" data-id="{{item.id}}">
+        <view class="checkbox {{item.selected ? 'checked' : ''}}">
+          <view wx:if="{{item.selected}}" class="checkmark"></view>
+        </view>
+        <text class="emp-name">{{item.name}}</text>
+      </view>
+    </scroll-view>
+  </view>
+
+</view>
