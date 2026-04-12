@@ -1,8 +1,0 @@
-{
-  "/leads/[id]/page": "app/leads/[id]/page.js",
-  "/login/page": "app/login/page.js",
-  "/materials/page": "app/materials/page.js",
-  "/projects/page": "app/projects/page.js",
-  "/contracts/page": "app/contracts/page.js",
-  "/quotes/page": "app/quotes/page.js"
-}
