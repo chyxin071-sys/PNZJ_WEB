@@ -52,6 +52,10 @@
 .hover-scale { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
 .hover-scale:active { transform: scale(0.96); }
 
+/* 禁用状态和查看模式样式 */
+.view-mode .input-box, .view-mode .picker-box, .view-mode .multi-select-box, .view-mode .textarea-box { border-color: transparent; background: transparent; padding-left: 0; padding-right: 0; color: var(--primary-900); font-weight: 500; }
+.view-mode .priority-selector.disabled { pointer-events: none; opacity: 0.9; }
+
 /* 多选弹窗 */
 .multi-select-box { display: flex; justify-content: space-between; align-items: center; }
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; }

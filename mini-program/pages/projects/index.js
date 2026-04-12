@@ -23,6 +23,19 @@ Page({
     ],
     selectedEmployeeIds: []
   },
+  onLoad() {
+    // 恢复筛选状态
+    const app = getApp();
+    if (app.globalData && app.globalData.projectFilters) {
+      const f = app.globalData.projectFilters;
+      this.setData({
+        timeFilterIndex: f.timeFilterIndex,
+        timeFilterLabel: f.timeFilterLabel,
+        filterEmployees: f.filterEmployees || this.data.filterEmployees,
+        selectedEmployeeIds: f.selectedEmployeeIds || []
+      });
+    }
+  },
   onShow() {
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) {
@@ -103,6 +116,16 @@ Page({
       this.filterProjects();
     });
   },
+  saveFilterState() {
+    const app = getApp();
+    if (!app.globalData) app.globalData = {};
+    app.globalData.projectFilters = {
+      timeFilterIndex: this.data.timeFilterIndex,
+      timeFilterLabel: this.data.timeFilterLabel,
+      filterEmployees: this.data.filterEmployees,
+      selectedEmployeeIds: this.data.selectedEmployeeIds
+    };
+  },
   onSearch(e) {
     this.setData({ searchQuery: e.detail.value }, () => {
       this.filterProjects();
@@ -114,6 +137,7 @@ Page({
       timeFilterIndex: idx,
       timeFilterLabel: this.data.timeFilterOptions[idx]
     }, () => {
+      this.saveFilterState();
       this.filterProjects();
     });
   },
@@ -139,6 +163,7 @@ Page({
       selectedEmployeeIds: selected,
       showFilterModal: false 
     }, () => {
+      this.saveFilterState();
       this.filterProjects();
     });
   },

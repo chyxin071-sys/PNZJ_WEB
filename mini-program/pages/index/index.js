@@ -14,12 +14,18 @@ Page({
     timeFilterLabel: '最近一周',
 
     showFilterModal: false,
+    
+    // 高级筛选状态
+    filterScope: 'related', // 'related' | 'all'
+    filterPriority: 'all',  // 'all' | 'high' | 'medium' | 'low'
+    
     filterEmployees: [
       { id: 1, name: '销售A', selected: false },
       { id: 2, name: '设计师B', selected: false },
       { id: 3, name: '项目经理C', selected: false }
     ],
-    selectedEmployeeIds: []
+    selectedEmployeeIds: [],
+    isAdmin: false
   },
   onShow() {
     const userInfo = wx.getStorageSync('userInfo');
@@ -28,8 +34,29 @@ Page({
         url: '/pages/login/index'
       });
     }
+    // 每次显示时重新过滤，以防全局状态被其他页面改变（如果有）
+    this.filterTodos();
   },
   onLoad() {
+    // 恢复筛选状态
+    const app = getApp();
+    if (app.globalData && app.globalData.todoFilters) {
+      const f = app.globalData.todoFilters;
+      this.setData({
+        timeFilterIndex: f.timeFilterIndex,
+        timeFilterLabel: f.timeFilterLabel,
+        filterScope: f.filterScope || 'related',
+        filterPriority: f.filterPriority || 'all',
+        filterEmployees: f.filterEmployees || this.data.filterEmployees,
+        selectedEmployeeIds: f.selectedEmployeeIds || []
+      });
+    }
+
+    const userInfo = wx.getStorageSync('userInfo');
+    if (userInfo && userInfo.role === 'admin') {
+      this.setData({ isAdmin: true });
+    }
+
     this.initDate();
     // 模拟从接口获取全部数据
     this.setData({ allTodos: todosData }, () => {
@@ -105,6 +132,22 @@ Page({
       });
     }
 
+    // 优先级过滤
+    if (this.data.filterPriority !== 'all') {
+      filtered = filtered.filter(t => t.priority === this.data.filterPriority);
+    }
+
+    // 范围过滤 (与我相关 vs 全部)
+    if (this.data.filterScope === 'related') {
+      const userInfo = wx.getStorageSync('userInfo');
+      if (userInfo && userInfo.name) {
+        filtered = filtered.filter(t => {
+          if (!t.assignees) return false;
+          return t.assignees.some(a => a.name === userInfo.name);
+        });
+      }
+    }
+
     // 计算到期状态
     const today = new Date().toISOString().split('T')[0].replace(/-/g, '/');
     const todayTime = new Date(today).getTime();
@@ -131,18 +174,31 @@ Page({
       this.filterTodos();
     });
   },
+  saveFilterState() {
+    const app = getApp();
+    if (!app.globalData) app.globalData = {};
+    app.globalData.todoFilters = {
+      timeFilterIndex: this.data.timeFilterIndex,
+      timeFilterLabel: this.data.timeFilterLabel,
+      filterScope: this.data.filterScope,
+      filterPriority: this.data.filterPriority,
+      filterEmployees: this.data.filterEmployees,
+      selectedEmployeeIds: this.data.selectedEmployeeIds
+    };
+  },
+
   onSearch(e) {
     this.setData({ searchQuery: e.detail.value }, () => {
       this.filterTodos();
     });
   },
-  
   onTimeFilterChange(e) {
     const idx = parseInt(e.detail.value);
-    this.setData({ 
+    this.setData({
       timeFilterIndex: idx,
       timeFilterLabel: this.data.timeFilterOptions[idx]
     }, () => {
+      this.saveFilterState();
       this.filterTodos();
     });
   },
@@ -203,12 +259,29 @@ Page({
     });
     this.setData({ filterEmployees: employees });
   },
+  switchFilterScope(e) {
+    const scope = e.currentTarget.dataset.scope;
+    this.setData({ filterScope: scope }, () => {
+      this.saveFilterState();
+      this.filterTodos();
+    });
+  },
+
+  switchFilterPriority(e) {
+    const p = e.currentTarget.dataset.priority;
+    this.setData({ filterPriority: p }, () => {
+      this.saveFilterState();
+      this.filterTodos();
+    });
+  },
+
   applyFilter() {
     const selected = this.data.filterEmployees.filter(e => e.selected).map(e => e.id);
     this.setData({ 
       selectedEmployeeIds: selected,
       showFilterModal: false 
     }, () => {
+      this.saveFilterState();
       this.filterTodos();
     });
   }

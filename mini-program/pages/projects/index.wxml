@@ -82,7 +82,6 @@
       <view class="card-body">
         <view class="info-row">
           <text class="customer-name">{{item.customer}}</text>
-          <view class="rating-badge rating-{{item.rating}}">{{item.rating}}级</view>
         </view>
         
         <view class="progress-wrap mt-3">

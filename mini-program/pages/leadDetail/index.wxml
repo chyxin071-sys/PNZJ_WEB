@@ -13,13 +13,9 @@
     
     <!-- 快捷操作区 -->
     <view class="action-icons mt-4">
-      <view class="action-btn" bindtap="callPhone">
-        <view class="icon-phone"></view>
-        <text>拨打</text>
-      </view>
       <view class="action-btn" bindtap="goToQuote">
         <view class="icon-quote"></view>
-        <text>报价(待开发)</text>
+        <text>关联报价单</text>
       </view>
       <view class="action-btn" wx:if="{{lead.status === '已签单'}}" bindtap="goToProject">
         <view class="icon-project"></view>

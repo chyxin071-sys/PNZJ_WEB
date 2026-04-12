@@ -10,8 +10,8 @@
     "pages/leadDetail/index"
   ],
   "window": {
-    "navigationBarBackgroundColor": "#4a403a",
-    "navigationBarTextStyle": "white",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
     "navigationBarTitleText": "品诺筑家",
     "backgroundColor": "#f5f4f2",
     "backgroundTextStyle": "light"
@@ -25,26 +25,26 @@
       {
         "pagePath": "pages/index/index",
         "text": "",
-        "iconPath": "assets/icons/todo.png",
-        "selectedIconPath": "assets/icons/todo-active.png"
+        "iconPath": "/assets/icons/todo.png",
+        "selectedIconPath": "/assets/icons/todo-active.png"
       },
       {
         "pagePath": "pages/leads/index",
         "text": "",
-        "iconPath": "assets/icons/leads.png",
-        "selectedIconPath": "assets/icons/leads-active.png"
+        "iconPath": "/assets/icons/leads.png",
+        "selectedIconPath": "/assets/icons/leads-active.png"
       },
       {
         "pagePath": "pages/projects/index",
         "text": "",
-        "iconPath": "assets/icons/projects.png",
-        "selectedIconPath": "assets/icons/projects-active.png"
+        "iconPath": "/assets/icons/projects.png",
+        "selectedIconPath": "/assets/icons/projects-active.png"
       },
       {
         "pagePath": "pages/profile/index",
         "text": "",
-        "iconPath": "assets/icons/profile.png",
-        "selectedIconPath": "assets/icons/profile-active.png"
+        "iconPath": "/assets/icons/profile.png",
+        "selectedIconPath": "/assets/icons/profile-active.png"
       }
     ]
   },

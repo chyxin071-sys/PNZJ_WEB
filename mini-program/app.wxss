@@ -48,6 +48,13 @@ page {
 .checkbox.checked { background: var(--primary-900); border-color: var(--primary-900); }
 .checkmark { width: 12rpx; height: 22rpx; border: 4rpx solid #fff; border-top: none; border-left: none; transform: rotate(45deg); margin-top: -4rpx; }
 
+/* 高级筛选区通用样式 */
+.filter-section { margin-bottom: 40rpx; }
+.filter-title { font-size: 28rpx; color: var(--primary-400); font-weight: bold; margin-bottom: 20rpx; }
+.filter-tags { display: flex; flex-wrap: wrap; gap: 20rpx; }
+.filter-tag { padding: 12rpx 32rpx; background: #f8fafc; border: 2rpx solid #e2e8f0; border-radius: 40rpx; font-size: 28rpx; color: var(--primary-600); transition: all 0.2s; }
+.filter-tag.active { background: var(--primary-900); border-color: var(--primary-900); color: #fff; }
+
 /* 高级感人员筛选图标 (三横线) */
 .btn-filter { background: #fff; border-radius: 20rpx; width: 80rpx; height: 80rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.02); border: 1rpx solid transparent; flex-shrink: 0; position: relative; transition: all 0.15s; }
 .icon-filter { width: 32rpx; height: 32rpx; display: flex; flex-direction: column; justify-content: space-evenly; align-items: center; }
@@ -57,7 +64,7 @@ page {
 .filter-badge { position: absolute; top: 16rpx; right: 16rpx; width: 14rpx; height: 14rpx; background: #ef4444; border-radius: 50%; border: 3rpx solid #fff; }
 
 /* 顶部时间筛选器 */
-.date-filter-box { background: #f5f4f2; padding: 8rpx 24rpx; border-radius: 30rpx; display: inline-flex; align-items: center; justify-content: center; border: 1rpx solid #eaddd7; transition: all 0.2s; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); }
-.date-filter-box:active { transform: scale(0.96); background: #eaddd7; }
+.date-filter-box { background: #f8fafc; padding: 8rpx 24rpx; border-radius: 30rpx; display: inline-flex; align-items: center; justify-content: center; border: 1rpx solid transparent; transition: all 0.2s; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); }
+.date-filter-box:active { transform: scale(0.96); background: #f1f5f9; }
 .date-filter-box text { font-size: 26rpx; color: var(--primary-600); font-weight: bold; }
 .date-filter-box::after { content: ''; width: 0; height: 0; border-left: 8rpx solid transparent; border-right: 8rpx solid transparent; border-top: 10rpx solid var(--primary-600); margin-left: 10rpx; border-radius: 2rpx; }

@@ -1,23 +1,23 @@
 
-<view class="page-container">
+<view class="page-container {{mode === 'view' ? 'view-mode' : ''}}">
   <scroll-view scroll-y class="form-scroll">
     <!-- 标题 -->
     <view class="form-group">
-      <view class="label">任务标题 <text class="required">*</text></view>
-      <input class="input-box" placeholder="输入待办任务标题..." placeholder-class="ph" value="{{formData.title}}" bindinput="onInput" data-field="title" />
+      <view class="label">任务标题 <text class="required" wx:if="{{mode !== 'view'}}">*</text></view>
+      <input class="input-box" placeholder="输入待办任务标题..." placeholder-class="ph" value="{{formData.title}}" bindinput="onInput" data-field="title" disabled="{{mode === 'view'}}" />
     </view>
 
     <!-- 优先级 -->
     <view class="form-group">
-      <view class="label">优先级 <text class="required">*</text></view>
-      <view class="priority-selector">
-        <view class="p-btn {{formData.priority === 'low' ? 'p-active-low' : ''}}" bindtap="setPriority" data-value="low">
+      <view class="label">优先级 <text class="required" wx:if="{{mode !== 'view'}}">*</text></view>
+      <view class="priority-selector {{mode === 'view' ? 'disabled' : ''}}">
+        <view class="p-btn {{formData.priority === 'low' ? 'p-active-low' : ''}}" bindtap="{{mode === 'view' ? '' : 'setPriority'}}" data-value="low">
           <view class="p-dot bg-emerald-500"></view>普通
         </view>
-        <view class="p-btn {{formData.priority === 'medium' ? 'p-active-medium' : ''}}" bindtap="setPriority" data-value="medium">
+        <view class="p-btn {{formData.priority === 'medium' ? 'p-active-medium' : ''}}" bindtap="{{mode === 'view' ? '' : 'setPriority'}}" data-value="medium">
           <view class="p-dot bg-amber-500"></view>重要
         </view>
-        <view class="p-btn {{formData.priority === 'high' ? 'p-active-high' : ''}}" bindtap="setPriority" data-value="high">
+        <view class="p-btn {{formData.priority === 'high' ? 'p-active-high' : ''}}" bindtap="{{mode === 'view' ? '' : 'setPriority'}}" data-value="high">
           <view class="p-dot bg-rose-500"></view>紧急
         </view>
       </view>
@@ -27,10 +27,10 @@
     <view class="form-row-group">
       <view class="form-group half">
         <view class="label">关联类型</view>
-        <picker bindchange="onTypeChange" value="{{typeIndex}}" range="{{typeOptions}}">
+        <picker bindchange="onTypeChange" value="{{typeIndex}}" range="{{typeOptions}}" disabled="{{mode === 'view'}}">
           <view class="picker-box">
             <text class="{{!formData.relatedType ? 'ph' : ''}}">{{typeOptions[typeIndex] || '请选择'}}</text>
-            <view class="arrow-down"></view>
+            <view class="arrow-down" wx:if="{{mode !== 'view'}}"></view>
           </view>
         </picker>
       </view>
@@ -40,10 +40,10 @@
           <text>关联{{formData.relatedType === 'lead' ? '客户' : '工地'}}</text>
           <text class="jump-link" wx:if="{{isEdit && formData.relatedId}}" bindtap="goToRelated">查看详情 ></text>
         </view>
-        <picker bindchange="onRelatedChange" value="{{relatedIndex}}" range="{{relatedOptions}}" range-key="name">
+        <picker bindchange="onRelatedChange" value="{{relatedIndex}}" range="{{relatedOptions}}" range-key="name" disabled="{{mode === 'view'}}">
           <view class="picker-box">
             <text class="{{relatedIndex === -1 ? 'ph' : 'ellipsis'}}">{{relatedIndex !== -1 ? relatedOptions[relatedIndex].name : '请选择'}}</text>
-            <view class="arrow-down"></view>
+            <view class="arrow-down" wx:if="{{mode !== 'view'}}"></view>
           </view>
         </picker>
       </view>
@@ -51,37 +51,40 @@
 
     <!-- 截止日期 -->
     <view class="form-group">
-      <view class="label">截止日期 <text class="required">*</text></view>
-      <picker mode="date" value="{{formData.dueDate}}" bindchange="onDateChange">
+      <view class="label">截止日期 <text class="required" wx:if="{{mode !== 'view'}}">*</text></view>
+      <picker mode="date" value="{{formData.dueDate}}" bindchange="onDateChange" disabled="{{mode === 'view'}}">
         <view class="picker-box">
           <text class="{{!formData.dueDate ? 'ph' : ''}}">{{formData.dueDate || '选择截止日期'}}</text>
-          <view class="icon-calendar"></view>
+          <view class="icon-calendar" wx:if="{{mode !== 'view'}}"></view>
         </view>
       </picker>
     </view>
 
     <!-- 执行人 (多选) -->
     <view class="form-group">
-      <view class="label">指派给谁 (执行人可多选) <text class="required">*</text></view>
-      <view class="multi-select-box" bindtap="showAssigneeModal">
+      <view class="label">指派给谁 (执行人可多选) <text class="required" wx:if="{{mode !== 'view'}}">*</text></view>
+      <view class="multi-select-box" bindtap="{{mode === 'view' ? '' : 'showAssigneeModal'}}">
         <text class="{{selectedEmployeeNames ? '' : 'ph'}}">{{selectedEmployeeNames || '请选择执行人'}}</text>
-        <view class="arrow-down"></view>
+        <view class="arrow-down" wx:if="{{mode !== 'view'}}"></view>
       </view>
     </view>
 
     <!-- 详细描述 -->
     <view class="form-group">
       <view class="label">详细描述</view>
-      <textarea class="textarea-box" placeholder="添加更详细的任务描述（选填）..." placeholder-class="ph" value="{{formData.description}}" bindinput="onInput" data-field="description" auto-height maxlength="500"></textarea>
+      <textarea class="textarea-box" placeholder="添加更详细的任务描述（选填）..." placeholder-class="ph" value="{{formData.description}}" bindinput="onInput" data-field="description" auto-height maxlength="500" disabled="{{mode === 'view'}}"></textarea>
     </view>
     
     <view class="bottom-padding"></view>
   </scroll-view>
 
   <!-- 底部固定按钮区 -->
-  <view class="bottom-bar">
-    <view class="btn-delete hover-scale" wx:if="{{isEdit}}" bindtap="deleteTodo">删除</view>
-    <view class="btn-cancel hover-scale" bindtap="goBack">取消</view>
+  <view class="bottom-bar" wx:if="{{mode === 'view'}}">
+    <view class="btn-delete hover-scale" bindtap="deleteTodo">删除</view>
+    <view class="btn-save hover-scale" bindtap="enterEditMode">编辑</view>
+  </view>
+  <view class="bottom-bar" wx:else>
+    <view class="btn-cancel hover-scale" bindtap="{{mode === 'edit' ? 'cancelEdit' : 'goBack'}}">取消</view>
     <view class="btn-save hover-scale" bindtap="saveTodo">保存</view>
   </view>
 

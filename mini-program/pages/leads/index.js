@@ -112,6 +112,34 @@ Page({
     });
   },
 
+  onLoad() {
+    // 恢复筛选状态
+    const app = getApp();
+    if (app.globalData && app.globalData.leadFilters) {
+      const f = app.globalData.leadFilters;
+      this.setData({
+        timeFilterIndex: f.timeFilterIndex,
+        timeFilterLabel: f.timeFilterLabel,
+        filterEmployees: f.filterEmployees || this.data.filterEmployees,
+        selectedEmployeeIds: f.selectedEmployeeIds || []
+      });
+    }
+
+    this.setData({ allLeads: leadsData });
+    this.filterLeads();
+  },
+
+  saveFilterState() {
+    const app = getApp();
+    if (!app.globalData) app.globalData = {};
+    app.globalData.leadFilters = {
+      timeFilterIndex: this.data.timeFilterIndex,
+      timeFilterLabel: this.data.timeFilterLabel,
+      filterEmployees: this.data.filterEmployees,
+      selectedEmployeeIds: this.data.selectedEmployeeIds
+    };
+  },
+
   onSearch(e) {
     this.setData({ searchQuery: e.detail.value }, () => {
       this.filterLeads();
@@ -124,6 +152,7 @@ Page({
       timeFilterIndex: idx,
       timeFilterLabel: this.data.timeFilterOptions[idx]
     }, () => {
+      this.saveFilterState();
       this.filterLeads();
     });
   },
@@ -191,6 +220,7 @@ Page({
       selectedEmployeeIds: selected,
       showFilterModal: false 
     }, () => {
+      this.saveFilterState();
       this.filterLeads();
     });
   }

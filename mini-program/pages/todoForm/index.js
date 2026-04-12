@@ -5,12 +5,12 @@ const employeesData = require('../../mock/employees.js');
 
 Page({
   data: {
-    isEdit: false,
+    mode: 'create', // 'create' | 'view' | 'edit'
     id: null,
-    
+    isEdit: false,
     formData: {
       title: '',
-      priority: 'low',
+      priority: 'medium',
       relatedType: 'none',
       relatedId: '',
       dueDate: '',
@@ -48,11 +48,22 @@ Page({
     this.setData({ employees: emps });
 
     if (options.id) {
-        wx.setNavigationBarTitle({ title: '待办详情 / 编辑' });
-        this.setData({ isEdit: true, id: options.id });
-        this.loadTodoData(options.id);
-      }
-    },
+      wx.setNavigationBarTitle({ title: '待办详情' });
+      this.setData({ isEdit: true, id: options.id, mode: 'view' });
+      this.loadTodoData(options.id);
+    }
+  },
+
+  enterEditMode() {
+    wx.setNavigationBarTitle({ title: '编辑待办' });
+    this.setData({ mode: 'edit' });
+  },
+
+  cancelEdit() {
+    wx.setNavigationBarTitle({ title: '待办详情' });
+    this.setData({ mode: 'view' });
+    this.loadTodoData(this.data.id); // 还原数据
+  },
 
     loadTodoData(id) {
       // 模拟从本地 mock 数据获取
