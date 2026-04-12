@@ -29,6 +29,42 @@ export default function LeadDetailPage() {
   const [personnelConfirm, setPersonnelConfirm] = useState<{ role: string, oldName: string, newName: string } | null>(null);
   const [showToast, setShowToast] = useState(false);
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem("pnzj_user");
+    if (userData) {
+      try {
+        setCurrentUser(JSON.parse(userData));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const isAssignedToMe = (leadData: any) => {
+    if (!currentUser) return false;
+    return leadData.sales === currentUser.name || leadData.designer === currentUser.name;
+  };
+
+  const maskPhone = (phone: string, leadData: any) => {
+    if (!currentUser || currentUser.role === 'admin') return phone;
+    if (isAssignedToMe(leadData)) return phone;
+    if (!phone || phone.length < 11) return phone;
+    return phone.substring(0, 3) + '****' + phone.substring(7);
+  };
+
+  const maskAddress = (address: string, leadData: any) => {
+    if (!currentUser || currentUser.role === 'admin') return address;
+    if (isAssignedToMe(leadData)) return address;
+    if (!address) return address;
+    const parts = address.split(' ');
+    if (parts.length > 1) {
+      return parts[0] + ' ***';
+    }
+    return address + ' ***';
+  };
+
   useEffect(() => {
     if (leadId) {
       const foundLead = leadsData.find(l => l.id === leadId);
@@ -97,7 +133,7 @@ export default function LeadDetailPage() {
     const newTimelineItem = {
       id: Date.now().toString(),
       type: 'user',
-      user: '王老板', // 当前登录用户
+      user: currentUser?.name || '未知用户', // 当前登录用户
       time: `${now.toISOString().split('T')[0]} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`,
       content: newNote
     };
@@ -176,6 +212,9 @@ export default function LeadDetailPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-2xl font-bold text-primary-900 flex items-center gap-2">
                     {lead.name}
+                    {isAssignedToMe(lead) && (
+                      <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
+                    )}
                     <span className="text-sm font-normal text-primary-500 font-mono mt-1">({lead.id})</span>
                   </h1>
                   
@@ -248,59 +287,63 @@ export default function LeadDetailPage() {
                   </div>
                   
                   {/* 编辑信息按钮 */}
-                  <button 
-                    onClick={() => { setEditForm(lead); setIsEditModalOpen(true); }}
-                    className="p-1.5 text-primary-400 hover:text-primary-900 hover:bg-primary-50 rounded-md transition-colors relative z-10"
-                    title="编辑客户信息"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
+                  {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
+                    <button 
+                      onClick={() => { setEditForm(lead); setIsEditModalOpen(true); }}
+                      className="p-1.5 text-primary-400 hover:text-primary-900 hover:bg-primary-50 rounded-md transition-colors relative z-10"
+                      title="编辑客户信息"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
 
                   {/* 删除按钮 */}
-                  <div className="relative z-20">
-                    <button 
-                      onClick={() => setDeleteConfirmId(lead.id)}
-                      className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
-                      title="删除此线索"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    {deleteConfirmId === lead.id && (
-                      <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-rose-100 rounded-xl shadow-xl p-4 z-50 animate-in fade-in zoom-in-95">
-                        <div className="flex items-start gap-3 mb-4">
-                          <div className="p-2 bg-rose-100 text-rose-600 rounded-full shrink-0">
-                            <Trash2 className="w-4 h-4" />
+                  {currentUser?.role === 'admin' && (
+                    <div className="relative z-20">
+                      <button 
+                        onClick={() => setDeleteConfirmId(lead.id)}
+                        className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                        title="删除此线索"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      {deleteConfirmId === lead.id && (
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-rose-100 rounded-xl shadow-xl p-4 z-50 animate-in fade-in zoom-in-95">
+                          <div className="flex items-start gap-3 mb-4">
+                            <div className="p-2 bg-rose-100 text-rose-600 rounded-full shrink-0">
+                              <Trash2 className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-primary-900 mb-1">确定要删除此线索吗？</h4>
+                              <p className="text-xs text-primary-500 leading-relaxed whitespace-normal text-left">删除后，该客户相关的所有记录及资料将无法恢复。</p>
+                            </div>
                           </div>
-                          <div>
-                            <h4 className="text-sm font-bold text-primary-900 mb-1">确定要删除此线索吗？</h4>
-                            <p className="text-xs text-primary-500 leading-relaxed whitespace-normal text-left">删除后，该客户相关的所有记录及资料将无法恢复。</p>
+                          <div className="flex gap-2 justify-end">
+                            <button 
+                              onClick={() => setDeleteConfirmId(null)} 
+                              className="px-3 py-1.5 border border-primary-200 text-primary-600 rounded-lg text-xs font-medium hover:bg-primary-50 transition-colors"
+                            >
+                              取消
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setDeleteConfirmId(null);
+                                router.push('/leads');
+                              }} 
+                              className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-medium hover:bg-rose-600 transition-colors shadow-sm shadow-rose-200"
+                            >
+                              确认删除
+                            </button>
                           </div>
                         </div>
-                        <div className="flex gap-2 justify-end">
-                          <button 
-                            onClick={() => setDeleteConfirmId(null)} 
-                            className="px-3 py-1.5 border border-primary-200 text-primary-600 rounded-lg text-xs font-medium hover:bg-primary-50 transition-colors"
-                          >
-                            取消
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setDeleteConfirmId(null);
-                              router.push('/leads');
-                            }} 
-                            className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-medium hover:bg-rose-600 transition-colors shadow-sm shadow-rose-200"
-                          >
-                            确认删除
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3 text-sm text-primary-700">
-                  <span className="flex items-center"><Phone className="w-4 h-4 mr-2 text-primary-400" /> {lead.phone}</span>
-                  <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-primary-400" /> {lead.address}</span>
+                  <span className="flex items-center"><Phone className="w-4 h-4 mr-2 text-primary-400" /> {maskPhone(lead.phone, lead)}</span>
+                  <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-primary-400" /> {maskAddress(lead.address, lead)}</span>
                   <span className="flex items-center"><Calendar className="w-4 h-4 mr-2 text-primary-400" /> 录入于 {lead.createdAt}</span>
                 </div>
               </div>

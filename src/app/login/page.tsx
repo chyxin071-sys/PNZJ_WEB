@@ -1,16 +1,50 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [account, setAccount] = useState("");
   const router = useRouter();
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/");
+    setError("");
+    
+    if (!phone || !password) {
+      setError("请输入手机号和密码");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, password })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "登录失败，请检查账号密码");
+      }
+
+      // 登录成功，将用户信息暂存本地 (真实项目会使用 JWT 或 HttpOnly Cookie)
+      localStorage.setItem("pnzj_user", JSON.stringify(data.user));
+      
+      // 跳转到工作台
+      router.push("/");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,6 +84,12 @@ export default function LoginPage() {
           <h3 className="text-2xl font-light mb-8 text-zinc-900">Sign In</h3>
 
           <form onSubmit={handleLogin} className="space-y-8">
+            {error && (
+              <div className="p-3 bg-rose-50 text-rose-600 text-sm text-center font-light">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-1">
               <label className="text-xs text-zinc-500 uppercase tracking-widest font-medium">
                 账号 / 手机号
@@ -57,6 +97,8 @@ export default function LoginPage() {
               <input
                 type="text"
                 placeholder="请输入您的账号"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
                 className="w-full border-b border-primary-100 py-3 bg-transparent text-zinc-900 focus:outline-none focus:border-primary-800 transition-colors placeholder:text-zinc-300 font-light"
                 required
               />
@@ -69,6 +111,8 @@ export default function LoginPage() {
               <input
                 type="password"
                 placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full border-b border-primary-100 py-3 bg-transparent text-zinc-900 focus:outline-none focus:border-primary-800 transition-colors placeholder:text-zinc-300 font-light"
                 required
               />
@@ -77,10 +121,20 @@ export default function LoginPage() {
             <div className="pt-4">
               <button
                 type="submit"
-                className="group flex items-center justify-between w-full bg-primary-900 text-white px-6 py-4 hover:bg-primary-800 transition-all duration-300"
+                disabled={isLoading}
+                className="group flex items-center justify-between w-full bg-primary-900 text-white px-6 py-4 hover:bg-primary-800 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                <span className="font-light tracking-widest text-sm">登录进入系统</span>
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
+                {isLoading ? (
+                  <span className="font-light tracking-widest text-sm flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    登录中...
+                  </span>
+                ) : (
+                  <>
+                    <span className="font-light tracking-widest text-sm">登录进入系统</span>
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" strokeWidth={1.5} />
+                  </>
+                )}
               </button>
             </div>
           </form>

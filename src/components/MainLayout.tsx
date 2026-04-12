@@ -1,36 +1,128 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LayoutDashboard, Users, FileText, Hammer, Bell, Search, Menu, Building2, PackageOpen, FileSignature, AlertCircle, FilePlus, CreditCard } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Hammer, Bell, Search, Menu, Building2, PackageOpen, FileSignature, AlertCircle, FilePlus, CreditCard, LogOut, Settings, User, KeyRound, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import dashboardData from "../../mock_data/dashboard.json";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ old: "", new: "", confirm: "" });
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  
   const notifRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // 未登录拦截校验
+    const userData = localStorage.getItem("pnzj_user");
+    if (!userData) {
+      router.push("/login");
+    } else {
+      try {
+        setCurrentUser(JSON.parse(userData));
+        setIsCheckingAuth(false);
+      } catch (e) {
+        localStorage.removeItem("pnzj_user");
+        router.push("/login");
+      }
+    }
+  }, [router]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setIsNotifOpen(false);
       }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleLogout = () => {
+    localStorage.removeItem("pnzj_user");
+    router.push("/login");
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordForm.new !== passwordForm.confirm) {
+      alert("两次输入的新密码不一致");
+      return;
+    }
+    if (!passwordForm.old || !passwordForm.new) {
+      alert("请填写完整");
+      return;
+    }
+
+    setIsSubmittingPassword(true);
+    try {
+      const res = await fetch("/api/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: currentUser._id,
+          oldPassword: passwordForm.old,
+          newPassword: passwordForm.new,
+        }),
+      });
+
+      if (res.ok) {
+        alert("密码修改成功，请重新登录");
+        handleLogout();
+      } else {
+        const data = await res.json();
+        alert(data.error || "密码修改失败");
+      }
+    } catch (err) {
+      alert("网络错误，请稍后再试");
+    } finally {
+      setIsSubmittingPassword(false);
+    }
+  };
+
+  const getRoleName = (role: string) => {
+    switch (role) {
+      case 'admin': return '系统管理员';
+      case 'sales': return '销售/客服';
+      case 'designer': return '设计师';
+      case 'manager': return '项目工长';
+      default: return '未知身份';
+    }
+  };
+
+  if (isCheckingAuth) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-primary-50">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-900 mb-4"></div>
+        <p className="text-primary-600 text-sm font-medium tracking-widest">验证身份中...</p>
+      </div>
+    );
+  }
+
   const navItems = [
-    { name: "全局看板", href: "/", icon: LayoutDashboard },
-    { name: "客户线索", href: "/leads", icon: Users },
-    { name: "报价管理", href: "/quotes", icon: FileText },
-    { name: "合同管理", href: "/contracts", icon: FileSignature },
-    { name: "库存管理", href: "/materials", icon: PackageOpen },
-    { name: "施工管理", href: "/projects", icon: Hammer },
-    { name: "组织架构", href: "/employees", icon: Building2 },
+    { name: "全局看板", href: "/", icon: LayoutDashboard, roles: ['admin', 'sales', 'designer', 'manager'] },
+    { name: "客户线索", href: "/leads", icon: Users, roles: ['admin', 'sales', 'designer', 'manager'] },
+    { name: "报价管理", href: "/quotes", icon: FileText, roles: ['admin', 'sales', 'designer', 'manager'] },
+    { name: "合同管理", href: "/contracts", icon: FileSignature, roles: ['admin', 'sales', 'designer', 'manager'] },
+    { name: "库存管理", href: "/materials", icon: PackageOpen, roles: ['admin', 'sales', 'designer', 'manager'] },
+    { name: "施工管理", href: "/projects", icon: Hammer, roles: ['admin', 'sales', 'designer', 'manager'] },
+    { name: "组织架构", href: "/employees", icon: Building2, roles: ['admin'] },
   ];
+
+  // 过滤当前角色可见的菜单
+  const visibleNavItems = navItems.filter(item => currentUser && item.roles.includes(currentUser.role));
 
   return (
     <div className="h-screen flex overflow-hidden bg-[var(--bg-color)]">
@@ -43,7 +135,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
         
         <nav className="flex-1 py-6 px-3 space-y-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link 
@@ -65,11 +157,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         <div className="p-6 border-t border-primary-100">
           <div className="flex items-center">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-primary-900 text-white shadow-sm">
-              A
+              {currentUser?.name?.[0] || 'U'}
             </div>
             <div className="ml-3">
-              <p className="text-sm font-bold text-primary-900">蒋老板</p>
-              <p className="text-xs text-primary-600">系统管理员</p>
+              <p className="text-sm font-bold text-primary-900">{currentUser?.name || '用户'}</p>
+              <p className="text-xs text-primary-600">{getRoleName(currentUser?.role)}</p>
             </div>
           </div>
         </div>
@@ -92,7 +184,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         <nav className="flex-1 py-8 px-4 space-y-2">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
             return (
               <Link
@@ -212,9 +304,66 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 </div>
               )}
             </div>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium bg-primary-900 text-white">
-              A
+            
+            {/* 用户头像与下拉菜单 */}
+            <div className="relative" ref={userMenuRef}>
+              <button 
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center gap-2 p-1 rounded-full hover:bg-primary-50/50 transition-colors focus:outline-none"
+              >
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium bg-primary-900 text-white shadow-sm">
+                  {currentUser?.name?.[0] || 'U'}
+                </div>
+              </button>
+
+              {isUserMenuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-primary-100 rounded-xl shadow-lg overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="p-3 border-b border-primary-100 bg-primary-50/30">
+                    <p className="text-sm font-bold text-primary-900">{currentUser?.name || '用户'}</p>
+                    <p className="text-xs text-primary-600 mt-0.5">{getRoleName(currentUser?.role)}</p>
+                  </div>
+                  <div className="p-1">
+                    <Link 
+                      href="/employees"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center w-full px-3 py-2 text-sm text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      个人信息
+                    </Link>
+                    <button 
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setPasswordForm({ old: "", new: "", confirm: "" });
+                        setIsPasswordModalOpen(true);
+                      }}
+                      className="flex items-center w-full px-3 py-2 text-sm text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <KeyRound className="w-4 h-4 mr-2" />
+                      修改密码
+                    </button>
+                    <Link 
+                      href="/employees"
+                      onClick={() => setIsUserMenuOpen(false)}
+                      className="flex items-center w-full px-3 py-2 text-sm text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer"
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      系统设置
+                    </Link>
+                  </div>
+                  <div className="p-1 border-t border-primary-100">
+                    <button 
+                      onClick={handleLogout}
+                      className="flex items-center w-full px-3 py-2 text-sm text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors font-medium cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      退出登录
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
+
           </div>
         </header>
 
@@ -225,6 +374,76 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
       </main>
+
+      {/* 修改密码弹窗 */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-in fade-in zoom-in duration-200">
+            <h3 className="text-lg font-bold text-primary-900 mb-6">
+              修改密码
+            </h3>
+            
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-primary-900">原密码 <span className="text-rose-500">*</span></label>
+                <input 
+                  type="password" 
+                  value={passwordForm.old}
+                  onChange={(e) => setPasswordForm({...passwordForm, old: e.target.value})}
+                  placeholder="请输入当前登录密码"
+                  className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-primary-900">新密码 <span className="text-rose-500">*</span></label>
+                <input 
+                  type="password" 
+                  value={passwordForm.new}
+                  onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+                  placeholder="请输入新密码"
+                  className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-primary-900">确认新密码 <span className="text-rose-500">*</span></label>
+                <input 
+                  type="password" 
+                  value={passwordForm.confirm}
+                  onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+                  placeholder="请再次输入新密码"
+                  className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
+                  required
+                />
+              </div>
+              
+              <div className="pt-4 flex gap-3 border-t border-primary-100 mt-6">
+                <button 
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium text-sm"
+                  disabled={isSubmittingPassword}
+                >
+                  取消
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSubmittingPassword || !passwordForm.old || !passwordForm.new || !passwordForm.confirm}
+                  className="flex-1 px-4 py-2.5 text-white rounded-lg transition-colors shadow-sm font-medium text-sm flex items-center justify-center bg-primary-900 hover:bg-primary-800 disabled:opacity-70"
+                >
+                  {isSubmittingPassword ? (
+                    <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
+                  ) : null}
+                  确认修改
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

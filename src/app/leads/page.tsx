@@ -38,6 +38,44 @@ function LeadsContent() {
 
   // 控制自定义下拉框的展开状态
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState<string | false>(false);
+
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem("pnzj_user");
+    if (userData) {
+      try {
+        setCurrentUser(JSON.parse(userData));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  const isAssignedToMe = (lead: any) => {
+    if (!currentUser) return false;
+    return lead.sales === currentUser.name || lead.designer === currentUser.name;
+  };
+
+  const maskPhone = (phone: string, lead: any) => {
+    if (!currentUser || currentUser.role === 'admin') return phone;
+    if (isAssignedToMe(lead)) return phone;
+    if (!phone || phone.length < 11) return phone;
+    return phone.substring(0, 3) + '****' + phone.substring(7);
+  };
+
+  const maskAddress = (address: string, lead: any) => {
+    if (!currentUser || currentUser.role === 'admin') return address;
+    if (isAssignedToMe(lead)) return address;
+    if (!address) return address;
+    // 简单的打码逻辑：隐藏具体的楼栋号等，比如 "万科星城 3栋1单元1204" -> "万科星城 ***"
+    const parts = address.split(' ');
+    if (parts.length > 1) {
+      return parts[0] + ' ***';
+    }
+    return address + ' ***';
+  };
 
   useEffect(() => {
     if (isModalOpen) {
@@ -97,10 +135,18 @@ function LeadsContent() {
 
   const updateLeadDesigner = (id: string, newDesigner: string) => {
     setLeadsData(leadsData.map(lead => lead.id === id ? { ...lead, designer: newDesigner } : lead));
+    if (newDesigner !== "未分配") {
+      setShowToast(`已成功将线索分配给设计：${newDesigner}`);
+      setTimeout(() => setShowToast(false), 3000);
+    }
   };
 
   const updateLeadSales = (id: string, newSales: string) => {
     setLeadsData(leadsData.map(lead => lead.id === id ? { ...lead, sales: newSales } : lead));
+    if (newSales !== "未分配") {
+      setShowToast(`已成功将线索分配给销售：${newSales}`);
+      setTimeout(() => setShowToast(false), 3000);
+    }
   };
 
   const updateLeadRating = (id: string, newRating: string) => {
@@ -407,7 +453,7 @@ function LeadsContent() {
                 <tr 
                   key={lead.id} 
                   onClick={() => router.push(`/leads/${lead.id}`)}
-                  className="hover:bg-primary-50/30 transition-colors group cursor-pointer"
+                  className={`hover:bg-primary-50/50 transition-colors group cursor-pointer ${isAssignedToMe(lead) ? 'bg-amber-50/30' : ''}`}
                 >
                   <td className="py-4 px-6 whitespace-nowrap">
                     <div className="flex items-start gap-2">
@@ -418,14 +464,21 @@ function LeadsContent() {
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-primary-900">{lead.name}</p>
+                          <p className="text-sm font-bold text-primary-900">
+                            {lead.name}
+                            {isAssignedToMe(lead) && (
+                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
+                            )}
+                          </p>
                           <div className="relative inline-block w-auto" title="点击修改评级">
                             <div 
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setOpenDropdown(openDropdown === `rating-${lead.id}` ? null : `rating-${lead.id}`);
+                                if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
+                                  setOpenDropdown(openDropdown === `rating-${lead.id}` ? null : `rating-${lead.id}`);
+                                }
                               }}
-                              className="cursor-pointer"
+                              className={currentUser?.role === 'admin' || isAssignedToMe(lead) ? "cursor-pointer hover:opacity-80" : ""}
                             >
                               {getRatingBadge(lead.rating)}
                             </div>
@@ -449,7 +502,7 @@ function LeadsContent() {
                             )}
                           </div>
                         </div>
-                        <p className="text-xs text-primary-600 font-mono">{lead.phone}</p>
+                        <p className="text-xs text-primary-600 font-mono">{maskPhone(lead.phone, lead)}</p>
                       </div>
                     </div>
                   </td>
@@ -458,12 +511,16 @@ function LeadsContent() {
                       <div 
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenDropdown(openDropdown === `status-${lead.id}` ? null : `status-${lead.id}`);
+                          if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
+                            setOpenDropdown(openDropdown === `status-${lead.id}` ? null : `status-${lead.id}`);
+                          }
                         }}
-                        className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium border whitespace-nowrap cursor-pointer transition-colors ${getStatusColor(lead.status)} hover:opacity-80`}
+                        className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium border whitespace-nowrap transition-colors ${getStatusColor(lead.status)} ${currentUser?.role === 'admin' || isAssignedToMe(lead) ? 'cursor-pointer hover:opacity-80' : ''}`}
                       >
                         {lead.status}
-                        <ChevronDown className={`w-3.5 h-3.5 ml-1.5 opacity-50 transition-transform ${openDropdown === `status-${lead.id}` ? 'rotate-180' : ''}`} />
+                        {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
+                          <ChevronDown className={`w-3.5 h-3.5 ml-1.5 opacity-50 transition-transform ${openDropdown === `status-${lead.id}` ? 'rotate-180' : ''}`} />
+                        )}
                       </div>
                       {openDropdown === `status-${lead.id}` && (
                         <>
@@ -487,7 +544,7 @@ function LeadsContent() {
                     </div>
                   </td>
                   <td className="py-4 px-6 whitespace-nowrap">
-                    <p className="text-sm font-medium text-primary-900 truncate max-w-[200px]" title={lead.address}>{lead.address}</p>
+                    <p className="text-sm font-medium text-primary-900 truncate max-w-[200px]" title={lead.address}>{maskAddress(lead.address, lead)}</p>
                     <p className="text-xs text-primary-600 mt-0.5">{lead.requirementType} · {lead.area}m² · 预算: {lead.budget}</p>
                   </td>
                   <td className="py-4 px-6 whitespace-nowrap">
@@ -496,17 +553,21 @@ function LeadsContent() {
                       <div 
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenDropdown(openDropdown === `sales-${lead.id}` ? null : `sales-${lead.id}`);
+                          if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
+                            setOpenDropdown(openDropdown === `sales-${lead.id}` ? null : `sales-${lead.id}`);
+                          }
                         }}
-                        className={`cursor-pointer transition-colors border px-2 py-0.5 rounded text-xs font-medium flex items-center group/sales ${
+                        className={`transition-colors border px-2 py-0.5 rounded text-xs font-medium flex items-center group/sales ${
                           lead.sales === "未分配" 
-                            ? "text-amber-600 bg-amber-50 hover:bg-amber-100 border-amber-100" 
-                            : "text-primary-700 bg-white hover:bg-primary-50 border-primary-200"
-                        }`}
+                            ? "text-amber-600 bg-amber-50 border-amber-100" 
+                            : "text-primary-700 bg-white border-primary-200"
+                        } ${currentUser?.role === 'admin' || isAssignedToMe(lead) ? 'cursor-pointer hover:bg-primary-50' : ''}`}
                       >
                         {lead.sales === "未分配" && <UserPlus className="w-3 h-3 mr-1" />}
                         {lead.sales}
-                        <ChevronDown className="w-3 h-3 ml-1 opacity-0 group-hover/sales:opacity-100 transition-opacity" />
+                        {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
+                          <ChevronDown className="w-3 h-3 ml-1 opacity-0 group-hover/sales:opacity-100 transition-opacity" />
+                        )}
                       </div>
                       {openDropdown === `sales-${lead.id}` && (
                         <>
@@ -533,17 +594,21 @@ function LeadsContent() {
                       <div 
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenDropdown(openDropdown === `designer-${lead.id}` ? null : `designer-${lead.id}`);
+                          if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
+                            setOpenDropdown(openDropdown === `designer-${lead.id}` ? null : `designer-${lead.id}`);
+                          }
                         }}
-                        className={`cursor-pointer transition-colors border px-2 py-0.5 rounded text-xs font-medium flex items-center group/designer ${
+                        className={`transition-colors border px-2 py-0.5 rounded text-xs font-medium flex items-center group/designer ${
                           lead.designer === "未分配" 
-                            ? "text-amber-600 bg-amber-50 hover:bg-amber-100 border-amber-100" 
-                            : "text-primary-700 bg-white hover:bg-primary-50 border-primary-200"
-                        }`}
+                            ? "text-amber-600 bg-amber-50 border-amber-100" 
+                            : "text-primary-700 bg-white border-primary-200"
+                        } ${currentUser?.role === 'admin' || isAssignedToMe(lead) ? 'cursor-pointer hover:bg-primary-50' : ''}`}
                       >
                         {lead.designer === "未分配" && <UserPlus className="w-3 h-3 mr-1" />}
                         {lead.designer}
-                        <ChevronDown className="w-3 h-3 ml-1 opacity-0 group-hover/designer:opacity-100 transition-opacity" />
+                        {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
+                          <ChevronDown className="w-3 h-3 ml-1 opacity-0 group-hover/designer:opacity-100 transition-opacity" />
+                        )}
                       </div>
                       {openDropdown === `designer-${lead.id}` && (
                         <>
@@ -736,6 +801,19 @@ function LeadsContent() {
         </div>
       )}
       </div>
+
+      {showToast && (
+        <div className="fixed top-24 right-8 z-[70] bg-white border border-primary-100 rounded-xl shadow-lg p-4 flex items-start gap-3 animate-in slide-in-from-top-5 fade-in duration-300">
+          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+            <Check className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-sm font-bold text-primary-900">分配成功</p>
+            <p className="text-xs text-primary-500 mt-0.5">{showToast}</p>
+          </div>
+        </div>
+      )}
+
     </MainLayout>
   );
 }
