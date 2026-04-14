@@ -240,7 +240,7 @@ export default function Dashboard() {
     }
     return acc;
   }, {} as Record<string, number>))
-    .map(([name, count]) => ({ name, count, role: '销售' }))
+    .map(([name, count]) => ({ name, count: count as number, role: '销售' }))
     .sort((a, b) => b.count - a.count)
     .map((user, index) => ({ ...user, rank: index + 1 }))
     .slice(0, 5);
@@ -267,7 +267,7 @@ export default function Dashboard() {
     acc[lead.source] = (acc[lead.source] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-  const sourceData = Object.entries(sourceDataRaw).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+  const sourceData = Object.entries(sourceDataRaw).map(([name, value]) => ({ name, value: value as number })).sort((a, b) => b.value - a.value);
 
   // -- 数据计算: 客单价分布 (遍历所有线索) --
   const orderValueData = (() => {

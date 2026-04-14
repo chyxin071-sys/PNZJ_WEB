@@ -105,6 +105,7 @@ export default function MaterialsPage() {
   const itemsPerPage = 20;
 
   const [products, setProducts] = useState<any[]>([]);
+  const [leadsData, setLeadsData] = useState<any[]>([]);
   const [stockHistory, setStockHistory] = useState<StockHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -128,7 +129,23 @@ export default function MaterialsPage() {
 
   useEffect(() => {
     fetchMaterials();
+    fetchLeads();
   }, []);
+
+  const fetchLeads = async () => {
+    try {
+      const res = await fetch('/api/leads');
+      if (res.ok) {
+        const data = await res.json();
+        setLeadsData(data.map((item: any) => ({
+          ...item,
+          id: item._id
+        })));
+      }
+    } catch (e) {
+      console.error('Failed to fetch leads', e);
+    }
+  };
 
   const fetchMaterials = async () => {
     setIsLoading(true);

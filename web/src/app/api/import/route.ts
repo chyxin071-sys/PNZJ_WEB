@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     const results = {
       leadsAdded: 0,
       materialsAdded: 0,
-      errors: []
+      errors: [] as string[]
     };
 
     // 导入线索
