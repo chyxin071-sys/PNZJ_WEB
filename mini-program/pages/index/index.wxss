@@ -3,11 +3,18 @@
 
 /* 顶部数据看板 */
 .dashboard { background: #fff; padding: 40rpx 40rpx 20rpx; border-bottom-left-radius: 40rpx; border-bottom-right-radius: 40rpx; box-shadow: 0 10rpx 30rpx rgba(74, 64, 58, 0.04); z-index: 10; flex-shrink: 0; }
-.dashboard-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40rpx; }
-.dashboard-title { font-size: 44rpx; font-weight: 800; color: var(--primary-900); letter-spacing: 2rpx; }
+.dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32rpx; }
+.dashboard-title { font-size: 36rpx; font-weight: bold; color: var(--primary-900); }
 .date-display { font-size: 26rpx; color: var(--primary-400); font-weight: 500; }
 
-/* 标题右侧的时间筛选样式已移至全局 app.wxss */
+/* 时间筛选器等样式 */
+.title-wrap { display: flex; flex-direction: column; gap: 8rpx; }
+.date-text { font-size: 24rpx; color: var(--primary-400); font-weight: normal; }
+
+.actions { display: flex; align-items: center; gap: 16rpx; }
+.btn-add { background: var(--primary-900); color: #fff; padding: 12rpx 24rpx; border-radius: 40rpx; font-size: 24rpx; font-weight: 500; display: flex; align-items: center; gap: 6rpx; }
+.date-filter-box { display: flex; align-items: center; gap: 8rpx; padding: 10rpx 24rpx; background: #f8fafc; border-radius: 40rpx; border: 1rpx solid transparent; font-size: 24rpx; color: var(--primary-600); font-weight: 500; }
+.date-filter-box .arrow-down { width: 0; height: 0; border-left: 8rpx solid transparent; border-right: 8rpx solid transparent; border-top: 8rpx solid var(--primary-400); margin-top: 4rpx; }
 
 
 /* 新版 Web 风格数据卡片 */
@@ -158,3 +165,35 @@
 .card-hover { transform: scale(0.98); opacity: 0.9; }
 .hover-scale { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
 .hover-scale:active { transform: scale(0.95); }
+
+.modal-content { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 65vh; background: #fff; border-radius: 24rpx; z-index: 1000; overflow: hidden; display: flex; flex-direction: column; }
+.modal-header { padding: 32rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; font-size: 32rpx; font-weight: bold; color: var(--primary-900); flex-shrink: 0; }
+.btn-close { font-size: 28rpx; color: #94a3b8; font-weight: normal; padding: 10rpx; margin: -10rpx; }
+.modal-scroll { flex: 1; height: 100%; }
+.modal-body { padding: 40rpx; padding-bottom: 120rpx; }
+.btn-save { background: var(--primary-900); color: #fff; text-align: center; padding: 24rpx 0; border-radius: 16rpx; font-size: 32rpx; font-weight: bold; margin-top: 20rpx; }
+.form-group { margin-bottom: 32rpx; }
+.label { display: block; font-size: 28rpx; font-weight: bold; color: var(--primary-900); margin-bottom: 16rpx; }
+.input, .picker-view { background: #f8fafc; border-radius: 16rpx; padding: 0 24rpx; height: 88rpx; border: 2rpx solid #e2e8f0; font-size: 30rpx; color: var(--primary-900); display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box; }
+.arrow-down { width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 10rpx solid #94a3b8; }
+
+/* 标签选择样式补充 (执行人、状态等) */
+.tags-wrap { display: flex; flex-wrap: wrap; gap: 20rpx; }
+.tag { padding: 12rpx 32rpx; border-radius: 40rpx; font-size: 26rpx; background: #f8fafc; color: var(--primary-600); border: 2rpx solid transparent; transition: all 0.2s; }
+.tag.active { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+
+/* 模拟下拉多选面板 */
+.form-group { position: relative; }
+.text-placeholder { color: #94a3b8; }
+.text-primary { color: var(--primary-900); }
+.dropdown-panel { position: absolute; bottom: 110rpx; top: auto; left: 0; right: 0; background: #fff; border-radius: 16rpx; box-shadow: 0 10rpx 40rpx rgba(0,0,0,0.15); border: 1rpx solid #e2e8f0; z-index: 100; overflow: hidden; }
+.dropdown-dept-title { padding: 16rpx 32rpx; font-size: 26rpx; color: var(--primary-900); background: #f8fafc; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 1rpx solid #f1f5f9; }
+.dropdown-item { padding: 24rpx 32rpx; display: flex; justify-content: space-between; align-items: center; border-bottom: 1rpx solid #f1f5f9; font-size: 28rpx; color: var(--primary-900); }
+.dropdown-item:active { background: #f8fafc; }
+.dropdown-item:last-child { border-bottom: none; }
+.dropdown-footer { padding: 24rpx; text-align: center; color: var(--primary-900); font-weight: bold; border-top: 1rpx solid #e2e8f0; background: #f8fafc; }
+.dept-title { font-size: 26rpx; color: var(--primary-900); margin: 24rpx 0 12rpx; font-weight: bold; padding: 16rpx 24rpx; background: #f8fafc; border-radius: 12rpx; display: flex; justify-content: space-between; align-items: center; }
+.dept-employees { padding: 0 12rpx; }
+.arrow { width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; }
+.arrow.down { border-top: 10rpx solid #94a3b8; border-bottom: none; }
+.arrow.up { border-bottom: 10rpx solid #94a3b8; border-top: none; }

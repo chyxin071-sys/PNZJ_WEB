@@ -56,12 +56,18 @@
 .follow-item::before { content: ''; position: absolute; left: 10rpx; top: 40rpx; bottom: -40rpx; width: 4rpx; background: #f1f5f9; }
 .follow-item:last-child::before { display: none; }
 
-.follow-time { font-size: 24rpx; color: var(--primary-400); margin-bottom: 12rpx; }
-.follow-content { font-size: 28rpx; color: var(--primary-900); line-height: 1.5; margin-bottom: 16rpx; }
+.follow-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
+.follow-time { font-size: 24rpx; color: var(--primary-400); font-weight: bold; }
+.follow-actions { display: flex; gap: 24rpx; }
+.btn-text { font-size: 24rpx; font-weight: bold; }
+.btn-text.edit { color: var(--primary-600); }
+.btn-text.delete { color: #ef4444; }
+.follow-content { font-size: 28rpx; color: var(--primary-900); line-height: 1.6; margin-bottom: 16rpx; }
 .follow-user { font-size: 24rpx; color: var(--primary-400); }
 
 .bottom-padding { height: 160rpx; }
 
 /* 底部按钮 */
-.bottom-action-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx 60rpx; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; }
-.btn-primary { background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2); }
+.bottom-action-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx 60rpx; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; display: flex; gap: 24rpx; }
+.btn-primary { flex: 2; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2); }
+.btn-danger { flex: 1; background: #fff1f2; color: #e11d48; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; border: 2rpx solid #fecdd3; }

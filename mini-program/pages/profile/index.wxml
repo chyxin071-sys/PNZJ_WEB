@@ -3,13 +3,31 @@
   <!-- 头部用户信息卡片 -->
   <view class="profile-header">
     <view class="user-card">
-      <view class="avatar-wrap">
-        <image class="avatar" src="{{userInfo.avatarUrl || '/assets/icons/profile-active.png'}}" mode="aspectFill"></image>
+      <view class="avatar-wrap avatar-bg-{{userInfo.role || 'default'}}">
+        <text class="avatar-text">{{userInfo.name ? userInfo.name[0] : '用'}}</text>
       </view>
       <view class="user-info">
-        <view class="name">{{userInfo.name || '未登录'}}</view>
+        <view class="name-row">
+          <view class="name">{{userInfo.name || '未登录'}}</view>
+          <view class="icon-edit" bindtap="openEditName"></view>
+        </view>
         <view class="role-badge">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'designer' ? '设计师' : userInfo.role === 'sales' ? '销售' : userInfo.role === 'manager' ? '项目经理' : '员工'}}</view>
       </view>
+    </view>
+  </view>
+
+  <!-- 修改姓名弹窗 -->
+  <view class="modal-mask" wx:if="{{showEditModal}}" bindtap="closeEditName"></view>
+  <view class="modal-content" wx:if="{{showEditModal}}">
+    <view class="modal-header">
+      <text>修改姓名</text>
+      <view class="btn-close" bindtap="closeEditName">取消</view>
+    </view>
+    <view class="modal-body">
+      <view class="input-wrap">
+        <input class="input" placeholder="请输入新姓名" value="{{editName}}" bindinput="onNameInput" />
+      </view>
+      <view class="btn-save hover-scale" bindtap="saveName">保 存</view>
     </view>
   </view>
 
@@ -34,27 +52,17 @@
     <view class="menu-item" hover-class="menu-hover">
       <view class="menu-left">
         <view class="icon-menu icon-phone"></view>
-        <text>绑定手机</text>
+        <text>账号</text>
       </view>
       <view class="menu-right">
         <text class="menu-val">{{userInfo.phone || '未绑定'}}</text>
       </view>
     </view>
 
-    <view class="menu-item" hover-class="menu-hover" bindtap="goToQuote">
-      <view class="menu-left">
-        <view class="icon-menu icon-quote"></view>
-        <text>我的报价</text>
-      </view>
-      <view class="menu-right">
-        <view class="arrow-right"></view>
-      </view>
-    </view>
-
-    <view class="menu-item" hover-class="menu-hover" bindtap="goToMaterials">
+    <view class="menu-item" hover-class="menu-hover" bindtap="goToMaterials" wx:if="{{userInfo.role === 'admin'}}">
       <view class="menu-left">
         <view class="icon-menu icon-material"></view>
-        <text>材料大厅</text>
+        <text>材料大厅管理</text>
       </view>
       <view class="menu-right">
         <view class="arrow-right"></view>

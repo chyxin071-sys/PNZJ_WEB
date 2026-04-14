@@ -1,7 +1,9 @@
 <view class="login-container">
   <view class="brand">
     <view class="logo-wrap">
-      <view class="logo"></view>
+      <!-- 如果本地没有logo.png，这里会显示为一个带字的品牌色方块作为默认Logo -->
+      <image class="logo-img" src="/assets/icons/logo.png" mode="aspectFit" binderror="onLogoError" wx:if="{{!logoError}}"></image>
+      <view class="logo-fallback" wx:else>PN</view>
     </view>
     <view class="title">品诺筑家</view>
     <view class="slogan">品诺有心，筑家有道。</view>

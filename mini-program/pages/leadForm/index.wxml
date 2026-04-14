@@ -22,9 +22,9 @@
       </view>
       <view class="form-group half">
         <view class="label">需求类型</view>
-        <picker bindchange="onPickerChange" data-field="requirementType" data-options="reqOptions" value="{{reqOptions.indexOf(formData.requirementType)}}" range="{{reqOptions}}">
+        <picker bindchange="onPickerChange" data-field="requirement" data-options="reqOptions" value="{{reqOptions.indexOf(formData.requirement)}}" range="{{reqOptions}}">
           <view class="picker-box">
-            <text>{{formData.requirementType}}</text>
+            <text>{{formData.requirement}}</text>
             <view class="arrow-down"></view>
           </view>
         </picker>
@@ -98,6 +98,42 @@
 
   <view class="bottom-bar">
     <view class="btn-cancel hover-scale" bindtap="goBack">取消</view>
-    <view class="btn-save hover-scale" bindtap="saveLead">保存客户</view>
+    <view class="btn-save hover-scale" bindtap="saveLead">保存资料</view>
+  </view>
+
+  <!-- 签单确认弹窗 -->
+  <view class="modal-mask" wx:if="{{showSignModal}}" bindtap="closeSignModal"></view>
+  <view class="sign-modal" wx:if="{{showSignModal}}">
+    <view class="sign-icon">🎉</view>
+    <view class="sign-title">恭喜！确认签单？</view>
+    <view class="sign-desc">为【{{formData.name}}】办理签单手续</view>
+    
+    <view class="form-group sign-date-picker">
+      <text class="label">签单日期</text>
+      <picker mode="date" value="{{signDate}}" bindchange="onSignDateChange">
+        <view class="picker-view">
+          <text>{{signDate}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+
+    <view class="sign-actions">
+      <view class="btn-cancel hover-scale" bindtap="closeSignModal">再想想</view>
+      <view class="btn-save hover-scale" bindtap="confirmSign" style="background: #f59e0b; color: #fff;">确认签单</view>
+    </view>
+  </view>
+
+  <!-- 签单成功喜报弹窗 (保守方案) -->
+  <view class="modal-mask" wx:if="{{showSuccessModal}}"></view>
+  <view class="success-modal" wx:if="{{showSuccessModal}}">
+    <view class="success-header">
+      <text class="success-badge">开单喜报</text>
+    </view>
+    <view class="success-body">
+      <view class="success-title">品诺筑家 恭喜签约</view>
+      <view class="success-desc">成功签约客户：<text class="highlight">{{formData.name}}</text></view>
+    </view>
+    <view class="btn-save hover-scale" bindtap="closeSuccessAndBack" style="margin-top: 60rpx; width: 80%; background: linear-gradient(135deg, #f59e0b, #ef4444); border-radius: 40rpx;">返回线索列表</view>
   </view>
 </view>

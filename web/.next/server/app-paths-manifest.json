@@ -1,0 +1,14 @@
+{
+  "/projects/page": "app/projects/page.js",
+  "/api/materials/route": "app/api/materials/route.js",
+  "/materials/page": "app/materials/page.js",
+  "/todos/page": "app/todos/page.js",
+  "/employees/page": "app/employees/page.js",
+  "/quotes/page": "app/quotes/page.js",
+  "/api/quotes/route": "app/api/quotes/route.js",
+  "/api/leads/route": "app/api/leads/route.js",
+  "/api/todos/route": "app/api/todos/route.js",
+  "/api/projects/route": "app/api/projects/route.js",
+  "/leads/page": "app/leads/page.js",
+  "/page": "app/page.js"
+}

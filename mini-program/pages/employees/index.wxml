@@ -6,9 +6,9 @@
       <view class="title">组织架构</view>
       <view class="subtitle">共 {{allEmployees.length}} 名员工</view>
     </view>
-    <!-- <view class="btn-add hover-scale" bindtap="addEmployee">
+    <view class="btn-add hover-scale" bindtap="showAddModal">
       <text>+</text> 添加
-    </view> -->
+    </view>
   </view>
 
   <!-- 搜索与筛选区 -->
@@ -33,13 +33,14 @@
 
   <!-- 员工列表 -->
   <scroll-view scroll-y class="list-scroll">
-    <view class="employee-card hover-scale" wx:for="{{filteredEmployees}}" wx:key="id">
+    <view class="employee-card hover-scale" wx:for="{{filteredEmployees}}" wx:key="_id" bindtap="showActionSheet" data-employee="{{item}}">
       <view class="card-left">
         <!-- 头像取名字第一个字 -->
         <view class="avatar {{item.role}}">{{item.name[0]}}</view>
         <view class="info">
           <view class="name-row">
             <text class="name">{{item.name}}</text>
+            <text class="tag-me" wx:if="{{item._id === currentUserId}}">我</text>
             <view class="role-badge role-{{item.role}}">
               {{item.role === 'admin' ? '管理员' : item.role === 'designer' ? '设计师' : item.role === 'sales' ? '销售' : item.role === 'manager' ? '项目经理' : '员工'}}
             </view>
@@ -48,13 +49,14 @@
             </view>
           </view>
           <view class="meta-row">
-            <text class="meta-item">{{item.username}}</text>
-            <text class="divider">|</text>
-            <text class="meta-item">{{item.department}}</text>
+            <text class="meta-item">{{item.phone}}</text>
             <text class="divider">|</text>
             <text class="meta-item">入职: {{item.joinDate}}</text>
           </view>
         </view>
+      </view>
+      <view class="card-right">
+        <view class="icon-more"></view>
       </view>
     </view>
 
@@ -65,4 +67,44 @@
     
     <view class="bottom-padding"></view>
   </scroll-view>
+
+  <!-- 员工编辑弹窗 (添加 / 修改) -->
+  <view class="modal-mask" wx:if="{{showModal}}" bindtap="closeModal"></view>
+  <view class="modal-content" wx:if="{{showModal}}">
+    <view class="modal-header">
+      <text>{{modalType === 'add' ? '添加员工' : '编辑员工'}}</text>
+      <view class="btn-close" bindtap="closeModal">取消</view>
+    </view>
+    <scroll-view scroll-y style="height: 65vh;">
+      <view class="modal-body">
+      <view class="form-group">
+        <text class="label">姓名</text>
+        <input class="input" placeholder="请输入姓名" value="{{formData.name}}" bindinput="onInput" data-field="name" />
+      </view>
+      <view class="form-group">
+        <text class="label">手机号/账号</text>
+        <input class="input" type="text" placeholder="请输入手机号或字母账号" value="{{formData.phone}}" bindinput="onInput" data-field="phone" />
+      </view>
+      <view class="form-group">
+        <text class="label">身份</text>
+        <picker bindchange="onRoleChange" value="{{roleIndex}}" range="{{roleOptions}}" range-key="name">
+          <view class="picker-view">
+            <text>{{roleOptions[roleIndex].name || '请选择身份'}}</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
+      <view class="form-group">
+        <text class="label">入职时间</text>
+        <picker mode="date" value="{{formData.joinDate}}" bindchange="onJoinDateChange">
+          <view class="picker-view">
+            <text>{{formData.joinDate || '请选择入职时间'}}</text>
+            <view class="arrow-down"></view>
+          </view>
+        </picker>
+      </view>
+      <view class="btn-save hover-scale" bindtap="saveEmployee">保 存</view>
+      </view>
+    </scroll-view>
+  </view>
 </view>

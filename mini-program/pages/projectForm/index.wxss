@@ -1,0 +1,109 @@
+.page-container {
+  min-height: 100vh;
+  background: #f8fafc;
+  padding: 32rpx;
+  box-sizing: border-box;
+}
+
+.form-card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 40rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.03);
+  margin-bottom: 40rpx;
+}
+
+.form-group {
+  margin-bottom: 32rpx;
+}
+
+.label {
+  display: block;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: var(--primary-900);
+  margin-bottom: 16rpx;
+}
+
+.required {
+  color: #ef4444;
+  margin-left: 8rpx;
+}
+
+.input, .picker-view {
+  background: #f8fafc;
+  border-radius: 16rpx;
+  padding: 0 24rpx;
+  height: 88rpx;
+  border: 2rpx solid #e2e8f0;
+  font-size: 30rpx;
+  color: var(--primary-900);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  border-color: var(--primary-900);
+  background: #fff;
+}
+
+.arrow-down {
+  width: 0;
+  height: 0;
+  border-left: 10rpx solid transparent;
+  border-right: 10rpx solid transparent;
+  border-top: 10rpx solid #94a3b8;
+}
+
+.icon-calendar {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23000'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' /%3E%3C/svg%3E") no-repeat center;
+  background-size: contain;
+}
+
+.text-placeholder {
+  color: #94a3b8;
+}
+
+.info-box {
+  background: #f1f5f9;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-top: -16rpx;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12rpx;
+  font-size: 26rpx;
+}
+
+.info-row:last-child {
+  margin-bottom: 0;
+}
+
+.info-label {
+  color: var(--primary-500);
+}
+
+.info-val {
+  color: var(--primary-900);
+  font-weight: 500;
+}
+
+.btn-submit {
+  background: var(--primary-900);
+  color: #fff;
+  height: 96rpx;
+  border-radius: 48rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  font-weight: bold;
+  box-shadow: 0 8rpx 24rpx rgba(74, 64, 58, 0.2);
+  margin-top: 60rpx;
+}

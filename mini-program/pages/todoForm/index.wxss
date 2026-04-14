@@ -40,7 +40,7 @@
 .p-active-medium { background: #fffbeb; border-color: #fbbf24; color: #d97706; }
 .p-active-high { background: #fff1f2; border-color: #fb7185; color: #e11d48; }
 
-.bottom-padding { height: 180rpx; }
+.bottom-padding { height: 280rpx; }
 
 /* 底部操作栏 */
 .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 24rpx 40rpx 60rpx; border-top: 1rpx solid rgba(0,0,0,0.05); display: flex; gap: 24rpx; z-index: 100; }

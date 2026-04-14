@@ -1,5 +1,6 @@
 
-const projectsData = require('../../mock/projects.js');
+// 移除 mock 数据
+// const projectsData = require('../../mock/projects.js');
 
 Page({
   data: {
@@ -16,11 +17,7 @@ Page({
     timeFilterLabel: '全部时间',
 
     showFilterModal: false,
-    filterEmployees: [
-      { id: 1, name: '销售A', selected: false },
-      { id: 2, name: '设计师B', selected: false },
-      { id: 3, name: '项目经理C', selected: false }
-    ],
+    filterEmployees: [],
     selectedEmployeeIds: [],
 
     filterStatuses: [
@@ -60,22 +57,127 @@ Page({
       });
       return;
     }
-    this.initData();
+    
+    // 权限控制：仅管理员和项目经理可新建
+    this.setData({
+      canCreate: userInfo.role === 'admin' || userInfo.role === 'manager'
+    });
+    
+    const d = new Date();
+    this.setData({ 
+      today: `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`
+    });
+
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 });
     }
+    
+    this.fetchData();
   },
-  initData() {
-    const d = new Date();
-    this.setData({ 
-      today: `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日`,
-      allProjects: projectsData
+
+  fetchData() {
+    wx.showNavigationBarLoading();
+    const db = wx.cloud.database();
+    
+    // 1. 获取员工列表用于高级筛选
+    db.collection('users').get().then(userRes => {
+      const roleMap = {
+        admin: '管理部',
+        manager: '项目部',
+        sales: '销售部',
+        designer: '设计部',
+        finance: '财务部'
+      };
+      const emps = userRes.data.map(u => {
+        const dept = roleMap[u.role] || '其他';
+        return { id: u._id, name: u.name, dept, selected: false };
+      });
+      if (this.data.selectedEmployeeIds && this.data.selectedEmployeeIds.length > 0) {
+        emps.forEach(e => {
+          if (this.data.selectedEmployeeIds.includes(e.id)) e.selected = true;
+        });
+      }
+      this.setData({ filterEmployees: emps }, () => {
+        this.updateGroupedEmployees();
+      });
     });
-    this.updateDashboard();
-    this.filterProjects();
+
+    // 2. 获取所有工地
+    db.collection('projects').get().then(res => {
+      wx.hideNavigationBarLoading();
+      wx.stopPullDownRefresh();
+      
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      
+      const list = res.data.sort((a, b) => {
+        const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dbTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dbTime - da;
+      }).map(p => {
+        // 模拟数据填充，对齐网页端功能
+        const nodesList = ["开工", "水电", "木工", "瓦工", "墙面", "定制", "软装", "交付"];
+        const currentNode = p.currentNode || 1;
+        
+        let health = p.health || '正常';
+        if (p.status === '已停工') health = '严重延期';
+        
+        // 动态计算当前状态
+        let dynamicStatus = p.status;
+        if (p.startDate && p.status !== '已竣工' && p.status !== '已停工') {
+           const startDate = new Date(p.startDate.replace(/-/g, '/'));
+           startDate.setHours(0,0,0,0);
+           
+           if (now.getTime() < startDate.getTime()) {
+             dynamicStatus = '未开工';
+           } else if (now.getTime() >= startDate.getTime()) {
+             dynamicStatus = '施工中';
+           }
+        }
+        
+        // 计算已耗天数 (开工后才算)
+        let daysElapsed = 0;
+        if (dynamicStatus !== '未开工' && p.startDate) {
+          daysElapsed = Math.ceil((new Date().getTime() - new Date(p.startDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24));
+        }
+        
+        return {
+          ...p,
+          status: dynamicStatus,
+          currentNode,
+          nodeName: nodesList[currentNode - 1],
+          nodesList,
+          health,
+          daysElapsed
+        };
+      });
+      
+      this.setData({ allProjects: list }, () => {
+        this.filterProjects();
+      });
+    }).catch(err => {
+      wx.hideNavigationBarLoading();
+      wx.stopPullDownRefresh();
+      console.error('获取工地失败', err);
+      wx.showToast({ title: '获取数据失败', icon: 'none' });
+    });
   },
-  updateDashboard() {
-    const data = this.data.allProjects;
+
+  updateGroupedEmployees() {
+    const depts = ['管理部', '项目部', '销售部', '设计部', '财务部', '其他'];
+    const grouped = [];
+    depts.forEach(dept => {
+      const emps = this.data.filterEmployees.filter(e => e.dept === dept);
+      if (emps.length > 0) grouped.push({ dept, employees: emps });
+    });
+    this.setData({ groupedEmployees: grouped });
+  },
+
+  onPullDownRefresh() {
+    this.fetchData();
+  },
+  updateDashboard(filteredList) {
+    const data = filteredList || this.data.allProjects;
     this.setData({
       totalCount: data.length,
       activeCount: data.filter(p => p.status === '施工中').length,
@@ -84,10 +186,6 @@ Page({
   },
   filterProjects() {
     let filtered = this.data.allProjects;
-    
-    if (this.data.activeTab !== '全部') {
-      filtered = filtered.filter(p => p.status === this.data.activeTab);
-    }
     
     if (this.data.searchQuery) {
       const q = this.data.searchQuery.toLowerCase().trim();
@@ -152,6 +250,14 @@ Page({
       });
     }
 
+    // 此时的 filtered 是经过时间、搜索、高级筛选的总数据，用来更新顶部看板
+    this.updateDashboard(filtered);
+
+    // 继续执行只影响列表的 tab 过滤
+    if (this.data.activeTab !== '全部') {
+      filtered = filtered.filter(p => p.status === this.data.activeTab);
+    }
+
     this.setData({ projects: filtered });
   },
   switchTab(e) {
@@ -196,25 +302,23 @@ Page({
   closeFilterModal() {
     this.setData({ showFilterModal: false });
   },
-  toggleFilterEmployee(e) {
+  toggleEmployee(e) {
     const id = e.currentTarget.dataset.id;
-    const employees = this.data.filterEmployees.map(emp => {
-      if (emp.id === id) {
-        return { ...emp, selected: !emp.selected };
-      }
+    const emps = this.data.filterEmployees.map(emp => {
+      if (emp.id === id) emp.selected = !emp.selected;
       return emp;
     });
-    this.setData({ filterEmployees: employees });
+    this.setData({ filterEmployees: emps }, () => {
+      this.updateGroupedEmployees();
+    });
   },
-  toggleFilterStatus(e) {
+  toggleStatus(e) {
     const name = e.currentTarget.dataset.name;
-    const statuses = this.data.filterStatuses.map(s => {
-      if (s.name === name) {
-        return { ...s, selected: !s.selected };
-      }
+    const stats = this.data.filterStatuses.map(s => {
+      if (s.name === name) s.selected = !s.selected;
       return s;
     });
-    this.setData({ filterStatuses: statuses });
+    this.setData({ filterStatuses: stats });
   },
   onStartDateStartChange(e) {
     this.setData({ filterStartDateStart: e.detail.value });
@@ -222,23 +326,56 @@ Page({
   onStartDateEndChange(e) {
     this.setData({ filterStartDateEnd: e.detail.value });
   },
+  resetFilter() {
+    const emps = this.data.filterEmployees.map(e => ({...e, selected: false}));
+    const stats = this.data.filterStatuses.map(s => ({...s, selected: false}));
+    
+    this.setData({
+      filterEmployees: emps,
+      filterStatuses: stats,
+      selectedEmployeeIds: [],
+      selectedStatuses: [],
+      filterStartDateStart: '',
+      filterStartDateEnd: ''
+    }, () => {
+      this.updateGroupedEmployees();
+      this.saveFilterState();
+      this.filterProjects();
+      this.closeFilterModal();
+    });
+  },
   applyFilter() {
-    const selectedEmps = this.data.filterEmployees.filter(e => e.selected).map(e => e.id);
+    const selectedEmpIds = this.data.filterEmployees.filter(e => e.selected).map(e => e.id);
     const selectedStats = this.data.filterStatuses.filter(s => s.selected).map(s => s.name);
     
-    this.setData({ 
-      selectedEmployeeIds: selectedEmps,
-      selectedStatuses: selectedStats,
-      showFilterModal: false 
+    this.setData({
+      selectedEmployeeIds: selectedEmpIds,
+      selectedStatuses: selectedStats
     }, () => {
       this.saveFilterState();
       this.filterProjects();
+      this.closeFilterModal();
     });
   },
-  createProject() {
-    wx.showToast({ title: '新建工地开发中', icon: 'none' });
+  // 阻止冒泡
+  preventTap() {
   },
+
+  // ===================== 新建工地逻辑 =====================
+  createProject() {
+    wx.navigateTo({ url: '/pages/projectForm/index' });
+  },
+
   goToDetail(e) {
-    wx.showToast({ title: '工地详情开发中', icon: 'none' });
+    wx.showToast({ title: '工地功能正在开发中', icon: 'none' });
+  },
+
+  showComingSoon(e) {
+    const type = e.currentTarget.dataset.type;
+    if (type === '报价') {
+      wx.navigateTo({ url: '/pages/quotes/index' });
+      return;
+    }
+    wx.showToast({ title: `${type}模块正在紧锣密鼓开发中...`, icon: 'none' });
   }
-})
+});

@@ -4,12 +4,13 @@
   <view class="dashboard">
     <view class="dashboard-header">
       <text class="dashboard-title">工地管理</text>
-      <!-- 标题右侧：时间筛选器 (带红框样式) -->
-      <picker mode="selector" range="{{timeFilterOptions}}" value="{{timeFilterIndex}}" bindchange="onTimeFilterChange">
-        <view class="date-filter-box">
-          <text>{{timeFilterLabel}}</text>
-        </view>
-      </picker>
+      <view class="actions">
+        <picker mode="selector" range="{{timeFilterOptions}}" value="{{timeFilterIndex}}" bindchange="onTimeFilterChange">
+          <view class="date-filter-box">
+            <text>{{timeFilterLabel}}</text>
+          </view>
+        </picker>
+      </view>
     </view>
     <view class="dashboard-cards">
       <!-- 全部卡片 -->
@@ -58,7 +59,7 @@
       </view>
       <view class="filter-badge" wx:if="{{selectedEmployeeIds.length > 0 || selectedStatuses.length > 0 || filterStartDateStart || filterStartDateEnd}}"></view>
     </view>
-    <view class="btn-create-small" hover-class="btn-create-hover" bindtap="createProject">
+    <view class="btn-create-small" hover-class="btn-create-hover" bindtap="createProject" wx:if="{{canCreate}}">
       <view class="plus-icon"></view>
       <text>新建</text>
     </view>
@@ -66,45 +67,72 @@
 
   <!-- 工地列表区 -->
   <scroll-view scroll-y class="list-container">
-    <view class="todo-card" hover-class="card-hover" hover-stay-time="100" wx:for="{{projects}}" wx:key="id" bindtap="goToDetail">
+    <view class="project-card" wx:for="{{projects}}" wx:key="id" bindtap="goToDetail">
       
-      <!-- 头部：地址与状态 -->
-      <view class="card-header">
-        <view class="title-wrap">
-          <text class="title">{{item.address}}</text>
-        </view>
-        <view class="status-badge {{item.status === '施工中' ? 'status-active' : (item.status === '已竣工' ? 'status-done' : 'status-stop')}}">
-          {{item.status}}
-        </view>
-      </view>
-
-      <!-- 主体：客户信息与进度条 -->
-      <view class="card-body">
-        <view class="info-row">
-          <text class="customer-name">{{item.customer}}</text>
+      <!-- 头部信息区 -->
+      <view class="card-header-new">
+        <view class="header-main">
+          <view class="avatar-circle {{item.health === '严重延期' ? 'bg-red text-red' : 'bg-primary text-white'}}">
+            {{item.customer ? item.customer[0] : '工'}}
+          </view>
+          <view class="header-text">
+            <view class="customer-row">
+              <text class="customer-name">{{item.customer}}</text>
+              <text class="address-text">{{item.address}}</text>
+            </view>
+            <view class="manager-text">项目经理: {{item.manager}}</view>
+          </view>
         </view>
         
-        <view class="progress-wrap mt-3">
-          <view class="progress-header">
-            <text class="stage-text">当前阶段: {{item.currentStage || '已竣工'}}</text>
-            <text class="progress-pct {{item.status === '已竣工' ? 'progress-pct-done' : ''}}">{{item.progress}}%</text>
+        <view class="header-meta">
+          <view class="meta-item">
+            <text class="meta-label">开工时间</text>
+            <text class="meta-val">{{item.startDate}}</text>
           </view>
-          <view class="progress-bar">
-            <view class="progress-inner {{item.status === '已竣工' ? 'progress-inner-done' : ''}}" style="width: {{item.progress}}%"></view>
+          <view class="meta-item">
+            <text class="meta-label">已耗时</text>
+            <text class="meta-val">{{item.daysElapsed}}天</text>
+          </view>
+          <view class="meta-item">
+            <view class="health-badge {{item.health === '严重延期' ? 'badge-red' : (item.health === '预警' ? 'badge-yellow' : 'badge-green')}}">
+              {{item.health}}
+            </view>
           </view>
         </view>
       </view>
 
-      <!-- 底部：人员分配与开工时间 -->
-      <view class="card-footer meta-stack">
-        <view class="meta-badge meta-related">
-          <view class="icon-calendar"></view>
-          <text>开工: {{item.startDate}}</text>
+      <!-- 8节点进度条区 -->
+      <view class="card-body-new">
+        <view class="node-header">
+          <text class="node-title">当前阶段: {{item.nodeName}}</text>
+          <text class="node-count">{{item.currentNode}} / 8</text>
         </view>
+        
+        <view class="node-progress-wrap">
+          <view class="node-line-bg"></view>
+          <view class="node-line-active" style="width: calc((100% - 40rpx) * {{(item.currentNode - 1) / 7}});"></view>
+          
+          <view class="node-dots">
+            <view class="node-dot-wrap" wx:for="{{item.nodesList}}" wx:for-item="node" wx:for-index="idx" wx:key="*this">
+              <view class="node-dot {{idx + 1 < item.currentNode ? 'completed' : (idx + 1 === item.currentNode ? 'current' : 'pending')}}"></view>
+              <text class="node-name {{idx + 1 === item.currentNode ? 'current-text' : ''}}">{{node}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
 
-        <view class="meta-assignee">
-          <view class="icon-user"></view>
-          <text>项目经理: {{item.manager}} | 设计: {{item.designer}}</text>
+      <!-- 底部操作区：合同、报价、详情 -->
+      <view class="card-footer-new">
+        <view class="footer-btns">
+          <view class="btn-outline" catchtap="showComingSoon" data-type="合同">
+            <text>合同</text>
+          </view>
+          <view class="btn-outline" catchtap="showComingSoon" data-type="报价">
+            <text>报价</text>
+          </view>
+        </view>
+        <view class="btn-primary-small" catchtap="goToDetail">
+          <text>查看详情</text>
         </view>
       </view>
 
@@ -118,50 +146,84 @@
     <view class="bottom-padding"></view>
   </scroll-view>
 
-  <!-- 高级筛选弹窗 -->
+  <!-- 高级筛选弹窗 (修改为团队待办样式的居中弹窗) -->
   <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
   <view class="modal-content" wx:if="{{showFilterModal}}">
     <view class="modal-header">
-      <text>高级筛选</text>
+      <text>工地高级筛选</text>
       <view class="btn-close" bindtap="applyFilter">确定</view>
     </view>
-    <scroll-view scroll-y class="modal-list">
-      <!-- 状态 -->
+    <scroll-view scroll-y class="modal-list" style="height: 60vh;">
       <view class="filter-section">
         <view class="filter-title">状态</view>
         <view class="filter-tags">
-          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterStatuses}}" wx:key="name" bindtap="toggleFilterStatus" data-name="{{item.name}}">
-            {{item.name}}
-          </view>
+          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterStatuses}}" wx:key="name" bindtap="toggleStatus" data-name="{{item.name}}">{{item.name}}</view>
         </view>
       </view>
 
-      <!-- 开工时间 -->
       <view class="filter-section">
         <view class="filter-title">开工时间</view>
-        <view class="date-range-picker">
-          <picker mode="date" value="{{filterStartDateStart}}" bindchange="onStartDateStartChange">
-            <view class="date-box {{filterStartDateStart ? 'active' : ''}}">
+        <view class="date-range">
+          <picker mode="date" value="{{filterStartDateStart}}" bindchange="onStartDateStartChange" style="flex: 1;">
+            <view class="date-picker-item {{filterStartDateStart ? 'active' : ''}}" style="width: 100%;">
               {{filterStartDateStart || '开始日期'}}
             </view>
           </picker>
-          <text class="date-separator">至</text>
-          <picker mode="date" value="{{filterStartDateEnd}}" bindchange="onStartDateEndChange">
-            <view class="date-box {{filterStartDateEnd ? 'active' : ''}}">
+          <view class="date-range-sep">至</view>
+          <picker mode="date" value="{{filterStartDateEnd}}" bindchange="onStartDateEndChange" style="flex: 1;">
+            <view class="date-picker-item {{filterStartDateEnd ? 'active' : ''}}" style="width: 100%;">
               {{filterStartDateEnd || '结束日期'}}
             </view>
           </picker>
         </view>
       </view>
 
-      <!-- 人员 -->
       <view class="filter-section">
-        <view class="filter-title">人员</view>
-        <view class="filter-tags">
-          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterEmployees}}" wx:key="id" bindtap="toggleFilterEmployee" data-id="{{item.id}}">
-            {{item.name}}
+        <view class="filter-title">负责人员</view>
+        <block wx:for="{{groupedEmployees}}" wx:key="dept">
+          <view class="dept-title">{{item.dept}}</view>
+          <view class="employee-item" wx:for="{{item.employees}}" wx:for-item="emp" wx:key="id" bindtap="toggleEmployee" data-id="{{emp.id}}">
+            <view class="checkbox {{emp.selected ? 'checked' : ''}}">
+              <view wx:if="{{emp.selected}}" class="checkmark"></view>
+            </view>
+            <text class="emp-name">{{emp.name}}</text>
           </view>
+        </block>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 新建工地弹窗 -->
+  <view class="modal-mask" wx:if="{{showAddModal}}" bindtap="closeAddModal"></view>
+  <view class="modal-content" wx:if="{{showAddModal}}">
+    <view class="modal-header">
+      <text>新建工地</text>
+      <view class="btn-close" bindtap="closeAddModal">取消</view>
+    </view>
+    <scroll-view scroll-y style="max-height: 65vh;">
+      <view class="modal-body">
+        <view class="form-group">
+          <text class="label">客户姓名 <text style="color:red">*</text></text>
+          <input class="input" placeholder="请输入姓名" value="{{newProject.customer}}" bindinput="onNewProjectInput" data-field="customer" />
         </view>
+        <view class="form-group">
+          <text class="label">手机号 <text style="color:red">*</text></text>
+          <input class="input" type="number" placeholder="请输入手机号" value="{{newProject.phone}}" bindinput="onNewProjectInput" data-field="phone" />
+        </view>
+        <view class="form-group">
+          <text class="label">所在小区 (工地地址) <text style="color:red">*</text></text>
+          <input class="input" placeholder="如：保利香槟国际2-1-201" value="{{newProject.address}}" bindinput="onNewProjectInput" data-field="address" />
+        </view>
+        <view class="form-group">
+          <text class="label">计划开工时间 <text style="color:red">*</text></text>
+          <picker mode="date" value="{{newProject.startDate}}" bindchange="onNewProjectDateChange">
+            <view class="picker-view">
+              <text>{{newProject.startDate || '请选择日期'}}</text>
+              <view class="arrow-down"></view>
+            </view>
+          </picker>
+        </view>
+        <view class="btn-save hover-scale" bindtap="saveNewProject">保 存</view>
       </view>
     </scroll-view>
   </view>

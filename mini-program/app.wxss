@@ -38,7 +38,7 @@ page {
 .modal-content { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 40rpx 40rpx 0 0; z-index: 101; padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; max-height: 85vh; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 40rpx; font-size: 34rpx; font-weight: bold; border-bottom: 1rpx solid #f1f5f9; flex-shrink: 0; }
 .btn-close { color: #3b82f6; font-size: 32rpx; font-weight: normal; }
-.modal-list { flex: 1; padding: 40rpx; overflow-y: auto; }
+.modal-list { max-height: 60vh; padding: 40rpx; box-sizing: border-box; }
 .employee-item { display: flex; align-items: center; padding: 24rpx 0; border-bottom: 1rpx solid #f8fafc; }
 .employee-item:last-child { border-bottom: none; }
 .emp-name { font-size: 30rpx; margin-left: 20rpx; }

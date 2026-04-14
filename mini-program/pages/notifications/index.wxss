@@ -1,0 +1,260 @@
+.page-container {
+  background: #faf9f8;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 0 40rpx;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.02);
+}
+
+.tabs {
+  display: flex;
+  gap: 60rpx;
+}
+
+.tab {
+  padding: 32rpx 0;
+  font-size: 32rpx;
+  color: var(--primary-500);
+  font-weight: 500;
+  position: relative;
+}
+
+.tab.active {
+  color: var(--primary-900);
+  font-weight: bold;
+}
+
+.tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40rpx;
+  height: 6rpx;
+  background: var(--primary-900);
+  border-radius: 6rpx 6rpx 0 0;
+}
+
+.profile-entry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10rpx 0 10rpx 20rpx;
+}
+
+.mini-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 32rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: bold;
+  box-shadow: 0 4rpx 10rpx rgba(0,0,0,0.05);
+  transition: transform 0.2s;
+}
+
+.profile-entry:active .mini-avatar {
+  transform: scale(0.9);
+}
+
+.bg-admin { background: #f3e8ff; color: #9333ea; }
+.bg-sales { background: #eff6ff; color: #3b82f6; }
+.bg-designer { background: #dcfce7; color: #10b981; }
+.bg-manager { background: #ffedd5; color: #f97316; }
+.bg-default { background: #f1f5f9; color: #64748b; }
+
+.list-container {
+  flex: 1;
+  padding: 24rpx;
+  overflow-x: hidden;
+}
+
+.swipe-wrap {
+  width: 100%;
+  height: auto;
+  margin-bottom: 24rpx;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.movable-area {
+  width: calc(100% + 280rpx); /* 卡片宽度 + 两个按钮的宽度 */
+  height: 200rpx; /* 根据卡片大致高度，如果有问题可以动态调整 */
+  position: relative;
+  left: -280rpx; /* 初始偏移量，把按钮藏在右边屏幕外 */
+}
+
+.swipe-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  display: flex;
+  z-index: 1;
+}
+
+.action-btn {
+  width: 140rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: bold;
+}
+
+.btn-star {
+  background: #f59e0b;
+}
+
+.btn-delete {
+  background: #ef4444;
+}
+
+.movable-view {
+  width: calc(100% - 280rpx); /* 实际卡片的宽度 */
+  height: 100%;
+  z-index: 2;
+  box-sizing: border-box;
+  margin-left: 280rpx; /* 将初始卡片位置推回到视野内 */
+}
+
+.notification-item {
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  display: flex;
+  gap: 24rpx;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.02);
+  transition: background 0.2s;
+  height: 100%;
+}
+
+.notification-item:active {
+  background: #f8fafc;
+}
+
+.notification-item.unread {
+  border-left: 8rpx solid #3b82f6;
+}
+
+.notification-item.read .item-content,
+.notification-item.read .item-icon {
+  opacity: 0.5;
+}
+
+.item-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 40rpx;
+  background: #f1f5f9;
+}
+
+.icon-circle {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 20rpx;
+}
+
+.icon-circle.todo { background: #3b82f6; }
+.icon-circle.lead { background: #10b981; }
+.icon-circle.system { background: #f59e0b; }
+
+.item-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.item-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  max-width: 70%;
+}
+
+.item-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: var(--primary-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.icon-star-filled {
+  color: #f59e0b;
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+.item-time {
+  font-size: 24rpx;
+  color: var(--primary-400);
+}
+
+.item-desc {
+  font-size: 28rpx;
+  color: var(--primary-600);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+  color: var(--primary-400);
+  font-size: 30rpx;
+}
+
+.empty-icon {
+  width: 160rpx;
+  height: 160rpx;
+  background: #f1f5f9;
+  border-radius: 80rpx;
+  margin-bottom: 32rpx;
+  position: relative;
+}
+
+.empty-icon::after {
+  content: "!";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 80rpx;
+  font-weight: bold;
+  color: #cbd5e1;
+}

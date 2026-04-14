@@ -1,0 +1,73 @@
+<view class="page-container">
+  <!-- 顶部标题与新建按钮 -->
+  <view class="page-header">
+    <view class="header-titles">
+      <text class="page-title">报价管理</text>
+      <text class="page-subtitle">支持引用材料库或灵活手写</text>
+    </view>
+    <view class="btn-create-icon hover-scale" bindtap="createQuote">
+      <text class="plus-icon">+</text>
+      新建
+    </view>
+  </view>
+
+  <!-- 搜索与状态切换 -->
+  <view class="search-filter-section">
+    <scroll-view class="status-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="status-tabs">
+        <view class="status-tab {{activeStatus === '全部' ? 'active' : ''}}" bindtap="switchStatus" data-status="全部">全部</view>
+        <view class="status-tab {{activeStatus === '初步' ? 'active' : ''}}" bindtap="switchStatus" data-status="初步">初步</view>
+        <view class="status-tab {{activeStatus === '待确认' ? 'active' : ''}}" bindtap="switchStatus" data-status="待确认">待确认</view>
+        <view class="status-tab {{activeStatus === '已确认' ? 'active' : ''}}" bindtap="switchStatus" data-status="已确认">已确认</view>
+        <view class="status-tab {{activeStatus === '已作废' ? 'active' : ''}}" bindtap="switchStatus" data-status="已作废">已作废</view>
+      </view>
+    </scroll-view>
+    <view class="search-box">
+      <view class="icon-search"></view>
+      <input type="text" placeholder="搜索客户 / 手机号..." value="{{searchQuery}}" bindinput="onSearch" class="search-input"/>
+    </view>
+  </view>
+
+  <!-- 报价列表 -->
+  <scroll-view scroll-y class="list-container">
+    <block wx:if="{{filteredQuotes.length > 0}}">
+      <view class="quote-card" wx:for="{{filteredQuotes}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
+        <view class="card-header">
+          <view class="customer-info">
+            <text class="customer-name">{{item.customer}}</text>
+            <text class="customer-phone">{{item.phone}}</text>
+          </view>
+          <view class="status-badge status-{{item.status === '初步' ? 'draft' : item.status === '待确认' ? 'wait' : item.status === '已确认' ? 'done' : 'cancel'}}">
+            {{item.status || '初步'}}
+          </view>
+        </view>
+        
+        <view class="card-body">
+          <view class="info-row">
+            <text class="info-icon">🏠</text>
+            <text class="info-text truncate">{{item.address || '暂无地址'}}</text>
+          </view>
+          <view class="info-row">
+            <text class="info-icon">👤</text>
+            <text class="info-text">销售：{{item.sales || '未分配'}}</text>
+          </view>
+        </view>
+
+        <view class="card-footer">
+          <view class="price-box">
+            <text class="price-label">总价</text>
+            <text class="price-val text-gray">¥{{item.total || 0}}</text>
+          </view>
+          <view class="price-box">
+            <text class="price-label">最终成交价</text>
+            <text class="price-val text-primary font-bold">¥{{item.final || 0}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+    <view class="empty-state" wx:else>
+      <view class="empty-icon-box">📄</view>
+      <text class="empty-text">暂无相关报价单</text>
+    </view>
+  </scroll-view>
+</view>

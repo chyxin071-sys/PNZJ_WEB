@@ -1,0 +1,59 @@
+<view class="page-container">
+  <!-- 顶部导航栏 (Tabs + 个人中心入口) -->
+  <view class="top-bar">
+    <view class="tabs">
+      <view class="tab {{activeTab === 'unread' ? 'active' : ''}}" bindtap="switchTab" data-tab="unread">未读消息</view>
+      <view class="tab {{activeTab === 'all' ? 'active' : ''}}" bindtap="switchTab" data-tab="all">全部消息</view>
+      <view class="tab {{activeTab === 'starred' ? 'active' : ''}}" bindtap="switchTab" data-tab="starred">收藏</view>
+    </view>
+    <view class="profile-entry" bindtap="goToProfile">
+      <view class="mini-avatar bg-{{userInfo.role || 'default'}}">
+        <text>{{userInfo.name ? userInfo.name[0] : '用'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="list-container">
+    <block wx:if="{{notifications.length > 0}}">
+      <view class="swipe-wrap" wx:for="{{notifications}}" wx:key="_id">
+        <movable-area class="movable-area">
+          <movable-view 
+            class="movable-view notification-item {{item.isRead ? 'read' : 'unread'}}" 
+            direction="horizontal" 
+            out-of-bounds="true"
+            animation="true"
+            x="{{item.x || 0}}"
+            bindchange="onSwipeChange"
+            bindtouchend="onSwipeEnd"
+            data-index="{{index}}"
+            bindtap="handleNotificationClick"
+            data-item="{{item}}"
+          >
+            <view class="item-icon">
+              <view class="icon-circle {{item.type}}"></view>
+            </view>
+            <view class="item-content">
+              <view class="item-header">
+                <view class="item-title-wrap">
+                  <text class="item-title">{{item.title}}</text>
+                  <text wx:if="{{item.isStarred}}" class="icon-star-filled">★</text>
+                </view>
+                <text class="item-time">{{item.createTimeStr}}</text>
+              </view>
+              <view class="item-desc">{{item.content}}</view>
+            </view>
+          </movable-view>
+          <view class="swipe-actions">
+            <view class="action-btn btn-star" catchtap="toggleStar" data-id="{{item._id}}" data-index="{{index}}">{{item.isStarred ? '取消收藏' : '收藏'}}</view>
+            <view class="action-btn btn-delete" catchtap="deleteNotification" data-id="{{item._id}}" data-index="{{index}}">删除</view>
+          </view>
+        </movable-area>
+      </view>
+    </block>
+    
+    <view class="empty-state" wx:else>
+      <view class="empty-icon"></view>
+      <text>暂无{{activeTab === 'unread' ? '未读' : (activeTab === 'starred' ? '收藏' : '')}}通知消息</text>
+    </view>
+  </view>
+</view>

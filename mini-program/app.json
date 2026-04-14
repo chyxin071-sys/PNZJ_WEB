@@ -9,7 +9,11 @@
     "pages/leadForm/index",
     "pages/leadDetail/index",
     "pages/addFollowUp/index",
-    "pages/employees/index"
+    "pages/projectForm/index",
+    "pages/employees/index",
+    "pages/notifications/index",
+    "pages/quotes/index",
+    "pages/materials/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
@@ -38,7 +42,7 @@
         "text": ""
       },
       {
-        "pagePath": "pages/profile/index",
+        "pagePath": "pages/notifications/index",
         "text": ""
       }
     ]

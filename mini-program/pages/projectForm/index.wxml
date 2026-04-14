@@ -1,0 +1,57 @@
+<view class="page-container">
+  <view class="form-card">
+    <view class="form-group">
+      <text class="label">关联客户 (仅可选择已签单客户) <text class="required">*</text></text>
+      <picker bindchange="onLeadChange" range="{{leads}}" range-key="pickerLabel" value="{{leadIndex}}">
+        <view class="picker-view">
+          <text class="{{leadIndex === -1 ? 'text-placeholder' : ''}}">{{leadIndex === -1 ? '请选择关联客户' : leads[leadIndex].name}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+
+    <!-- 客户详细信息只读展示 -->
+    <block wx:if="{{leadIndex !== -1}}">
+      <view class="info-box">
+        <view class="info-row">
+          <text class="info-label">客户地址</text>
+          <text class="info-val">{{leads[leadIndex].address || '未填写'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">签单时间</text>
+          <text class="info-val">{{leads[leadIndex].signDate || '未知'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">归属销售</text>
+          <text class="info-val">{{leads[leadIndex].sales || '未分配'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">归属设计</text>
+          <text class="info-val">{{leads[leadIndex].designer || '未分配'}}</text>
+        </view>
+      </view>
+    </block>
+
+    <view class="form-group" style="margin-top: 32rpx;">
+      <text class="label">项目经理 <text class="required">*</text></text>
+      <picker bindchange="onPickerChange" data-field="manager" range="{{managers}}" range-key="name" value="{{managerIndex}}">
+        <view class="picker-view">
+          <text>{{managers[managerIndex].name || '请选择项目经理'}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-group">
+      <text class="label">开工时间 <text class="required">*</text></text>
+      <picker mode="date" value="{{formData.startDate}}" bindchange="onInput" data-field="startDate">
+        <view class="picker-view">
+          <text class="{{!formData.startDate ? 'text-placeholder' : ''}}">{{formData.startDate || '请选择开工时间'}}</text>
+          <view class="icon-calendar" style="width: 32rpx; height: 32rpx; opacity: 0.5;"></view>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="btn-submit hover-scale" bindtap="saveProject">保存工地</view>
+</view>

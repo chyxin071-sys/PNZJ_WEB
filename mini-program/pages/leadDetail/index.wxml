@@ -19,7 +19,7 @@
       <view class="action-card quote-card hover-scale" bindtap="goToQuote">     
         <view class="ac-left">
           <view class="icon-doc"></view>
-          <text>查看报价单</text>
+          <text>{{quoteId ? '查看报价单' : '生成报价单'}}</text>
         </view>
       </view>
 
@@ -54,11 +54,11 @@
         </view>
         <view class="info-item">
           <text class="info-label">需求类型</text>
-          <text class="info-value">{{lead.requirementType}}</text>
+          <text class="info-value">{{lead.requirement || '未填'}}</text>
         </view>
         <view class="info-item">
           <text class="info-label">房屋面积</text>
-          <text class="info-value">{{lead.area}} m²</text>
+          <text class="info-value">{{lead.area ? lead.area + ' m²' : '未填'}}</text>
         </view>
         <view class="info-item">
           <text class="info-label">装修预算</text>
@@ -81,15 +81,20 @@
 
     <!-- 跟进记录 Tab -->
     <view wx:if="{{activeTab === 'follow'}}" class="follow-section">
-      <!-- 模拟一条最新跟进记录 -->
-      <view class="follow-item">
+      <view class="follow-item" wx:for="{{followUps}}" wx:key="_id">
         <view class="timeline-dot"></view>
-        <view class="follow-time">{{lead.lastFollowUp}}</view>
-        <view class="follow-content">最新跟进：与客户电话沟通了初步需求，客户对全案设计比较感兴趣，计划本周末去现场量房。</view>
-        <view class="follow-user">记录人: {{lead.sales}}</view>
+        <view class="follow-header">
+          <view class="follow-time">{{item.displayTime || item.createdAt}}</view>
+          <view class="follow-actions">
+            <text class="btn-text edit" bindtap="editFollowUp" data-id="{{item._id}}">编辑</text>
+            <text class="btn-text delete" bindtap="deleteFollowUp" data-id="{{item._id}}">删除</text>
+          </view>
+        </view>
+        <view class="follow-content">{{item.content}}</view>
+        <view class="follow-user">记录人: {{item.createdBy}}</view>
       </view>
       
-      <view class="empty-state" wx:if="{{!lead.lastFollowUp}}">
+      <view class="empty-state" wx:if="{{followUps.length === 0}}">
         <text>暂无跟进记录</text>
       </view>
     </view>
@@ -98,6 +103,7 @@
   </scroll-view>
 
   <view class="bottom-action-bar">
+    <view class="btn-danger hover-scale" bindtap="deleteLead">删除线索</view>
     <view class="btn-primary hover-scale" bindtap="addFollowUp">添加跟进</view>
   </view>
 </view>

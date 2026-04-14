@@ -1,0 +1,57 @@
+[
+  {
+    "id": "USR-001",
+    "name": "新员工001",
+    "username": "PN001",
+    "role": "admin",
+    "department": "总经办",
+    "status": "active",
+    "joinDate": "2024-01-01",
+    "leadsCount": 0,
+    "projectsCount": 0
+  },
+  {
+    "id": "USR-002",
+    "name": "新员工002",
+    "username": "PN002",
+    "role": "admin",
+    "department": "总经办",
+    "status": "active",
+    "joinDate": "2024-01-01",
+    "leadsCount": 0,
+    "projectsCount": 0
+  },
+  {
+    "id": "USR-003",
+    "name": "新员工003",
+    "username": "PN003",
+    "role": "designer",
+    "department": "设计部",
+    "status": "active",
+    "joinDate": "2024-02-15",
+    "leadsCount": 0,
+    "projectsCount": 0
+  },
+  {
+    "id": "USR-004",
+    "name": "新员工004",
+    "username": "PN004",
+    "role": "sales",
+    "department": "销售部",
+    "status": "active",
+    "joinDate": "2024-03-01",
+    "leadsCount": 0,
+    "projectsCount": 0
+  },
+  {
+    "id": "USR-005",
+    "name": "新员工005",
+    "username": "PN005",
+    "role": "manager",
+    "department": "工程部",
+    "status": "active",
+    "joinDate": "2024-03-10",
+    "leadsCount": 0,
+    "projectsCount": 0
+  }
+]

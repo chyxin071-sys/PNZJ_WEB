@@ -1,0 +1,70 @@
+<view class="page-container">
+  <!-- 顶部标题与新建按钮 -->
+  <view class="page-header">
+    <view class="header-titles">
+      <text class="page-title">材料库</text>
+      <text class="page-subtitle">公司标准化物料与套餐库</text>
+    </view>
+    <view class="btn-create-icon hover-scale" bindtap="createMaterial">
+      <text class="plus-icon">+</text>
+      新建
+    </view>
+  </view>
+
+  <!-- 搜索与分类切换 -->
+  <view class="search-filter-section">
+    <scroll-view class="status-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="status-tabs">
+        <view class="status-tab {{activeCategory === '全部' ? 'active' : ''}}" bindtap="switchCategory" data-category="全部">全部</view>
+        <view class="status-tab {{activeCategory === '主材' ? 'active' : ''}}" bindtap="switchCategory" data-category="主材">主材</view>
+        <view class="status-tab {{activeCategory === '辅材' ? 'active' : ''}}" bindtap="switchCategory" data-category="辅材">辅材</view>
+        <view class="status-tab {{activeCategory === '软装' ? 'active' : ''}}" bindtap="switchCategory" data-category="软装">软装</view>
+        <view class="status-tab {{activeCategory === '定制' ? 'active' : ''}}" bindtap="switchCategory" data-category="定制">定制</view>
+        <view class="status-tab {{activeCategory === '家电' ? 'active' : ''}}" bindtap="switchCategory" data-category="家电">家电</view>
+        <view class="status-tab {{activeCategory === '人工' ? 'active' : ''}}" bindtap="switchCategory" data-category="人工">人工</view>
+      </view>
+    </scroll-view>
+    <view class="search-box">
+      <view class="icon-search"></view>
+      <input type="text" placeholder="搜索名称 / 品牌 / 型号..." value="{{searchQuery}}" bindinput="onSearch" class="search-input"/>
+    </view>
+  </view>
+
+  <!-- 材料列表 -->
+  <scroll-view scroll-y class="list-container">
+    <block wx:if="{{filteredMaterials.length > 0}}">
+      <view class="material-card" wx:for="{{filteredMaterials}}" wx:key="_id">
+        <view class="card-header">
+          <view class="material-info">
+            <view class="material-title-box">
+              <text class="material-name">{{item.name}}</text>
+              <text class="category-badge">{{item.category || '未分类'}}</text>
+            </view>
+            <text class="material-brand">品牌: {{item.brand || '暂无'}} | 型号: {{item.sku || '暂无'}}</text>
+          </view>
+          <view class="status-badge {{item.status === 'active' ? 'status-active' : 'status-inactive'}}">
+            {{item.status === 'active' ? '已上架' : '已下架'}}
+          </view>
+        </view>
+        
+        <view class="card-body">
+          <view class="info-row">
+            <text class="info-icon">📦</text>
+            <text class="info-text">当前库存：<text class="font-mono font-bold {{item.stock < 20 ? 'text-danger' : 'text-primary-900'}}">{{item.stock || 0}}</text> {{item.unit}}</text>
+          </view>
+        </view>
+
+        <view class="card-footer">
+          <view class="price-box">
+            <text class="price-label">标准单价</text>
+            <text class="price-val text-primary font-bold">¥{{item.price || 0}} <text style="font-size:24rpx;color:#94a3b8;">/ {{item.unit}}</text></text>
+          </view>
+        </view>
+      </view>
+    </block>
+    <view class="empty-state" wx:else>
+      <view class="empty-icon-box">📦</view>
+      <text class="empty-text">暂无相关材料数据</text>
+    </view>
+  </scroll-view>
+</view>

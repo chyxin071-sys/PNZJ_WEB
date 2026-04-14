@@ -1,0 +1,260 @@
+/* 材料库列表全局样式 */
+.page-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8fafc;
+  box-sizing: border-box;
+}
+
+/* 顶部标题与新建按钮区域 */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 32rpx 40rpx 24rpx;
+  background-color: #ffffff;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.page-title {
+  font-size: 44rpx;
+  font-weight: 800;
+  color: var(--primary-900);
+  letter-spacing: 1rpx;
+}
+
+.page-subtitle {
+  font-size: 24rpx;
+  color: var(--primary-500);
+}
+
+.btn-create-icon {
+  display: flex;
+  align-items: center;
+  background-color: var(--primary-900);
+  color: #ffffff;
+  padding: 14rpx 28rpx;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  box-shadow: 0 6rpx 16rpx rgba(74, 64, 58, 0.15);
+}
+
+.plus-icon {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+  margin-top: -4rpx;
+}
+
+/* 搜索与分类切换区域 */
+.search-filter-section {
+  background-color: #ffffff;
+  padding: 0 40rpx 24rpx;
+  border-bottom: 1rpx solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+/* 状态滑动选择器 */
+.status-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.status-tabs {
+  display: flex;
+  gap: 16rpx;
+  padding-bottom: 4rpx;
+}
+
+.status-tab {
+  display: inline-block;
+  padding: 12rpx 32rpx;
+  border-radius: 40rpx;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--primary-600);
+  background-color: #f1f5f9;
+  transition: all 0.3s ease;
+}
+
+.status-tab.active {
+  background-color: var(--primary-900);
+  color: #ffffff;
+  box-shadow: 0 4rpx 12rpx rgba(74, 64, 58, 0.15);
+}
+
+/* 搜索框 */
+.search-box {
+  display: flex;
+  align-items: center;
+  background-color: #f8fafc;
+  padding: 16rpx 24rpx;
+  border-radius: 20rpx;
+  border: 1rpx solid transparent;
+  transition: border-color 0.3s;
+}
+
+.icon-search {
+  width: 32rpx;
+  height: 32rpx;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' /%3E%3C/svg%3E") no-repeat center;
+  margin-right: 16rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: var(--primary-900);
+}
+
+/* 列表容器 */
+.list-container {
+  flex: 1;
+  padding: 24rpx 32rpx;
+  box-sizing: border-box;
+}
+
+/* 材料卡片样式 */
+.material-card {
+  background-color: #ffffff;
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.02);
+  border: 1rpx solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+/* 卡片头部 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.material-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.material-title-box {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.material-name {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: var(--primary-900);
+}
+
+.category-badge {
+  font-size: 22rpx;
+  background-color: #f1f5f9;
+  color: var(--primary-600);
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+}
+
+.material-brand {
+  font-size: 24rpx;
+  color: var(--primary-500);
+}
+
+/* 状态标签 */
+.status-badge {
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 8rpx 20rpx;
+  border-radius: 12rpx;
+}
+
+.status-active { background: #ecfdf5; color: #059669; border: 1rpx solid #d1fae5; }
+.status-inactive { background: #fff1f2; color: #e11d48; border: 1rpx solid #ffe4e6; }
+
+/* 卡片主体内容 */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  background-color: #f8fafc;
+  padding: 20rpx;
+  border-radius: 16rpx;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.info-icon {
+  font-size: 24rpx;
+  opacity: 0.8;
+}
+
+.info-text {
+  font-size: 26rpx;
+  color: var(--primary-600);
+}
+
+.text-danger { color: #e11d48; }
+
+/* 卡片底部金额 */
+.card-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding-top: 16rpx;
+  border-top: 2rpx dashed #f1f5f9;
+}
+
+.price-box {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.price-label {
+  font-size: 24rpx;
+  color: var(--primary-400);
+}
+
+.price-val {
+  font-family: monospace;
+  font-size: 36rpx;
+}
+
+.text-primary { color: #d97706; }
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 200rpx;
+}
+
+.empty-icon-box {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+  opacity: 0.5;
+}
+
+.empty-text {
+  font-size: 28rpx;
+  color: var(--primary-400);
+}

@@ -4,13 +4,13 @@
   <view class="dashboard">
     <view class="dashboard-header">
       <text class="dashboard-title">客户管理</text>
-      
-      <!-- 标题右侧：时间筛选器 (带红框样式) -->
-      <picker mode="selector" range="{{timeFilterOptions}}" value="{{timeFilterIndex}}" bindchange="onTimeFilterChange">
-        <view class="date-filter-box">
-          <text>{{timeFilterLabel}}</text>
-        </view>
-      </picker>
+      <view class="actions">
+        <picker mode="selector" range="{{timeFilterOptions}}" value="{{timeFilterIndex}}" bindchange="onTimeFilterChange">
+          <view class="date-filter-box">
+            <text>{{timeFilterLabel}}</text>
+          </view>
+        </picker>
+      </view>
     </view>
     <view class="dashboard-cards">
       <!-- 全部卡片 -->
@@ -34,7 +34,8 @@
           </view>
         </view>
       <!-- 已签单卡片 -->
-      <view class="stat-card {{activeTab === '已签单' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="已签单">
+      <view class="stat-card {{activeTab === '已签单' ? 'active-card' : ''}}" bindtap="switchTab" data-tab="已签单" style="position: relative;">
+        <view class="plus-one-anim" wx:if="{{playSignAnim}}">+1</view>
         <view class="icon-box bg-emerald-50">
           <view class="icon-check"></view>
         </view>
@@ -53,13 +54,13 @@
       <input placeholder="搜索客户/电话/小区..." placeholder-class="ph" bindinput="onSearch" />
     </view>
     <!-- 高级筛选器 (三横线图标) -->
-    <view class="btn-filter hover-scale" bindtap="openAdvancedFilter">
+    <view class="btn-filter hover-scale" bindtap="openFilterModal">
       <view class="icon-filter">
         <view class="line-mid"></view>
       </view>
       <view class="filter-badge" wx:if="{{selectedEmployeeIds.length > 0 || selectedRatings.length > 0 || selectedSources.length > 0}}"></view>
     </view>
-    <view class="btn-create-small" hover-class="btn-create-hover" bindtap="createLead">
+    <view class="btn-create-small" hover-class="btn-create-hover" bindtap="showAddLeadModal">
       <view class="plus-icon"></view>
       <text>新建</text>
     </view>
@@ -67,16 +68,16 @@
 
   <!-- 客户列表区 -->
   <scroll-view scroll-y class="list-container">
-    <view class="todo-card" hover-class="card-hover" hover-stay-time="100" wx:for="{{leads}}" wx:key="id" bindtap="goToDetail" data-id="{{item.id}}">
+    <view class="todo-card" hover-class="card-hover" hover-stay-time="100" wx:for="{{leads}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
       
       <!-- 头部：姓名、电话、状态下拉标签 -->
       <view class="card-header">
         <view class="title-wrap">
           <text class="title">{{item.name}}</text>
-          <text class="phone">{{item.phone}}</text>
+          <text class="phone" user-select="false">{{item.phone}}</text>
         </view>
         <view class="status-picker-wrap" catchtap="preventTap">
-          <picker mode="selector" range="{{['待分配', '跟进中', '已量房', '已出图', '已报预估', '已签单', '已流失']}}" bindchange="onStatusChange" data-id="{{item.id}}">
+          <picker mode="selector" range="{{['待分配', '跟进中', '已量房', '已出图', '已报预估', '已签单', '已流失']}}" bindchange="onStatusChange" data-id="{{item._id}}">
             <view class="status-badge {{item.status === '已签单' ? 'status-signed' : 'status-default'}}">
               <text>{{item.status}}</text>
               <view class="icon-arrow-down"></view>
@@ -92,7 +93,7 @@
           <text class="address">{{item.address}}</text>
         </view>
         <view class="info-row mt-2">
-          <text class="meta-text">{{item.requirementType}} · {{item.area}}m² · {{item.budget}} · {{item.source}}</text>
+          <text class="meta-text">{{item.requirement || '未填需求'}} · {{item.area ? item.area + 'm²' : '未填面积'}} · {{item.source}}</text>
         </view>
       </view>
 
@@ -105,7 +106,8 @@
 
         <view class="meta-assignee">
           <view class="icon-user"></view>
-          <text>{{item.sales}} | {{item.designer}}</text>
+          <text wx:if="{{item.sales || item.designer}}">{{item.sales || '无销售'}} | {{item.designer || '无设计'}}</text>
+          <text wx:else>创建人: {{item.creatorName || '未知'}}</text>
         </view>
       </view>
 
@@ -119,42 +121,105 @@
     <view class="bottom-padding"></view>
   </scroll-view>
 
-  <!-- 高级筛选弹窗 -->
+  <!-- 高级筛选弹窗 (修改为团队待办样式的居中弹窗) -->
   <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
   <view class="modal-content" wx:if="{{showFilterModal}}">
     <view class="modal-header">
-      <text>高级筛选</text>
+      <text>客户高级筛选</text>
       <view class="btn-close" bindtap="applyFilter">确定</view>
     </view>
-    <scroll-view scroll-y class="modal-list">
-      <!-- 评级 -->
+    <scroll-view scroll-y class="modal-list" style="height: 60vh;">
       <view class="filter-section">
         <view class="filter-title">评级</view>
         <view class="filter-tags">
-          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterRatings}}" wx:key="name" bindtap="toggleFilterRating" data-name="{{item.name}}">
-            {{item.name}}级
-          </view>
+          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterRatings}}" wx:key="name" bindtap="toggleRating" data-name="{{item.name}}">{{item.name}}</view>
         </view>
       </view>
 
-      <!-- 来源 -->
       <view class="filter-section">
         <view class="filter-title">来源</view>
         <view class="filter-tags">
-          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterSources}}" wx:key="name" bindtap="toggleFilterSource" data-name="{{item.name}}">
-            {{item.name}}
-          </view>
+          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterSources}}" wx:key="name" bindtap="toggleSource" data-name="{{item.name}}">{{item.name}}</view>
         </view>
       </view>
 
-      <!-- 人员 -->
       <view class="filter-section">
-        <view class="filter-title">人员</view>
-        <view class="filter-tags">
-          <view class="filter-tag {{item.selected ? 'active' : ''}}" wx:for="{{filterEmployees}}" wx:key="id" bindtap="toggleFilterEmployee" data-id="{{item.id}}">
-            {{item.name}}
+        <view class="filter-title">跟进人员</view>
+        <block wx:for="{{groupedEmployees}}" wx:key="dept">
+          <view class="dept-title" bindtap="toggleDept" data-dept="{{item.dept}}">
+            <text>{{item.dept}}</text>
+            <view class="arrow {{item.expanded ? 'up' : 'down'}}"></view>
           </view>
+          <view class="dept-employees" wx:if="{{item.expanded}}">
+            <view class="employee-item" wx:for="{{item.employees}}" wx:for-item="emp" wx:key="id" bindtap="toggleEmployee" data-id="{{emp.id}}">
+              <view class="checkbox {{emp.selected ? 'checked' : ''}}">
+                <view wx:if="{{emp.selected}}" class="checkmark"></view>
+              </view>
+              <text class="emp-name">{{emp.name}}</text>
+            </view>
+          </view>
+        </block>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- 添加线索弹窗 -->
+  <view class="modal-mask" wx:if="{{showAddModal}}" bindtap="closeAddModal"></view>
+  <view class="modal-content" wx:if="{{showAddModal}}">
+    <view class="modal-header">
+      <text>添加线索</text>
+      <view class="btn-close" bindtap="closeAddModal">取消</view>
+    </view>
+    <scroll-view scroll-y class="modal-scroll">
+      <view class="modal-body">
+        <view class="form-group">
+          <text class="label">客户姓名 <text style="color:red">*</text></text>
+          <input class="input" placeholder="请输入姓名" value="{{newLead.name}}" bindinput="onNewLeadInput" data-field="name" />
         </view>
+        <view class="form-group">
+          <text class="label">手机号 <text style="color:red">*</text></text>
+          <input class="input" type="number" placeholder="请输入手机号" value="{{newLead.phone}}" bindinput="onNewLeadInput" data-field="phone" />
+        </view>
+        <view class="form-group">
+          <text class="label">地址</text>
+          <input class="input" placeholder="如：保利香槟国际1栋1单元" value="{{newLead.address}}" bindinput="onNewLeadInput" data-field="address" />
+        </view>
+        <view class="form-group">
+          <text class="label">面积 (㎡)</text>
+          <input class="input" type="digit" placeholder="请输入房屋面积" value="{{newLead.area}}" bindinput="onNewLeadInput" data-field="area" />
+        </view>
+        <view class="form-group">
+          <text class="label">需求类型</text>
+          <picker bindchange="onNewLeadPickerChange" data-field="requirement" range="{{['旧改', '毛坯']}}">
+            <view class="picker-view">
+              <text>{{newLead.requirement}}</text>
+              <view class="arrow-down"></view>
+            </view>
+          </picker>
+        </view>
+        <view class="form-group">
+          <text class="label">客户评级</text>
+          <picker bindchange="onNewLeadPickerChange" data-field="rating" range="{{['A', 'B', 'C', 'D']}}">
+            <view class="picker-view">
+              <text>{{newLead.rating}}级</text>
+              <view class="arrow-down"></view>
+            </view>
+          </picker>
+        </view>
+        <view class="form-group">
+          <text class="label">来源</text>
+          <picker bindchange="onNewLeadPickerChange" data-field="source" range="{{['自然进店', '老介新', '抖音', '小红书', '大众点评', '自有关系', '其他']}}">
+            <view class="picker-view">
+              <text>{{newLead.source}}</text>
+              <view class="arrow-down"></view>
+            </view>
+          </picker>
+        </view>
+        <view class="form-group" style="margin-bottom: 0;">
+          <text class="label">备注</text>
+          <input class="input" placeholder="简单描述客户需求" value="{{newLead.notes}}" bindinput="onNewLeadInput" data-field="notes" />
+        </view>
+        <view class="btn-save hover-scale" bindtap="saveNewLead">保 存</view>
       </view>
     </scroll-view>
   </view>

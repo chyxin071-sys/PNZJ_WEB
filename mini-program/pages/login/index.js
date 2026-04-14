@@ -2,7 +2,8 @@
 Page({
   data: {
     username: '',
-    password: ''
+    password: '',
+    logoError: false
   },
 
   onLoad() {
@@ -13,6 +14,10 @@ Page({
         url: '/pages/index/index'
       });
     }
+  },
+
+  onLogoError() {
+    this.setData({ logoError: true });
   },
 
   onInput(e) {
@@ -34,27 +39,40 @@ Page({
 
     wx.showLoading({ title: '登录中...' });
     
-    // 模拟账号密码登录校验
-    setTimeout(() => {
+    // 调用云数据库进行真实鉴权
+    const db = wx.cloud.database();
+    db.collection('users').where({
+      phone: username
+    }).get().then(res => {
       wx.hideLoading();
-      
-      // 简单模拟：如果账号是 admin，则认为是老板
-      let role = 'sales';
-      let name = '测试员工';
-      
-      if (username === 'admin' || username === '老板') {
-        role = 'admin';
-        name = '老板';
+      if (res.data && res.data.length > 0) {
+        const user = res.data[0];
+        
+        // 校验密码
+        if (user.passwordPlain !== password) {
+          return wx.showToast({ title: '密码错误，请重新输入', icon: 'none' });
+        }
+        
+        if (user.status !== 'active') {
+          return wx.showToast({ title: '该账号已被停用', icon: 'none' });
+        }
+        
+        this.doLoginSuccess({
+          id: user._id,
+          name: user.name,
+          role: user.role,
+          phone: user.phone,
+          department: user.department,
+          avatarUrl: ''
+        });
+      } else {
+        wx.showToast({ title: '账号不存在，请联系管理员', icon: 'none' });
       }
-
-      this.doLoginSuccess({
-        id: `user_${new Date().getTime()}`,
-        name: name,
-        role: role,
-        phone: username,
-        avatarUrl: ''
-      });
-    }, 800);
+    }).catch(err => {
+      wx.hideLoading();
+      console.error('登录失败:', err);
+      wx.showToast({ title: '网络异常，请重试', icon: 'none' });
+    });
   },
 
   doLoginSuccess(userInfo) {
