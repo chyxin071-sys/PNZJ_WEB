@@ -24,6 +24,7 @@ function LeadsContent() {
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
+    scope: "全部线索",
     status: "全部",
     sales: "全部",
     designer: "全部",
@@ -87,6 +88,13 @@ function LeadsContent() {
   const isAssignedToMe = (lead: any) => {
     if (!currentUser) return false;
     return lead.sales === currentUser.name || lead.designer === currentUser.name;
+  };
+
+  const maskName = (name: string, lead: any) => {
+    if (!currentUser || currentUser.role === 'admin') return name;
+    if (isAssignedToMe(lead)) return name;
+    if (!name) return name;
+    return name.substring(0, 1) + '**';
   };
 
   const maskPhone = (phone: string, lead: any) => {
@@ -240,6 +248,9 @@ function LeadsContent() {
     // 评级筛选
     if (activeRating !== "全部" && !activeRating.includes(l.rating)) return false;
     
+    // 数据范围筛选
+    if (filters.scope === "与我相关" && !isAssignedToMe(l)) return false;
+
     // 搜索筛选
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
@@ -353,7 +364,7 @@ function LeadsContent() {
           >
             <Filter className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">高级筛选</span>
-            {(filters.sales !== "全部" || filters.designer !== "全部" || filters.status !== "全部" || filters.year !== "全部" || filters.month !== "全部" || filters.day) && (
+            {(filters.scope !== "全部线索" || filters.sales !== "全部" || filters.designer !== "全部" || filters.status !== "全部" || filters.year !== "全部" || filters.month !== "全部" || filters.day) && (
               <span className="absolute top-2.5 right-2.5 sm:static sm:ml-2 w-2 h-2 rounded-full bg-rose-500"></span>
             )}
             <ChevronDown className={`hidden sm:inline-block w-4 h-4 ml-1 opacity-50 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
@@ -366,6 +377,24 @@ function LeadsContent() {
               <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] max-w-[340px] sm:absolute sm:top-full sm:left-0 sm:-translate-x-0 sm:-translate-y-0 sm:transform-none sm:w-80 sm:max-w-none mt-0 sm:mt-2 z-50 bg-white border border-primary-100 rounded-xl shadow-xl p-4 sm:p-5 animate-in fade-in zoom-in-95 sm:zoom-in-100 slide-in-from-top-2 duration-150">
                 <div className="space-y-4">
                   <div className="relative z-50">
+                    <label className="block text-xs font-medium text-primary-600 mb-1">数据范围</label>
+                    <div className="flex gap-2">
+                      {["全部线索", "与我相关"].map((option) => (
+                        <button
+                          key={option}
+                          onClick={() => setFilters({ ...filters, scope: option })}
+                          className={`flex-1 py-2 rounded-lg text-sm transition-colors border ${
+                            filters.scope === option
+                              ? "bg-primary-900 text-white border-primary-900 shadow-sm font-medium"
+                              : "bg-primary-50 text-primary-600 border-transparent hover:bg-primary-100"
+                          }`}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="relative z-40">
                     <label className="block text-xs font-medium text-primary-600 mb-1">跟进状态</label>
                     <div 
                       onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'filter-status' ? null : 'filter-status'); }}
@@ -509,7 +538,7 @@ function LeadsContent() {
                   </div>
                   <div className="pt-2 flex gap-2">
                     <button 
-                      onClick={() => setFilters({ status: "全部", sales: "全部", designer: "全部", year: "全部", month: "全部", day: "" })}
+                      onClick={() => setFilters({ scope: "全部线索", status: "全部", sales: "全部", designer: "全部", year: "全部", month: "全部", day: "" })}
                       className="flex-1 px-3 py-2 border border-primary-200 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors text-sm font-medium"
                     >
                       重置
@@ -565,8 +594,19 @@ function LeadsContent() {
                 .map((lead) => (
                 <tr 
                   key={lead.id} 
-                  onClick={() => router.push(`/leads/${lead.id}`)}
-                  className={`hover:bg-primary-50/50 transition-colors group cursor-pointer ${isAssignedToMe(lead) ? 'bg-amber-50/30' : ''}`}
+                  onClick={() => {
+                    if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
+                      router.push(`/leads/${lead.id}`);
+                    } else {
+                      setShowToast("您暂无权限查看此客户的详细信息");
+                      setTimeout(() => setShowToast(false), 3000);
+                    }
+                  }}
+                  className={`transition-colors group ${
+                    currentUser?.role === 'admin' || isAssignedToMe(lead) 
+                      ? 'hover:bg-primary-50/50 cursor-pointer' 
+                      : 'opacity-80 cursor-default'
+                  } ${isAssignedToMe(lead) ? 'bg-amber-50/30' : ''}`}
                 >
                   <td className="py-4 px-6 whitespace-nowrap">
                     <div className="flex items-start gap-2">
@@ -578,7 +618,7 @@ function LeadsContent() {
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-primary-900">
-                            {lead.customerNo || lead.id.substring(0, 6)} - {lead.name}
+                            {lead.customerNo || lead.id.substring(0, 6)} - {maskName(lead.name, lead)}
                             {isAssignedToMe(lead) && (
                               <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
                             )}
