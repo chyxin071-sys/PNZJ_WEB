@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [phone, setPhone] = useState("");
+  const [account, setAccount] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -15,8 +15,8 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     
-    if (!phone || !password) {
-      setError("请输入手机号和密码");
+    if (!account || !password) {
+      setError("请输入账号和密码");
       return;
     }
 
@@ -26,7 +26,7 @@ export default function LoginPage() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, password })
+        body: JSON.stringify({ account, password })
       });
 
       const data = await res.json();
@@ -99,8 +99,8 @@ export default function LoginPage() {
               <input
                 type="text"
                 placeholder="请输入您的账号"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                value={account}
+                onChange={(e) => setAccount(e.target.value)}
                 className="w-full border-b border-primary-100 py-3 bg-transparent text-zinc-900 focus:outline-none focus:border-primary-800 transition-colors placeholder:text-zinc-300 font-light"
                 required
               />

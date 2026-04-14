@@ -16,7 +16,7 @@ function LeadsContent() {
     phone: "",
     rating: "B",
     address: "",
-    requirement: "毛坯",
+    requirementType: "毛坯",
     area: "",
     budget: "暂无",
     source: "自然进店",
@@ -125,7 +125,7 @@ function LeadsContent() {
       if (res.ok) {
         fetchLeads(); // 重新拉取
         setIsModalOpen(false);
-        setNewLead({ name: "", phone: "", rating: "B", address: "", requirement: "毛坯", area: "", budget: "暂无", source: "自然进店" });
+        setNewLead({ name: "", phone: "", rating: "B", address: "", requirementType: "毛坯", area: "", budget: "暂无", source: "自然进店" });
       }
     } catch (e) {
       console.error('Failed to create lead', e);

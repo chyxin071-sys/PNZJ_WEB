@@ -39,11 +39,13 @@ Page({
 
     wx.showLoading({ title: '登录中...' });
     
-    // 调用云数据库进行真实鉴权
+    // 调用云数据库进行真实鉴权 (支持 phone 或 account)
     const db = wx.cloud.database();
-    db.collection('users').where({
-      phone: username
-    }).get().then(res => {
+    const _ = db.command;
+    db.collection('users').where(_.or([
+      { phone: username },
+      { account: username }
+    ])).get().then(res => {
       wx.hideLoading();
       if (res.data && res.data.length > 0) {
         const user = res.data[0];

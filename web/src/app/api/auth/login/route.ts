@@ -8,10 +8,10 @@ const ENV = 'cloud1-8grodf5s3006f004';
 
 export async function POST(request: Request) {
   try {
-    const { phone, password } = await request.json();
+    const { account, password } = await request.json();
 
-    if (!phone || !password) {
-      return NextResponse.json({ error: '手机号或密码不能为空' }, { status: 400 });
+    if (!account || !password) {
+      return NextResponse.json({ error: '账号或密码不能为空' }, { status: 400 });
     }
 
     // 1. 获取微信接口调用凭证 (access_token)
@@ -23,8 +23,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '无法连接云数据库' }, { status: 500 });
     }
 
-    // 2. 查询云数据库中的用户
-    const query = `db.collection('users').where({phone: '${phone}'}).get()`;
+    // 2. 查询云数据库中的用户 (支持 phone 或 account)
+    const query = `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()`;
     const dbRes = await fetch(`https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
