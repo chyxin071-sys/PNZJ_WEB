@@ -1,0 +1,14 @@
+.page-container { padding: 40rpx; background: #f8fafc; min-height: 100vh; }
+.form-card { background: #fff; border-radius: 24rpx; padding: 40rpx; margin-bottom: 40rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.02); }
+.form-group { margin-bottom: 32rpx; }
+.form-row { display: flex; justify-content: space-between; }
+.flex-1 { flex: 1; }
+.label { display: block; font-size: 28rpx; font-weight: bold; color: var(--primary-900); margin-bottom: 16rpx; }
+.required { color: #ef4444; margin-left: 4rpx; }
+.input, .picker-view { background: #f8fafc; border-radius: 16rpx; padding: 0 24rpx; height: 88rpx; border: 2rpx solid transparent; font-size: 30rpx; color: var(--primary-900); display: flex; align-items: center; justify-content: space-between; transition: all 0.2s; }
+.input:focus { border-color: var(--primary-900); background: #fff; }
+.arrow-down { width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 10rpx solid #94a3b8; }
+.btn-save { background: var(--primary-900); color: #fff; text-align: center; padding: 28rpx 0; border-radius: 16rpx; font-size: 32rpx; font-weight: bold; margin-bottom: 24rpx; }
+.btn-delete { background: #fff; border: 2rpx solid #ef4444; color: #ef4444; text-align: center; padding: 28rpx 0; border-radius: 16rpx; font-size: 32rpx; font-weight: bold; }
+.hover-scale { transition: transform 0.1s ease; }
+.hover-scale:active { transform: scale(0.96); }

@@ -30,9 +30,14 @@ Page({
 
     // 自定义开工时间范围
     filterStartDateStart: '',
-    filterStartDateEnd: ''
+    filterStartDateEnd: '',
+    
+    leadIdFilter: '' // 仅显示特定客户的工地
   },
-  onLoad() {
+  onLoad(options) {
+    if (options && options.leadId) {
+      this.setData({ leadIdFilter: options.leadId });
+    }
     // 恢复筛选状态
     const app = getApp();
     if (app.globalData && app.globalData.projectFilters) {
@@ -196,6 +201,10 @@ Page({
   filterProjects() {
     let filtered = this.data.allProjects;
     
+    if (this.data.leadIdFilter) {
+      filtered = filtered.filter(p => p.leadId === this.data.leadIdFilter);
+    }
+
     if (this.data.searchQuery) {
       const q = this.data.searchQuery.toLowerCase().trim();
       filtered = filtered.filter(p => {
@@ -376,7 +385,10 @@ Page({
   },
 
   goToDetail(e) {
-    wx.showToast({ title: '工地功能正在开发中', icon: 'none' });
+    const id = e.currentTarget.dataset.id;
+    if (id) {
+      wx.navigateTo({ url: `/pages/projectDetail/index?id=${id}` });
+    }
   },
 
   showComingSoon(e) {

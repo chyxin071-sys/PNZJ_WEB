@@ -1,0 +1,58 @@
+<view class="page-container" wx:if="{{!loading && project}}">
+  
+  <view class="project-header">
+    <view class="flex justify-between items-center">
+      <view class="title">{{project.customer}}的家</view>
+      <view class="status-badge {{project.health === '严重延期' ? 'badge-red' : (project.health === '预警' ? 'badge-yellow' : 'badge-green')}}">
+        {{project.health || '正常'}}
+      </view>
+    </view>
+    <view class="address-text">{{project.address}}</view>
+    
+    <view class="meta-grid">
+      <view class="meta-item">
+        <text class="label">项目经理</text>
+        <text class="value">{{project.manager}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="label">设计师</text>
+        <text class="value">{{project.designer}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="label">开工时间</text>
+        <text class="value">{{project.startDate || '-'}}</text>
+      </view>
+      <view class="meta-item">
+        <text class="label">预计完工</text>
+        <text class="value">{{project.expectedEndDate || '-'}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="progress-section">
+    <view class="section-title">
+      当前阶段: {{nodesList[currentNodeIndex]}} 
+      <text class="days-badge">已耗时 {{project.daysElapsed || 0}} 天</text>
+    </view>
+    
+    <view class="nodes-list">
+      <view class="node-item" wx:for="{{nodesList}}" wx:key="*this" wx:for-index="idx">
+        <view class="node-line {{idx < currentNodeIndex ? 'active' : ''}}" wx:if="{{idx < nodesList.length - 1}}"></view>
+        <view class="node-circle {{idx < currentNodeIndex ? 'completed' : (idx === currentNodeIndex ? 'current' : 'pending')}}">
+          {{idx + 1}}
+        </view>
+        <view class="node-info">
+          <text class="node-name {{idx === currentNodeIndex ? 'current-text' : ''}}">{{item}}</text>
+          <text class="node-status">{{idx < currentNodeIndex ? '已完成' : (idx === currentNodeIndex ? '进行中' : '未开始')}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  
+  <view class="action-section">
+    <view class="btn-quote" bindtap="goToQuote">
+      查看相关报价单
+    </view>
+  </view>
+
+</view>

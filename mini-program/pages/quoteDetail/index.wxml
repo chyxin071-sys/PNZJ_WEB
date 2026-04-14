@@ -20,7 +20,10 @@
   </view>
 
   <view class="items-section">
-    <view class="section-title">费用明细</view>
+    <view class="section-title flex justify-between items-center" style="display: flex; justify-content: space-between; align-items: center;">
+      <text>费用明细</text>
+      <view class="btn-add-item" bindtap="goToSelectMaterial" style="font-size: 24rpx; color: var(--primary-600); padding: 6rpx 16rpx; border: 1rpx solid var(--primary-600); border-radius: 8rpx;">+ 添加明细</view>
+    </view>
     
     <block wx:if="{{quote.items && quote.items.length > 0}}">
       <view class="item-card" wx:for="{{quote.items}}" wx:key="name">
@@ -32,12 +35,15 @@
           <text>单价: ¥{{item.price}}</text>
           <text>数量: {{item.quantity}}</text>
         </view>
+        <view style="display: flex; justify-content: flex-end; margin-top: 10rpx;">
+          <view style="font-size: 24rpx; color: #ef4444; padding: 6rpx 16rpx; border: 1rpx solid #fecaca; border-radius: 8rpx;" bindtap="deleteItem" data-index="{{index}}">删除</view>
+        </view>
       </view>
     </block>
     <view class="empty-items" wx:else>
       <view class="icon-empty"></view>
       <text>暂无明细项</text>
-      <text class="tip">请前往网页端(PC)添加详细材料与价格</text>
+      <text class="tip">点击上方按钮从材料库添加</text>
     </view>
   </view>
   

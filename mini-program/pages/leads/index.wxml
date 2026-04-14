@@ -58,7 +58,7 @@
       <view class="icon-filter">
         <view class="line-mid"></view>
       </view>
-      <view class="filter-badge" wx:if="{{selectedEmployeeIds.length > 0 || selectedRatings.length > 0 || selectedSources.length > 0}}"></view>
+      <view class="filter-badge" wx:if="{{filterScope === '与我相关' || selectedEmployeeIds.length > 0 || selectedRatings.length > 0 || selectedSources.length > 0}}"></view>
     </view>
     <view class="btn-create-small" hover-class="btn-create-hover" bindtap="showAddLeadModal">
       <view class="plus-icon"></view>
@@ -129,6 +129,14 @@
       <view class="btn-close" bindtap="applyFilter">确定</view>
     </view>
     <scroll-view scroll-y class="modal-list" style="height: 60vh;">
+      <view class="filter-section">
+        <view class="filter-title">数据范围</view>
+        <view class="filter-tags">
+          <view class="filter-tag {{filterScope === '全部线索' ? 'active' : ''}}" bindtap="switchScope" data-scope="全部线索">全部线索</view>
+          <view class="filter-tag {{filterScope === '与我相关' ? 'active' : ''}}" bindtap="switchScope" data-scope="与我相关">与我相关</view>
+        </view>
+      </view>
+
       <view class="filter-section">
         <view class="filter-title">评级</view>
         <view class="filter-tags">

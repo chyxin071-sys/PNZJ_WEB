@@ -1,0 +1,57 @@
+<view class="page-container">
+  <view class="form-card">
+    <view class="form-group">
+      <text class="label">材料名称 <text class="required">*</text></text>
+      <input class="input" placeholder="如：多乐士乳胶漆" value="{{material.name}}" bindinput="onInput" data-field="name" />
+    </view>
+    
+    <view class="form-group">
+      <text class="label">分类 <text class="required">*</text></text>
+      <picker bindchange="onPickerChange" data-field="category" range="{{categories}}">
+        <view class="picker-view">
+          <text>{{material.category}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+    
+    <view class="form-group">
+      <text class="label">规格型号 (SKU)</text>
+      <input class="input" placeholder="如：5L/桶" value="{{material.sku}}" bindinput="onInput" data-field="sku" />
+    </view>
+    
+    <view class="form-group">
+      <text class="label">品牌</text>
+      <input class="input" placeholder="如：多乐士" value="{{material.brand}}" bindinput="onInput" data-field="brand" />
+    </view>
+
+    <view class="form-row">
+      <view class="form-group flex-1">
+        <text class="label">单位 <text class="required">*</text></text>
+        <input class="input" placeholder="如：桶" value="{{material.unit}}" bindinput="onInput" data-field="unit" />
+      </view>
+      <view class="form-group flex-1" style="margin-left: 20rpx;">
+        <text class="label">单价 (¥) <text class="required">*</text></text>
+        <input class="input" type="digit" placeholder="0.00" value="{{material.price}}" bindinput="onInput" data-field="price" />
+      </view>
+    </view>
+    
+    <view class="form-group">
+      <text class="label">当前库存 <text class="required">*</text></text>
+      <input class="input" type="number" placeholder="0" value="{{material.stock}}" bindinput="onInput" data-field="stock" />
+    </view>
+    
+    <view class="form-group">
+      <text class="label">状态</text>
+      <picker bindchange="onPickerChange" data-field="status" range="{{statuses}}">
+        <view class="picker-view">
+          <text>{{material.status}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+  </view>
+
+  <view class="btn-save hover-scale" bindtap="saveMaterial">保存材料</view>
+  <view class="btn-delete hover-scale" wx:if="{{id}}" bindtap="deleteMaterial">删除材料</view>
+</view>

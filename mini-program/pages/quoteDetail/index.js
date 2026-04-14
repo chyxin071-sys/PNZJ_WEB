@@ -18,6 +18,12 @@ Page({
     }
   },
 
+  onShow() {
+    if (this.data.id) {
+      this.loadQuote(this.data.id);
+    }
+  },
+
   loadQuote(id) {
     wx.showLoading({ title: '加载中' });
     const db = wx.cloud.database();
@@ -62,6 +68,28 @@ Page({
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '获取客户信息失败', icon: 'none' });
+    });
+  },
+
+  goToSelectMaterial() {
+    wx.navigateTo({ url: `/pages/materials/index?selectMode=true&quoteId=${this.data.id}` });
+  },
+
+  deleteItem(e) {
+    const idx = e.currentTarget.dataset.index;
+    const items = this.data.quote.items || [];
+    items.splice(idx, 1);
+    
+    // 重新计算总价
+    const total = items.reduce((sum, item) => sum + (item.total || 0), 0);
+    
+    wx.showLoading({ title: '删除中' });
+    const db = wx.cloud.database();
+    db.collection('quotes').doc(this.data.id).update({
+      data: { items, total, updatedAt: db.serverDate() }
+    }).then(() => {
+      this.setData({ 'quote.items': items, 'quote.total': total });
+      wx.hideLoading();
     });
   }
 });

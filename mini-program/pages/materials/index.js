@@ -5,7 +5,15 @@ Page({
     loading: true,
     activeCategory: '全部',
     categories: ['全部', '主材', '辅材', '软装', '家电', '人工', '定制', '套餐'],
-    searchQuery: ''
+    searchQuery: '',
+    selectMode: false,
+    quoteId: null
+  },
+  onLoad(options) {
+    if (options.selectMode) {
+      this.setData({ selectMode: true, quoteId: options.quoteId });
+      wx.setNavigationBarTitle({ title: '选择材料' });
+    }
   },
   onShow() {
     this.fetchData();
@@ -71,6 +79,57 @@ Page({
     this.setData({ filteredMaterials: list });
   },
   createMaterial() {
-    wx.showToast({ title: '新增及库存管理请前往网页端操作', icon: 'none', duration: 2500 });
+    wx.navigateTo({ url: '/pages/materialForm/index' });
+  },
+  goToDetail(e) {
+    const id = e.currentTarget.dataset.id;
+    if (this.data.selectMode) {
+      wx.showModal({
+        title: '添加数量',
+        editable: true,
+        placeholderText: '请输入添加数量',
+        success: (res) => {
+          if (res.confirm && res.content) {
+            const qty = parseInt(res.content, 10);
+            if (qty > 0) {
+              this.addItemToQuote(id, qty);
+            } else {
+              wx.showToast({ title: '数量必须大于0', icon: 'none' });
+            }
+          }
+        }
+      });
+    } else {
+      wx.navigateTo({ url: `/pages/materialForm/index?id=${id}` });
+    }
+  },
+
+  addItemToQuote(materialId, qty) {
+    wx.showLoading({ title: '添加中' });
+    const material = this.data.materials.find(m => m._id === materialId);
+    if (!material) return wx.hideLoading();
+
+    const db = wx.cloud.database();
+    db.collection('quotes').doc(this.data.quoteId).get().then(res => {
+      const quote = res.data;
+      const items = quote.items || [];
+      items.push({
+        name: material.name,
+        price: material.price,
+        quantity: qty,
+        total: material.price * qty,
+        category: material.category,
+        sku: material.sku
+      });
+      const total = items.reduce((sum, item) => sum + (item.total || 0), 0);
+      
+      db.collection('quotes').doc(this.data.quoteId).update({
+        data: { items, total, updatedAt: db.serverDate() }
+      }).then(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '添加成功', icon: 'success' });
+        setTimeout(() => wx.navigateBack(), 1000);
+      });
+    });
   }
 });

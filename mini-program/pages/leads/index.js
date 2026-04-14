@@ -19,6 +19,8 @@ Page({
     filterEmployees: [],
     selectedEmployeeIds: [],
 
+    filterScope: '全部线索',
+
     filterRatings: [
       { name: 'A', selected: false },
       { name: 'B', selected: false },
@@ -330,6 +332,14 @@ Page({
       );
     }
 
+    // 与我相关过滤
+    if (this.data.filterScope === '与我相关') {
+      const userInfo = wx.getStorageSync('userInfo');
+      if (userInfo) {
+        filtered = filtered.filter(l => l.sales === userInfo.name || l.designer === userInfo.name);
+      }
+    }
+
     // 此时的 filtered 是经过时间、搜索、高级筛选的总数据，用来更新顶部看板
     this.updateDashboard(filtered);
 
@@ -361,7 +371,7 @@ Page({
       this.setData({
         timeFilterIndex: f.timeFilterIndex !== undefined ? f.timeFilterIndex : 2,
         timeFilterLabel: f.timeFilterLabel || '最近一月',
-        filterEmployees: f.filterEmployees || this.data.filterEmployees,
+        filterScope: f.filterScope || '全部线索',
         selectedEmployeeIds: f.selectedEmployeeIds || [],
         filterRatings: f.filterRatings || this.data.filterRatings,
         selectedRatings: f.selectedRatings || [],
@@ -379,7 +389,7 @@ Page({
     app.globalData.leadFilters = {
       timeFilterIndex: this.data.timeFilterIndex,
       timeFilterLabel: this.data.timeFilterLabel,
-      filterEmployees: this.data.filterEmployees,
+      filterScope: this.data.filterScope,
       selectedEmployeeIds: this.data.selectedEmployeeIds,
       filterRatings: this.data.filterRatings,
       selectedRatings: this.data.selectedRatings,
@@ -489,6 +499,14 @@ Page({
     this.setData({ filterSources: srcs });
   },
 
+  switchScope(e) {
+    const scope = e.currentTarget.dataset.scope;
+    this.setData({ filterScope: scope }, () => {
+      this.saveFilterState();
+      this.filterLeads();
+    });
+  },
+
   resetFilter() {
     const emps = this.data.filterEmployees.map(e => ({...e, selected: false}));
     const src = this.data.filterSources.map(s => ({...s, selected: false}));
@@ -498,6 +516,7 @@ Page({
       filterEmployees: emps,
       filterSources: src,
       filterRatings: rts,
+      filterScope: '全部线索',
       selectedEmployeeIds: [],
       selectedSources: [],
       selectedRatings: []

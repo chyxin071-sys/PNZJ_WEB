@@ -88,7 +88,17 @@ Page({
   },
 
   goToProject() {
-    wx.showToast({ title: '工地详情待开发', icon: 'none' });
+    // 检查是否有工地，如果有则跳详情，没有则跳列表（列表带有 filter）
+    const db = wx.cloud.database();
+    db.collection('projects').where({ leadId: this.data.leadId }).limit(1).get().then(res => {
+      if (res.data && res.data.length > 0) {
+        wx.navigateTo({ url: `/pages/projectDetail/index?id=${res.data[0]._id}` });
+      } else {
+        wx.navigateTo({ url: `/pages/projects/index?leadId=${this.data.leadId}` });
+      }
+    }).catch(() => {
+      wx.navigateTo({ url: `/pages/projects/index?leadId=${this.data.leadId}` });
+    });
   },
 
   addFollowUp() {

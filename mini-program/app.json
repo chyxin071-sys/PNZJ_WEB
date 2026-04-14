@@ -14,7 +14,9 @@
     "pages/notifications/index",
     "pages/quotes/index",
     "pages/quoteDetail/index",
-    "pages/materials/index"
+    "pages/materials/index",
+    "pages/materialForm/index",
+    "pages/projectDetail/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",

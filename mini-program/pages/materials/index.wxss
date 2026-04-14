@@ -37,6 +37,7 @@
 .btn-create-icon {
   display: flex;
   align-items: center;
+  justify-content: center;
   background-color: var(--primary-900);
   color: #ffffff;
   padding: 14rpx 28rpx;
@@ -48,8 +49,6 @@
 
 .plus-icon {
   font-size: 32rpx;
-  margin-right: 8rpx;
-  margin-top: -4rpx;
 }
 
 /* 搜索与分类切换区域 */
