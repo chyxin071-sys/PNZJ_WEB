@@ -4,6 +4,7 @@ Page({
     filteredMaterials: [],
     loading: true,
     activeCategory: '全部',
+    categories: ['全部', '主材', '辅材', '软装', '家电', '人工', '定制', '套餐'],
     searchQuery: ''
   },
   onShow() {

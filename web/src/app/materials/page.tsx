@@ -90,7 +90,7 @@ const generateMockStockHistory = () => {
 
 const mockStockHistory = generateMockStockHistory();
 
-const categories = ["全部", "主材", "辅材", "软装", "家电", "人工", "套餐"];
+const categories = ["全部", "主材", "辅材", "软装", "家电", "人工", "定制", "套餐"];
 
 import MainLayout from "../../components/MainLayout";
 
@@ -164,6 +164,7 @@ export default function MaterialsPage() {
       case "软装": return <Home className="w-5 h-5" />;
       case "家电": return <Monitor className="w-5 h-5" />;
       case "人工": return <UserCheck className="w-5 h-5" />;
+      case "定制": return <LayoutTemplate className="w-5 h-5" />;
       case "套餐": return <LayoutTemplate className="w-5 h-5" />;
       default: return <Package className="w-5 h-5" />;
     }

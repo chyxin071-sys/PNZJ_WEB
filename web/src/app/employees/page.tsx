@@ -33,7 +33,8 @@ export default function EmployeesPage() {
   
   // 添加员工表单状态
   const [newEmployeeName, setNewEmployeeName] = useState("");
-  const [newEmployeePhone, setNewEmployeePhone] = useState("");
+  const [newEmployeeAccount, setNewEmployeeAccount] = useState(""); // 登录账号
+  const [newEmployeePhone, setNewEmployeePhone] = useState(""); // 手机号
   const [newEmployeeRoleDropdown, setNewEmployeeRoleDropdown] = useState(false);
   const [newEmployeeRole, setNewEmployeeRole] = useState("sales");
   
@@ -67,7 +68,8 @@ export default function EmployeesPage() {
           ...item,
           id: item._id,
           name: item.name || '未知姓名',
-          username: item.phone || '',
+          username: item.account || item.phone || '', // 登录账号
+          phone: item.phone || '', // 手机号
           role: item.role || 'sales',
           department: item.department || roleMap[item.role || 'sales'].dept,
           status: item.is_active ? 'active' : 'inactive',
@@ -106,8 +108,8 @@ export default function EmployeesPage() {
 
   const handleSaveEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmployeeName || !newEmployeePhone) {
-      alert("请填写完整信息");
+    if (!newEmployeeName || !newEmployeeAccount) {
+      alert("请填写完整姓名和账号");
       return;
     }
     
@@ -120,6 +122,7 @@ export default function EmployeesPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: newEmployeeName,
+            account: newEmployeeAccount,
             phone: newEmployeePhone,
             role: newEmployeeRole,
             department: roleMap[newEmployeeRole].dept,
@@ -135,6 +138,7 @@ export default function EmployeesPage() {
              const updatedUser = {
                ...currentUser,
                name: newEmployeeName,
+               account: newEmployeeAccount,
                phone: newEmployeePhone,
                role: newEmployeeRole,
              };
@@ -154,11 +158,12 @@ export default function EmployeesPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: newEmployeeName,
+            account: newEmployeeAccount,
             phone: newEmployeePhone,
             role: newEmployeeRole,
             department: roleMap[newEmployeeRole].dept,
             joinDate: newEmployeeJoinDate,
-            password: "123" // 默认密码
+            password: "888888" // 初始密码
           })
         });
         
@@ -273,6 +278,7 @@ export default function EmployeesPage() {
             onClick={() => {
               setEditingEmployee(null);
               setNewEmployeeName("");
+              setNewEmployeeAccount("");
               setNewEmployeePhone("");
               setNewEmployeeRole("sales");
               const today = new Date();
@@ -359,11 +365,12 @@ export default function EmployeesPage() {
 
         {/* 员工列表表格 */}
         <div className="bg-white rounded-xl border border-primary-100 shadow-sm flex flex-col relative z-10">
-          <div className="w-full overflow-visible rounded-t-xl">
-            <table className="w-full text-left border-collapse">
+          <div className="w-full overflow-x-auto rounded-t-xl">
+            <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
-                <tr className="bg-primary-50/50 border-b border-primary-100 text-primary-600 text-sm">
+                <tr className="bg-primary-50/50 border-b border-primary-100 text-primary-600 text-sm whitespace-nowrap">
                   <th className="py-4 px-6 font-medium">员工姓名 / 账号</th>
+                  <th className="py-4 px-6 font-medium">手机号码</th>
                   <th className="py-4 px-6 font-medium">所属部门</th>
                   <th className="py-4 px-6 font-medium">系统角色</th>
                   <th className="py-4 px-6 font-medium">状态</th>
@@ -399,6 +406,9 @@ export default function EmployeesPage() {
                             <p className="text-xs text-primary-600 font-mono mt-0.5">{emp.username}</p>
                           </div>
                         </div>
+                      </td>
+                      <td className="py-4 px-6 text-primary-900 font-mono text-sm">
+                        {emp.phone || '-'}
                       </td>
                       <td className="py-4 px-6">
                         <div className="flex items-center text-primary-900 font-medium">
@@ -450,7 +460,8 @@ export default function EmployeesPage() {
                                   onClick={() => {
                                     setEditingEmployee(emp);
                                     setNewEmployeeName(emp.name);
-                                    setNewEmployeePhone(emp.username);
+                                    setNewEmployeeAccount(emp.username);
+                                    setNewEmployeePhone(emp.phone);
                                     setNewEmployeeRole(emp.role);
                                     const joinDate = emp.joinDate || new Date().toISOString().split('T')[0];
                                     setNewEmployeeJoinDate(joinDate);
@@ -555,16 +566,27 @@ export default function EmployeesPage() {
               </div>
               
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-primary-900">手机号码 (登录账号) <span className="text-rose-500">*</span></label>
+                <label className="text-sm font-medium text-primary-900">登录账号 <span className="text-rose-500">*</span></label>
+                <input 
+                  type="text" 
+                  value={newEmployeeAccount}
+                  onChange={(e) => setNewEmployeeAccount(e.target.value)}
+                  placeholder="请输入登录账号(建议手机号或工号)"
+                  className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
+                  required
+                />
+                {!editingEmployee && <p className="text-xs text-primary-500 mt-1">默认初始密码为: 888888</p>}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-primary-900">手机号码</label>
                 <input 
                   type="tel" 
                   value={newEmployeePhone}
                   onChange={(e) => setNewEmployeePhone(e.target.value)}
                   placeholder="请输入11位手机号"
                   className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
-                  required
                 />
-                {!editingEmployee && <p className="text-xs text-primary-500 mt-1">默认初始密码为: 123</p>}
               </div>
 
               <div className="space-y-1.5 relative">

@@ -19,9 +19,10 @@
         <view class="status-tab {{activeCategory === '主材' ? 'active' : ''}}" bindtap="switchCategory" data-category="主材">主材</view>
         <view class="status-tab {{activeCategory === '辅材' ? 'active' : ''}}" bindtap="switchCategory" data-category="辅材">辅材</view>
         <view class="status-tab {{activeCategory === '软装' ? 'active' : ''}}" bindtap="switchCategory" data-category="软装">软装</view>
-        <view class="status-tab {{activeCategory === '定制' ? 'active' : ''}}" bindtap="switchCategory" data-category="定制">定制</view>
         <view class="status-tab {{activeCategory === '家电' ? 'active' : ''}}" bindtap="switchCategory" data-category="家电">家电</view>
         <view class="status-tab {{activeCategory === '人工' ? 'active' : ''}}" bindtap="switchCategory" data-category="人工">人工</view>
+        <view class="status-tab {{activeCategory === '定制' ? 'active' : ''}}" bindtap="switchCategory" data-category="定制">定制</view>
+        <view class="status-tab {{activeCategory === '套餐' ? 'active' : ''}}" bindtap="switchCategory" data-category="套餐">套餐</view>
       </view>
     </scroll-view>
     <view class="search-box">

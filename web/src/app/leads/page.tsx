@@ -134,10 +134,11 @@ function LeadsContent() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
+      case "待跟进": return "bg-zinc-50 text-zinc-700 border-zinc-200";
       case "沟通中": return "bg-blue-50 text-blue-700 border-blue-100";
       case "已量房": return "bg-indigo-50 text-indigo-700 border-indigo-100";
-      case "已交定金": return "bg-pink-50 text-pink-700 border-pink-100";
       case "方案阶段": return "bg-purple-50 text-purple-700 border-purple-100";
+      case "已交定金": return "bg-pink-50 text-pink-700 border-pink-100";
       case "已签单": return "bg-emerald-50 text-emerald-700 border-emerald-100";
       case "已流失": return "bg-zinc-100 text-zinc-500 border-zinc-200";
       default: return "bg-zinc-50 text-zinc-700 border-zinc-200";
@@ -226,7 +227,16 @@ function LeadsContent() {
     if (activeRating !== "全部" && !activeRating.includes(l.rating)) return false;
     
     // 搜索筛选
-    if (searchQuery && !l.name.includes(searchQuery) && !l.phone.includes(searchQuery) && !l.address?.includes(searchQuery)) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (!l.name.toLowerCase().includes(q) && 
+          !l.phone.includes(q) && 
+          !l.address?.toLowerCase().includes(q) &&
+          !l.customerNo?.toLowerCase().includes(q) &&
+          !l.id.includes(q)) {
+        return false;
+      }
+    }
     
     // 高级筛选
     if (filters.sales !== "全部" && l.sales !== filters.sales) return false;
@@ -352,7 +362,7 @@ function LeadsContent() {
                     </div>
                     {openDropdown === 'filter-status' && (
                       <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
-                        {["全部", "沟通中", "已量房", "方案阶段", "已交定金", "已签单", "已流失"].map(option => (
+                        {["全部", "待跟进", "沟通中", "已量房", "方案阶段", "已交定金", "已签单", "已流失"].map(option => (
                           <div 
                             key={option}
                             onClick={() => { setFilters({...filters, status: option}); setOpenDropdown(null); }}
@@ -507,7 +517,7 @@ function LeadsContent() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="搜索姓名/电话/地址..."
+              placeholder="搜索编号/姓名/电话/地址..."
               className="w-full min-h-[44px] pl-9 pr-10 py-2.5 bg-primary-50 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary-900 focus:bg-white transition-all outline-none text-primary-900 placeholder:text-primary-600/60"
             />
             {searchQuery && (
@@ -554,7 +564,7 @@ function LeadsContent() {
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-primary-900">
-                            {lead.name}
+                            {lead.customerNo || lead.id.substring(0, 6)} - {lead.name}
                             {isAssignedToMe(lead) && (
                               <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
                             )}
@@ -615,7 +625,7 @@ function LeadsContent() {
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)} />
                           <div className="absolute z-20 w-32 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-0">
-                            {["沟通中", "已量房", "方案阶段", "已交定金", "已签单", "已流失"].map(option => (
+                            {["待跟进", "沟通中", "已量房", "方案阶段", "已交定金", "已签单", "已流失"].map(option => (
                               <div 
                                 key={option}
                                 onClick={() => { updateLeadStatus(lead.id, option); setOpenDropdown(null); }}
@@ -822,7 +832,7 @@ function LeadsContent() {
                     </div>
                     {openDropdown === 'source' && (
                       <div className="absolute z-30 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1">
-                        {["自然进店", "抖音", "老介新", "自有关系"].map(option => (
+                        {["自然进店", "老介新", "抖音", "小红书", "大众点评", "自有关系", "其他"].map(option => (
                           <div 
                             key={option}
                             onClick={() => { setNewLead({...newLead, source: option}); setOpenDropdown(null); }}
