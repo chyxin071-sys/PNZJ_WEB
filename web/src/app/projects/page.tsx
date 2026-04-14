@@ -35,11 +35,25 @@ export default function ProjectsPage() {
       const res = await fetch('/api/projects');
       if (res.ok) {
         const data = await res.json();
-        const formatted = data.map((item: any) => ({
-          ...item,
-          id: item._id,
-          createdAt: item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-        }));
+        const formatted = data.map((item: any) => {
+          let dateStr = new Date().toISOString().split('T')[0];
+          if (item.createdAt) {
+            try {
+              if (item.createdAt.$date) {
+                dateStr = new Date(item.createdAt.$date).toISOString().split('T')[0];
+              } else {
+                dateStr = new Date(item.createdAt).toISOString().split('T')[0];
+              }
+            } catch(err) {
+              console.error('Date parse error', err);
+            }
+          }
+          return {
+            ...item,
+            id: item._id,
+            createdAt: dateStr
+          };
+        });
         setProjectsData(formatted);
       }
     } catch (e) {

@@ -70,10 +70,20 @@ export default function LeadDetailPage() {
       const res = await fetch(`/api/leads/${leadId}`);
       if (res.ok) {
         const data = await res.json();
+        let dateStr = "未知";
+        if (data.createdAt) {
+          try {
+            if (data.createdAt.$date) {
+              dateStr = new Date(data.createdAt.$date).toISOString().split('T')[0];
+            } else {
+              dateStr = new Date(data.createdAt).toISOString().split('T')[0];
+            }
+          } catch(err) {}
+        }
         const formatted = {
           ...data,
           id: data._id,
-          createdAt: data.createdAt ? new Date(data.createdAt).toISOString().split('T')[0] : "未知",
+          createdAt: dateStr,
           lastFollowUp: data.lastFollowUp || "暂无"
         };
         setLead(formatted);

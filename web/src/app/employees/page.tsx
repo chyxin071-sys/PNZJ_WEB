@@ -64,17 +64,29 @@ export default function EmployeesPage() {
       if (res.ok) {
         const data = await res.json();
         // 映射一下字段以匹配原有UI逻辑，_id 映射为 id, phone 是手机号
-        const mappedData = data.map((item: any) => ({
-          ...item,
-          id: item._id,
-          name: item.name || '未知姓名',
-          username: item.account || item.phone || '', // 登录账号
-          phone: item.phone || '', // 手机号
-          role: item.role || 'sales',
-          department: item.department || roleMap[item.role || 'sales'].dept,
-          status: item.is_active ? 'active' : 'inactive',
-          joinDate: item.joinDate || (item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : '')
-        }));
+        const mappedData = data.map((item: any) => {
+          let jDate = item.joinDate || '';
+          if (!jDate && item.created_at) {
+            try {
+              if (item.created_at.$date) {
+                jDate = new Date(item.created_at.$date).toISOString().split('T')[0];
+              } else {
+                jDate = new Date(item.created_at).toISOString().split('T')[0];
+              }
+            } catch(e) {}
+          }
+          return {
+            ...item,
+            id: item._id,
+            name: item.name || '未知姓名',
+            username: item.account || item.phone || '', // 登录账号
+            phone: item.phone || '', // 手机号
+            role: item.role || 'sales',
+            department: item.department || roleMap[item.role || 'sales'].dept,
+            status: item.is_active ? 'active' : 'inactive',
+            joinDate: jDate
+          };
+        });
         setEmployees(mappedData);
       } else {
         console.error('Failed to fetch employees');

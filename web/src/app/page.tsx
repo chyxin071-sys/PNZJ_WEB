@@ -38,10 +38,22 @@ export default function Dashboard() {
         
         if (leadsRes.ok) {
           const data = await leadsRes.json();
-          setLeadsData(data.map((item: any) => ({
-            ...item,
-            createdAt: item.createdAt ? new Date(item.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-          })));
+          setLeadsData(data.map((item: any) => {
+            let dateStr = new Date().toISOString().split('T')[0];
+            if (item.createdAt) {
+              try {
+                if (item.createdAt.$date) {
+                  dateStr = new Date(item.createdAt.$date).toISOString().split('T')[0];
+                } else {
+                  dateStr = new Date(item.createdAt).toISOString().split('T')[0];
+                }
+              } catch(err) {}
+            }
+            return {
+              ...item,
+              createdAt: dateStr
+            };
+          }));
         }
         if (projectsRes.ok) {
           setProjectsData(await projectsRes.json());
