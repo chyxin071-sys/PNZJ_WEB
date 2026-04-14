@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'pnzj-super-secret-key-123';
 const APPID = 'wxc9f24e9a9f57bc7a';
@@ -14,18 +15,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '账号或密码不能为空' }, { status: 400 });
     }
 
-    // 1. 获取微信接口调用凭证 (access_token)
-    const tokenRes = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
-    const tokenData = await tokenRes.json();
-    const accessToken = tokenData.access_token;
-
-    if (!accessToken) {
-      return NextResponse.json({ error: '无法连接云数据库' }, { status: 500 });
+    // 1. 根据环境决定是否需要 access_token
+    const isCloudRun = !!process.env.CBR_ENV_ID || process.env.NODE_ENV === 'production';
+    let url = `http://api.weixin.qq.com/tcb/databasequery`;
+    
+    if (!isCloudRun) {
+      const tokenRes = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
+      const tokenData = await tokenRes.json();
+      const accessToken = tokenData.access_token;
+      if (!accessToken) {
+        return NextResponse.json({ error: '无法连接云数据库' }, { status: 500 });
+      }
+      url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
     }
 
     // 2. 查询云数据库中的用户 (支持 phone 或 account)
     const query = `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()`;
-    const dbRes = await fetch(`https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`, {
+    const dbRes = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ env: ENV, query })
@@ -43,7 +49,6 @@ export async function POST(request: Request) {
     // 之前脚本中已经将明文密码存入了 passwordPlain，也可以比较 bcrypt 哈希，但为了简化同步
     if (user.passwordPlain !== password && user.passwordHash !== password) {
       // 这里也提供对原始 bcrypt 校验的退路，由于 Web 端直接比较需要 bcrypt，我们可以简单判断
-      const bcrypt = require('bcryptjs');
       const isMatch = user.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
       if (!isMatch) {
         return NextResponse.json({ error: '账号不存在或密码错误' }, { status: 401 });
@@ -82,6 +87,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error('Login Error:', error);
-    return NextResponse.json({ error: '服务器内部错误' }, { status: 500 });
+    return NextResponse.json({ error: '服务器内部错误', details: error.message }, { status: 500 });
   }
 }

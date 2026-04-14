@@ -37,9 +37,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '该手机号已注册，请使用其他手机号' }, { status: 400 });
     }
 
+    // 生成新账号：找出当前最大账号
+    let newAccount = 'PN001';
+    try {
+      const lastUserQuery = `db.collection("users").where({ account: db.RegExp({ regexp: '^PN\\\\d{3}$', options: 'i' }) }).orderBy("created_at", "desc").limit(1).get()`;
+      const lastUserData = await tcbQuery(lastUserQuery);
+      if (lastUserData && lastUserData.length > 0 && lastUserData[0].account) {
+        const lastNo = lastUserData[0].account;
+        const match = lastNo.match(/PN(\d{3})/);
+        if (match && match[1]) {
+          const sequence = parseInt(match[1], 10) + 1;
+          newAccount = `PN${sequence.toString().padStart(3, '0')}`;
+        }
+      }
+    } catch(e) {
+      console.error("生成账号失败，回退到默认", e);
+    }
+
     // 使用 passwordPlain 保存（为了简单同步）
     const newUser = JSON.stringify({
       name,
+      account: newAccount,
       phone,
       role,
       passwordPlain: password,

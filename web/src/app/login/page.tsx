@@ -142,9 +142,13 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-16 text-center">
-            <p className="text-xs text-zinc-400 font-light">
+            <button
+              type="button"
+              onClick={() => alert("请联系微信chyxinxin222")}
+              className="text-xs text-zinc-400 font-light hover:text-zinc-600 transition-colors"
+            >
               遇到登录问题？请联系系统管理员
-            </p>
+            </button>
           </div>
         </div>
       </div>
