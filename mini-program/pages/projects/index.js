@@ -141,6 +141,14 @@ Page({
           daysElapsed = Math.ceil((new Date().getTime() - new Date(p.startDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24));
         }
         
+        // 计算预计完工时间 (默认开工后 90 天)
+        let expectedEndDate = '-';
+        if (p.startDate) {
+          const sd = new Date(p.startDate.replace(/-/g, '/'));
+          sd.setDate(sd.getDate() + 90);
+          expectedEndDate = `${sd.getFullYear()}-${String(sd.getMonth()+1).padStart(2,'0')}-${String(sd.getDate()).padStart(2,'0')}`;
+        }
+        
         return {
           ...p,
           status: dynamicStatus,
@@ -148,7 +156,8 @@ Page({
           nodeName: nodesList[currentNode - 1],
           nodesList,
           health,
-          daysElapsed
+          daysElapsed: daysElapsed > 0 ? daysElapsed : 0,
+          expectedEndDate
         };
       });
       

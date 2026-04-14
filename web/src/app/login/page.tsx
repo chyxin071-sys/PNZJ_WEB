@@ -37,6 +37,8 @@ export default function LoginPage() {
 
       // 登录成功，将用户信息暂存本地 (真实项目会使用 JWT 或 HttpOnly Cookie)
       localStorage.setItem("pnzj_user", JSON.stringify(data.user));
+      localStorage.setItem("userInfo", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token);
       
       // 跳转到工作台
       router.push("/");

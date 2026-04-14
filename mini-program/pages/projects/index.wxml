@@ -71,32 +71,32 @@
       
       <!-- 头部信息区 -->
       <view class="card-header-new">
-        <view class="header-main">
-          <view class="avatar-circle {{item.health === '严重延期' ? 'bg-red text-red' : 'bg-primary text-white'}}">
-            {{item.customer ? item.customer[0] : '工'}}
-          </view>
+        <view class="header-main" style="display: flex; justify-content: space-between; align-items: flex-start;">
           <view class="header-text">
-            <view class="customer-row">
-              <text class="customer-name">{{item.customer}}</text>
-              <text class="address-text">{{item.address}}</text>
+            <view class="customer-row" style="margin-bottom: 8rpx;">
+              <text class="address-text" style="font-size: 32rpx; font-weight: 600; color: #1a1a1a;">{{item.address || '未知地址'}}</text>
             </view>
-            <view class="manager-text">项目经理: {{item.manager}}</view>
+            <view class="manager-text" style="font-size: 24rpx; color: #888;">
+              客户: {{item.customer}} | 项目经理: {{item.manager}}
+            </view>
+          </view>
+          <view class="health-badge {{item.health === '严重延期' ? 'badge-red' : (item.health === '预警' ? 'badge-yellow' : 'badge-green')}}" style="flex-shrink: 0; font-size: 24rpx; padding: 4rpx 12rpx; border-radius: 8rpx;">
+            {{item.health}}
           </view>
         </view>
         
-        <view class="header-meta">
-          <view class="meta-item">
-            <text class="meta-label">开工时间</text>
-            <text class="meta-val">{{item.startDate}}</text>
+        <view class="header-meta" style="margin-top: 24rpx; display: flex; justify-content: space-between; padding-top: 20rpx; border-top: 1rpx dashed #eee;">
+          <view class="meta-item" style="display: flex; flex-direction: column; align-items: center;">
+            <text class="meta-label" style="font-size: 22rpx; color: #999; margin-bottom: 8rpx;">开工时间</text>
+            <text class="meta-val" style="font-size: 26rpx; color: #333; font-weight: 500;">{{item.startDate || '-'}}</text>
           </view>
-          <view class="meta-item">
-            <text class="meta-label">已耗时</text>
-            <text class="meta-val">{{item.daysElapsed}}天</text>
+          <view class="meta-item" style="display: flex; flex-direction: column; align-items: center;">
+            <text class="meta-label" style="font-size: 22rpx; color: #999; margin-bottom: 8rpx;">预计完工</text>
+            <text class="meta-val" style="font-size: 26rpx; color: #333; font-weight: 500;">{{item.expectedEndDate || '-'}}</text>
           </view>
-          <view class="meta-item">
-            <view class="health-badge {{item.health === '严重延期' ? 'badge-red' : (item.health === '预警' ? 'badge-yellow' : 'badge-green')}}">
-              {{item.health}}
-            </view>
+          <view class="meta-item" style="display: flex; flex-direction: column; align-items: center;">
+            <text class="meta-label" style="font-size: 22rpx; color: #999; margin-bottom: 8rpx;">已耗时</text>
+            <text class="meta-val" style="font-size: 26rpx; color: #333; font-weight: 500;">{{item.daysElapsed}}天</text>
           </view>
         </view>
       </view>
@@ -122,15 +122,7 @@
       </view>
 
       <!-- 底部操作区：合同、报价、详情 -->
-      <view class="card-footer-new">
-        <view class="footer-btns">
-          <view class="btn-outline" catchtap="showComingSoon" data-type="合同">
-            <text>合同</text>
-          </view>
-          <view class="btn-outline" catchtap="showComingSoon" data-type="报价">
-            <text>报价</text>
-          </view>
-        </view>
+      <view class="card-footer-new" style="justify-content: flex-end;">
         <view class="btn-primary-small" catchtap="goToDetail">
           <text>查看详情</text>
         </view>

@@ -1,0 +1,48 @@
+<view class="page-container" wx:if="{{!loading && quote}}">
+  
+  <view class="quote-header">
+    <view class="flex justify-between items-center">
+      <view class="quote-title">报价单 - {{quote.customer}}</view>
+      <view class="status-badge">{{quote.status || '初步'}}</view>
+    </view>
+    <view class="address-text">{{quote.address}}</view>
+  </view>
+
+  <view class="summary-card">
+    <view class="summary-row">
+      <text class="label">预估总造价</text>
+      <text class="value text-primary font-bold">¥{{quote.total || 0}}</text>
+    </view>
+    <view class="summary-row mt-2">
+      <text class="label">最终成交价</text>
+      <text class="value font-bold">¥{{quote.final || 0}}</text>
+    </view>
+  </view>
+
+  <view class="items-section">
+    <view class="section-title">费用明细</view>
+    
+    <block wx:if="{{quote.items && quote.items.length > 0}}">
+      <view class="item-card" wx:for="{{quote.items}}" wx:key="name">
+        <view class="item-header">
+          <text class="item-name">{{item.name}}</text>
+          <text class="item-price">¥{{item.total || 0}}</text>
+        </view>
+        <view class="item-meta">
+          <text>单价: ¥{{item.price}}</text>
+          <text>数量: {{item.quantity}}</text>
+        </view>
+      </view>
+    </block>
+    <view class="empty-items" wx:else>
+      <view class="icon-empty"></view>
+      <text>暂无明细项</text>
+      <text class="tip">请前往网页端(PC)添加详细材料与价格</text>
+    </view>
+  </view>
+  
+  <view class="bottom-tips">
+    <text>提示：小程序端目前仅支持预览与生成报价单框架，完整的费用计算及材料添加请在PC端完成。</text>
+  </view>
+
+</view>

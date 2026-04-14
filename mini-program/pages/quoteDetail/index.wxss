@@ -1,0 +1,119 @@
+.page-container {
+  padding: 20rpx;
+  background: #f5f4f2;
+  min-height: 100vh;
+}
+.quote-header {
+  background: #fff;
+  padding: 30rpx;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+}
+.quote-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+.status-badge {
+  font-size: 22rpx;
+  padding: 4rpx 16rpx;
+  background: #e5f6e8;
+  color: #10b981;
+  border-radius: 8rpx;
+}
+.address-text {
+  font-size: 26rpx;
+  color: #666;
+  margin-top: 10rpx;
+}
+.summary-card {
+  background: #fff;
+  padding: 30rpx;
+  border-radius: 16rpx;
+  margin-bottom: 20rpx;
+}
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.summary-row .label {
+  font-size: 28rpx;
+  color: #333;
+}
+.summary-row .value {
+  font-size: 32rpx;
+}
+.text-primary {
+  color: #4a403a;
+}
+.font-bold {
+  font-weight: bold;
+}
+.mt-2 {
+  margin-top: 10rpx;
+}
+.items-section {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 30rpx;
+}
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 20rpx;
+  border-bottom: 2rpx solid #f0f0f0;
+  padding-bottom: 10rpx;
+}
+.item-card {
+  border-bottom: 2rpx dashed #eee;
+  padding: 20rpx 0;
+}
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.item-name {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+}
+.item-price {
+  font-size: 28rpx;
+  color: #e11d48;
+  font-weight: bold;
+}
+.item-meta {
+  display: flex;
+  gap: 30rpx;
+  font-size: 24rpx;
+  color: #999;
+  margin-top: 8rpx;
+}
+.empty-items {
+  text-align: center;
+  padding: 60rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+}
+.empty-items text {
+  font-size: 28rpx;
+  color: #999;
+}
+.empty-items .tip {
+  font-size: 24rpx;
+  color: #ccc;
+  margin-top: 8rpx;
+}
+.bottom-tips {
+  margin-top: 40rpx;
+  padding: 0 20rpx;
+  font-size: 22rpx;
+  color: #aaa;
+  text-align: center;
+  line-height: 1.6;
+}

@@ -83,7 +83,7 @@ Page({
     if (this.data.quoteId) {
       wx.navigateTo({ url: `/pages/quoteDetail/index?id=${this.data.quoteId}` });
     } else {
-      wx.showToast({ title: '请前往网页端生成报价单', icon: 'none', duration: 2000 });
+      wx.navigateTo({ url: `/pages/quoteDetail/index?leadId=${this.data.leadId}` });
     }
   },
 

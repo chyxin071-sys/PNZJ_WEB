@@ -13,6 +13,7 @@
     "pages/employees/index",
     "pages/notifications/index",
     "pages/quotes/index",
+    "pages/quoteDetail/index",
     "pages/materials/index"
   ],
   "window": {
