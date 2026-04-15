@@ -1,9 +1,8 @@
 "use client";
 
-import { ArrowRight, Loader2 } from "lucide-react";
+import { ArrowRight, Loader2, X } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -157,32 +156,52 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <Dialog open={showContact} onOpenChange={setShowContact}>
-        <DialogContent className="sm:max-w-md bg-white border-zinc-100 rounded-xl p-8">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-xl font-medium text-center text-zinc-900">联系管理员</DialogTitle>
-            <DialogDescription className="text-center text-zinc-500 mt-2">
-              请添加下方微信以获取账号或重置密码
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-6">
-            <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mb-6">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-900">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-            </div>
-            <div className="text-3xl font-light tracking-wider text-zinc-900 select-all mb-8">
-              chyxinxin222
-            </div>
+      {showContact && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm transition-opacity"
+            onClick={() => setShowContact(false)}
+          ></div>
+          
+          <div className="relative bg-white w-full max-w-sm rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95 fade-in duration-200">
             <button 
               onClick={() => setShowContact(false)}
-              className="w-full py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded-lg transition-colors font-medium text-sm"
+              className="absolute right-4 top-4 p-2 text-zinc-400 hover:text-zinc-600 bg-zinc-50 hover:bg-zinc-100 rounded-full transition-colors"
             >
-              我知道了
+              <X className="w-4 h-4" />
             </button>
+
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <h3 className="text-xl font-medium text-zinc-900">联系管理员</h3>
+                <p className="text-sm text-zinc-500 mt-2">请添加下方微信以获取账号或重置密码</p>
+              </div>
+
+              <div className="flex flex-col items-center justify-center">
+                <div className="w-16 h-16 bg-primary-50 rounded-2xl flex items-center justify-center mb-6 rotate-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-900 -rotate-3">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </div>
+                
+                <div className="bg-zinc-50 w-full rounded-xl p-4 text-center mb-8 border border-zinc-100">
+                  <div className="text-2xl font-light tracking-wider text-zinc-900 select-all">
+                    chyxinxin222
+                  </div>
+                  <div className="text-xs text-zinc-400 mt-2 font-light">长按上方微信号可复制</div>
+                </div>
+
+                <button 
+                  onClick={() => setShowContact(false)}
+                  className="w-full py-3.5 bg-primary-900 hover:bg-primary-800 text-white rounded-xl transition-all duration-200 font-medium text-sm shadow-sm"
+                >
+                  我知道了
+                </button>
+              </div>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

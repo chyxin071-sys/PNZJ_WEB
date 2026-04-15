@@ -24,17 +24,25 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     // 未登录拦截校验
     const userData = localStorage.getItem("pnzj_user");
     if (!userData) {
-      router.push("/login");
+      if (pathname !== "/login") {
+        router.push("/login");
+      } else {
+        setIsCheckingAuth(false);
+      }
     } else {
       try {
         setCurrentUser(JSON.parse(userData));
         setIsCheckingAuth(false);
       } catch (e) {
         localStorage.removeItem("pnzj_user");
-        router.push("/login");
+        if (pathname !== "/login") {
+          router.push("/login");
+        } else {
+          setIsCheckingAuth(false);
+        }
       }
     }
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
