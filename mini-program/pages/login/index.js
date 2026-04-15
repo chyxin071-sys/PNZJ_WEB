@@ -46,16 +46,17 @@ Page({
       { phone: username },
       { account: username }
     ])).get().then(res => {
-      wx.hideLoading();
       if (res.data && res.data.length > 0) {
         const user = res.data[0];
         
         // 校验密码
-        if (user.passwordPlain !== password) {
+        if (user.passwordPlain !== password && user.passwordHash !== password) {
+          wx.hideLoading();
           return wx.showToast({ title: '密码错误，请重新输入', icon: 'none' });
         }
         
         if (user.status !== 'active') {
+          wx.hideLoading();
           return wx.showToast({ title: '该账号已被停用', icon: 'none' });
         }
         
@@ -64,11 +65,13 @@ Page({
           name: user.name,
           role: user.role,
           phone: user.phone,
+          account: user.account,
           department: user.department,
           avatarUrl: ''
         });
       } else {
-        wx.showToast({ title: '账号不存在，请联系管理员', icon: 'none' });
+        wx.hideLoading();
+        wx.showToast({ title: '账号不存在或密码错误', icon: 'none' });
       }
     }).catch(err => {
       wx.hideLoading();
@@ -78,6 +81,7 @@ Page({
   },
 
   doLoginSuccess(userInfo) {
+    wx.hideLoading();
     wx.setStorageSync('userInfo', userInfo);
     wx.showToast({ title: '登录成功', icon: 'success' });
 
@@ -86,5 +90,14 @@ Page({
         url: '/pages/index/index'
       });
     }, 1000);
+  },
+
+  contactAdmin() {
+    wx.showModal({
+      title: '联系管理员',
+      content: '请联系微信chyxinxin222',
+      showCancel: false,
+      confirmText: '我知道了'
+    });
   }
 });

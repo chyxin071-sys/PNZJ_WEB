@@ -30,7 +30,8 @@ export async function POST(request: Request) {
     }
 
     // 2. 查询云数据库中的用户 (支持 phone 或 account)
-    const query = `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()`;
+    // 注意：微信 TCB HTTP API 的语法使用 _.or 而不是 db.command.or
+    const query = `db.collection('users').where(_.or([{account: '${account}'}, {phone: '${account}'}])).get()`;
     const dbRes = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

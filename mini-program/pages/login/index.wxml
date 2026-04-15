@@ -22,7 +22,8 @@
     <view class="btn-login hover-scale" bindtap="handleLogin">登 录</view>
   </view>
 
-  <view class="bottom-tips">
+  <view class="bottom-tips" bindtap="contactAdmin">
     <text>账号由管理员统一分配</text>
+    <view style="margin-top: 10rpx; font-size: 24rpx; color: var(--primary-600); text-decoration: underline;">遇到登录问题？请联系系统管理员</view>
   </view>
 </view>
