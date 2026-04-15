@@ -59,54 +59,30 @@ export default function QuoteDetailPage() {
   useEffect(() => {
     if (quoteId) {
       // 临时假数据
-      const foundQuote: any = {
-        id: quoteId,
-        customer: "加载中...",
-        phone: "13800138000",
-        sales: "张三",
-        date: "2024-01-01",
-        status: "待确认",
-        total: 100000,
-        discount: 0
+      const fetchQuoteDetail = async () => {
+        try {
+          const res = await fetch(`/api/quotes/${quoteId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setQuote(data);
+            setCustomer({
+              name: data.customer,
+              customerNo: data.customerNo || data.leadId,
+              phone: data.phone,
+              address: data.address,
+              sales: data.sales,
+              designer: data.designer
+            });
+            setDiscount(data.discount || 0);
+            if (data.items && Array.isArray(data.items)) {
+              setItems(data.items);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to fetch quote details", e);
+        }
       };
-      if (foundQuote) {
-        setQuote(foundQuote);
-        setDiscount(foundQuote.discount || 0);
-        
-        // 生成对应客户数据
-        const leadId = quoteId;
-        const foundLead: any = null; // 临时假数据
-        if (foundLead) {
-          setCustomer(foundLead);
-        } else {
-          // Fallback if no exact lead matches
-          setCustomer({
-            name: foundQuote.customer,
-            phone: foundQuote.phone,
-            sales: foundQuote.sales,
-            requirementType: "精装微调",
-            area: 100,
-            budget: "未填写"
-          });
-        }
-
-        // 模拟生成报价明细（基于总价反推）
-        const mockItems: QuoteItem[] = [
-          { id: "1", category: "人工", name: "水电基础改造套餐 (按平米)", unit: "m²", price: 88, quantity: 100, isCustom: false },
-          { id: "2", category: "主材", name: "马可波罗 连纹大板 800*800", unit: "片", price: 128, quantity: 156, isCustom: false },
-          { id: "3", category: "定制", name: "欧普 极简静音木门 烤漆版", unit: "樘", price: 1599, quantity: 3, isCustom: false },
-          { id: "4", category: "主材", name: "老板 厨卫集成吊顶模块", unit: "m²", price: 120, quantity: 15, isCustom: false },
-          { id: "5", category: "定制", name: "全屋定制柜体 (投影面积)", unit: "m²", price: 899, quantity: 20, isCustom: true },
-        ];
-        
-        // 调整最后一项使总价等于模拟数据的 total
-        const currentMockTotal = mockItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const difference = foundQuote.total - currentMockTotal;
-        if (difference > 0) {
-          mockItems.push({ id: "6", category: "杂项", name: "其他主辅材及人工杂项", unit: "项", price: difference, quantity: 1, isCustom: true });
-        }
-        setItems(mockItems);
-      }
+      fetchQuoteDetail();
     }
   }, [quoteId]);
 
@@ -163,8 +139,8 @@ export default function QuoteDetailPage() {
     );
   }
 
-  const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const finalAmount = Math.max(0, totalAmount - discount);
+  const totalAmount = (items || []).reduce((sum, item) => sum + ((item.price || 0) * (item.quantity || 1)), 0);
+  const finalAmount = Math.max(0, totalAmount - (discount || 0));
 
   return (
     <MainLayout>
@@ -190,7 +166,7 @@ export default function QuoteDetailPage() {
                 {quote.status}
               </span>
             </div>
-            <p className="text-primary-600 mt-2 font-mono text-sm">客户编号：{quote.id} <span className="mx-2 text-primary-200">|</span> 创建日期：{quote.date}</p>
+            <p className="text-primary-600 mt-2 font-mono text-sm">客户编号：{quote.customerNo || quote.id} <span className="mx-2 text-primary-200">|</span> 创建日期：{quote.createdAt || quote.date}</p>
           </div>
           
           <div className="flex gap-3">
@@ -304,8 +280,8 @@ export default function QuoteDetailPage() {
                     </td>
                   </tr>
                 ) : (
-                  ["人工", "主材", "辅材", "定制", "软装", "家电", "杂项"].map(category => {
-                    const categoryItems = items.filter(item => item.category === category);
+                  ["人工", "主材", "辅材", "定制", "软装", "家电", "杂项", "其他"].map(category => {
+                    const categoryItems = items.filter(item => (item.category || "其他") === category);
                     if (categoryItems.length === 0) return null;
                     return (
                       <React.Fragment key={category}>
@@ -327,17 +303,17 @@ export default function QuoteDetailPage() {
                               </span>
                             </td>
                             <td className="py-4 px-6 text-primary-600">{item.unit}</td>
-                            <td className="py-4 px-6 text-right font-mono text-primary-900">¥{item.price.toFixed(2)}</td>
+                            <td className="py-4 px-6 text-right font-mono text-primary-900">¥{(item.price || 0).toFixed(2)}</td>
                             <td className="py-4 px-6 text-center">
                               <input 
                                 type="number" 
                                 min="1" 
-                                value={item.quantity}
+                                value={item.quantity || 1}
                                 onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
                                 className="w-16 text-center py-1 border border-primary-200 rounded focus:outline-none focus:border-primary-500 font-mono"
                               />
                             </td>
-                            <td className="py-4 px-6 text-right font-mono font-bold text-primary-900">¥{(item.price * item.quantity).toFixed(2)}</td>
+                            <td className="py-4 px-6 text-right font-mono font-bold text-primary-900">¥{((item.price || 0) * (item.quantity || 1)).toFixed(2)}</td>
                             <td className="py-4 px-6 text-center">
                               <button onClick={() => setItemToRemove(item.id)} className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors">
                                 <Trash2 className="w-4 h-4" />
