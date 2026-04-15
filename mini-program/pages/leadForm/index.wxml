@@ -97,8 +97,9 @@
   </scroll-view>
 
   <view class="bottom-bar">
-    <view class="btn-cancel hover-scale" bindtap="goBack">取消</view>
-    <view class="btn-save hover-scale" bindtap="saveLead">保存资料</view>
+    <view class="btn-cancel hover-scale" bindtap="goBack" wx:if="{{!isEdit}}">取消</view>
+    <view class="btn-delete hover-scale" bindtap="deleteLead" wx:if="{{isEdit}}" style="flex: 1;">删除</view>
+    <view class="btn-save hover-scale" bindtap="saveLead" style="flex: 2;">保存资料</view>
   </view>
 
   <!-- 签单确认弹窗 -->

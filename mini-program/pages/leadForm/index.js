@@ -249,6 +249,31 @@ Page({
     wx.navigateBack();
   },
 
+  deleteLead() {
+    wx.showModal({
+      title: '删除线索',
+      content: '删除后无法恢复，确定要删除这个客户吗？',
+      confirmColor: '#e11d48',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中' });
+          const db = wx.cloud.database();
+          db.collection('leads').doc(this.data.id).remove().then(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '已删除', icon: 'success' });
+            setTimeout(() => {
+              // 返回到列表页（返回两层：返回上一页是详情页，再上一层是列表）
+              wx.navigateBack({ delta: 2 });
+            }, 1000);
+          }).catch(err => {
+            wx.hideLoading();
+            wx.showToast({ title: '删除失败', icon: 'none' });
+          });
+        }
+      }
+    });
+  },
+
   goBack() {
     wx.navigateBack();
   }
