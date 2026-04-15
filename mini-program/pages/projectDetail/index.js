@@ -161,6 +161,70 @@ Page({
     });
   },
 
+  completeNode(e) {
+    const idx = e.currentTarget.dataset.index;
+    wx.showModal({
+      title: '验收确认',
+      content: `确认完成【${this.data.nodesList[idx].name}】节点验收并推进到下一阶段吗？`,
+      success: (res) => {
+        if (res.confirm) {
+          this.processCompleteNode(idx);
+        }
+      }
+    });
+  },
+
+  processCompleteNode(nodeIndex) {
+    wx.showLoading({ title: '处理中' });
+    const nodes = [...this.data.nodesList];
+    const nowStr = new Date().toISOString().split('T')[0];
+    
+    // 更新当前节点
+    nodes[nodeIndex].status = 'completed';
+    nodes[nodeIndex].endDate = nowStr;
+
+    let newCurrentNode = this.data.currentNodeIndex + 1;
+
+    // 如果还有下一个节点
+    if (nodeIndex + 1 < nodes.length) {
+      nodes[nodeIndex + 1].status = 'current';
+      nodes[nodeIndex + 1].startDate = nowStr;
+      
+      const nextEnd = new Date();
+      nextEnd.setDate(nextEnd.getDate() + 5);
+      nodes[nodeIndex + 1].endDate = `${nextEnd.getFullYear()}-${String(nextEnd.getMonth()+1).padStart(2,'0')}-${String(nextEnd.getDate()).padStart(2,'0')}`;
+      
+      newCurrentNode = nodeIndex + 2;
+    }
+
+    const isFinished = nodeIndex + 1 >= nodes.length;
+    const newProjectStatus = isFinished ? '已竣工' : this.data.project.status;
+
+    const db = wx.cloud.database();
+    db.collection('projects').doc(this.data.id).update({
+      data: {
+        nodesData: nodes,
+        currentNode: newCurrentNode,
+        status: newProjectStatus
+      }
+    }).then(() => {
+      this.setData({ 
+        nodesList: nodes, 
+        currentNodeIndex: newCurrentNode - 1,
+        'project.status': newProjectStatus
+      });
+      // 展开下一个节点
+      if (!isFinished) {
+        this.setData({ [`nodesList[${nodeIndex + 1}].expanded`]: true });
+      }
+      wx.hideLoading();
+      wx.showToast({ title: '节点已推进', icon: 'success' });
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '处理失败', icon: 'none' });
+    });
+  },
+
   submitUpload() {
     if (this.data.uploadFiles.length === 0 && !this.data.uploadDesc.trim()) {
       return wx.showToast({ title: '请添加文字或图片', icon: 'none' });

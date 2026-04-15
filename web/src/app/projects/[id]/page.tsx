@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import MainLayout from "../../../components/MainLayout";
-import { ArrowLeft, Hammer, CheckCircle2, Clock, AlertTriangle, PlayCircle, HardHat, FileText, ChevronDown, Check } from "lucide-react";
+import { ArrowLeft, Hammer, CheckCircle2, Clock, AlertTriangle, PlayCircle, HardHat, FileText, ChevronDown, Check, Camera } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function ProjectDetailPage() {
