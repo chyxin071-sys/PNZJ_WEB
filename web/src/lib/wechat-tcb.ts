@@ -23,7 +23,10 @@ export async function getAccessToken() {
 }
 
 export async function tcbQuery(queryStr: string) {
-  const url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${await getAccessToken()}`;
+  const isCloudRun = !!process.env.CBR_ENV_ID || process.env.NODE_ENV === 'production';
+  const url = isCloudRun 
+    ? `http://api.weixin.qq.com/tcb/databasequery`
+    : `https://api.weixin.qq.com/tcb/databasequery?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -36,7 +39,10 @@ export async function tcbQuery(queryStr: string) {
 }
 
 export async function tcbAdd(queryStr: string) {
-  const url = `https://api.weixin.qq.com/tcb/databaseadd?access_token=${await getAccessToken()}`;
+  const isCloudRun = !!process.env.CBR_ENV_ID || process.env.NODE_ENV === 'production';
+  const url = isCloudRun 
+    ? `http://api.weixin.qq.com/tcb/databaseadd`
+    : `https://api.weixin.qq.com/tcb/databaseadd?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -49,7 +55,10 @@ export async function tcbAdd(queryStr: string) {
 }
 
 export async function tcbUpdate(queryStr: string) {
-  const url = `https://api.weixin.qq.com/tcb/databaseupdate?access_token=${await getAccessToken()}`;
+  const isCloudRun = !!process.env.CBR_ENV_ID || process.env.NODE_ENV === 'production';
+  const url = isCloudRun 
+    ? `http://api.weixin.qq.com/tcb/databaseupdate`
+    : `https://api.weixin.qq.com/tcb/databaseupdate?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -62,7 +71,10 @@ export async function tcbUpdate(queryStr: string) {
 }
 
 export async function tcbDelete(queryStr: string) {
-  const url = `https://api.weixin.qq.com/tcb/databasedelete?access_token=${await getAccessToken()}`;
+  const isCloudRun = !!process.env.CBR_ENV_ID || process.env.NODE_ENV === 'production';
+  const url = isCloudRun 
+    ? `http://api.weixin.qq.com/tcb/databasedelete`
+    : `https://api.weixin.qq.com/tcb/databasedelete?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',

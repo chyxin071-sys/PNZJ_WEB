@@ -16,20 +16,19 @@ export async function POST(request: Request) {
     }
 
     // 1. 根据环境决定是否需要 access_token
-    // Web 部署在云托管上时，微信官方推荐的内网地址是 http://api.weixin.qq.com
-    // 但在部分云托管环境中可能需要显式使用内网 API 或直接使用带有 access_token 的公网调用作为 fallback
+    const isCloudRun = !!process.env.CBR_ENV_ID || process.env.NODE_ENV === 'production';
     let url = `http://api.weixin.qq.com/tcb/databasequery`;
     let bodyData: any = { env: ENV, query: `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()` };
 
-    // 无论是否是 CloudRun，我们统一使用带有 access_token 的公网调用来保证 100% 成功率
-    // 因为云托管内网免鉴权配置容易出问题，直接使用 token 最稳妥
-    const tokenRes = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
-    const tokenData = await tokenRes.json();
-    const accessToken = tokenData.access_token;
-    if (!accessToken) {
-      return NextResponse.json({ error: '无法连接云数据库(Token获取失败)' }, { status: 500 });
+    if (!isCloudRun) {
+      const tokenRes = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
+      const tokenData = await tokenRes.json();
+      const accessToken = tokenData.access_token;
+      if (!accessToken) {
+        return NextResponse.json({ error: '无法连接云数据库(Token获取失败)' }, { status: 500 });
+      }
+      url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
     }
-    url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
 
     // 2. 查询云数据库中的用户 (支持 phone 或 account)
     // 注意：微信 TCB HTTP API 的语法使用 db.command.or
