@@ -1,8 +1,10 @@
 {
-  "/page": "app/page.js",
+  "/leads/page": "app/leads/page.js",
+  "/projects/page": "app/projects/page.js",
+  "/api/projects/route": "app/api/projects/route.js",
   "/projects/[id]/page": "app/projects/[id]/page.js",
   "/api/leads/route": "app/api/leads/route.js",
-  "/projects/page": "app/projects/page.js",
-  "/leads/page": "app/leads/page.js",
-  "/employees/page": "app/employees/page.js"
+  "/quotes/page": "app/quotes/page.js",
+  "/todos/page": "app/todos/page.js",
+  "/api/quotes/route": "app/api/quotes/route.js"
 }
