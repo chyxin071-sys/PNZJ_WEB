@@ -4,7 +4,10 @@ Page({
     filteredQuotes: [],
     loading: true,
     activeStatus: '全部',
-    searchQuery: ''
+    searchQuery: '',
+    showCreateModal: false,
+    leadsList: [],
+    searchLeadQuery: ''
   },
   onShow() {
     this.fetchData();
@@ -73,7 +76,40 @@ Page({
     wx.navigateTo({ url: `/pages/quoteDetail/index?id=${id}` });
   },
   createQuote() {
-    // wx.navigateTo({ url: `/pages/quoteForm/index` });
-    wx.showToast({ title: '请在网页端创建', icon: 'none' });
+    this.setData({ showCreateModal: true, searchLeadQuery: '' });
+    this.loadLeads();
+  },
+  
+  closeCreateModal() {
+    this.setData({ showCreateModal: false });
+  },
+  
+  onLeadSearch(e) {
+    this.setData({ searchLeadQuery: e.detail.value });
+    this.loadLeads();
+  },
+  
+  loadLeads() {
+    const db = wx.cloud.database();
+    const _ = db.command;
+    let query = db.collection('leads');
+    
+    if (this.data.searchLeadQuery) {
+      const sq = this.data.searchLeadQuery;
+      query = query.where(_.or([
+        { name: db.RegExp({ regexp: sq, options: 'i' }) },
+        { phone: db.RegExp({ regexp: sq, options: 'i' }) }
+      ]));
+    }
+    
+    query.limit(20).get().then(res => {
+      this.setData({ leadsList: res.data });
+    });
+  },
+  
+  selectLead(e) {
+    const leadId = e.currentTarget.dataset.id;
+    this.setData({ showCreateModal: false });
+    wx.navigateTo({ url: `/pages/quoteDetail/index?leadId=${leadId}` });
   }
 });

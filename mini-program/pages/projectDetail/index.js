@@ -8,7 +8,8 @@ Page({
     showUploadModal: false,
     currentUploadNodeIndex: null,
     uploadDesc: '',
-    uploadFiles: []
+    uploadFiles: [],
+    showFilesModal: false
   },
 
   onLoad(options) {
@@ -196,6 +197,59 @@ Page({
     } else {
       wx.showToast({ title: '暂无报价信息', icon: 'none' });
     }
+  },
+
+  viewFiles() {
+    this.setData({ showFilesModal: true });
+  },
+
+  closeFiles() {
+    this.setData({ showFilesModal: false });
+  },
+
+  previewFile(e) {
+    const { url, type } = e.currentTarget.dataset;
+    if (type === 'image') {
+      wx.previewImage({ urls: [url], current: url });
+    } else {
+      wx.showToast({ title: '视频请在相册或电脑端查看', icon: 'none' });
+    }
+  },
+
+  uploadProjectFile() {
+    wx.chooseMedia({
+      count: 1,
+      success: (res) => {
+        wx.showLoading({ title: '上传中' });
+        const file = res.tempFiles[0];
+        const userInfo = wx.getStorageSync('userInfo') || { name: '未知人员' };
+        const now = new Date();
+        const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+        const newFile = {
+          name: '项目资料附件',
+          url: file.tempFilePath,
+          type: file.fileType,
+          uploader: userInfo.name,
+          time: timeStr
+        };
+
+        const projectFiles = this.data.project.files || [];
+        projectFiles.unshift(newFile);
+
+        const db = wx.cloud.database();
+        db.collection('projects').doc(this.data.id).update({
+          data: { files: projectFiles }
+        }).then(() => {
+          this.setData({ 'project.files': projectFiles });
+          wx.hideLoading();
+          wx.showToast({ title: '上传成功', icon: 'success' });
+        }).catch(() => {
+          wx.hideLoading();
+          wx.showToast({ title: '上传失败', icon: 'none' });
+        });
+      }
+    });
   },
 
   showComingSoon() {

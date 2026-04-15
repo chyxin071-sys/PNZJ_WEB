@@ -51,7 +51,7 @@
       </view>
       <text style="font-size: 26rpx; font-weight: 500; color: #475569;">看报价</text>
     </view>
-    <view class="action-card" bindtap="showComingSoon" style="flex: 1; background: #fff; padding: 30rpx 0; border-radius: 16rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02); border: 1rpx solid #f1f5f9;">
+    <view class="action-card" bindtap="viewFiles" style="flex: 1; background: #fff; padding: 30rpx 0; border-radius: 16rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02); border: 1rpx solid #f1f5f9;">
       <view style="width: 60rpx; height: 60rpx; border-radius: 30rpx; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-bottom: 12rpx; border: 2rpx solid #e2e8f0;">
         <view style="width: 24rpx; height: 24rpx; border: 2rpx solid #64748b; border-radius: 4rpx; position: relative;">
           <view style="position: absolute; top: 4rpx; left: 4rpx; right: 4rpx; height: 2rpx; background: #64748b;"></view>
@@ -60,7 +60,7 @@
       </view>
       <text style="font-size: 26rpx; font-weight: 500; color: #475569;">看合同</text>
     </view>
-    <view class="action-card" bindtap="showComingSoon" style="flex: 1; background: #fff; padding: 30rpx 0; border-radius: 16rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02); border: 1rpx solid #f1f5f9;">
+    <view class="action-card" bindtap="viewFiles" style="flex: 1; background: #fff; padding: 30rpx 0; border-radius: 16rpx; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02); border: 1rpx solid #f1f5f9;">
       <view style="width: 60rpx; height: 60rpx; border-radius: 30rpx; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-bottom: 12rpx; border: 2rpx solid #e2e8f0;">
         <view style="width: 28rpx; height: 20rpx; border: 2rpx solid #64748b; border-radius: 4rpx; position: relative;">
           <view style="position: absolute; top: -6rpx; left: 2rpx; width: 10rpx; height: 4rpx; border: 2rpx solid #64748b; border-bottom: none; border-radius: 2rpx 2rpx 0 0;"></view>

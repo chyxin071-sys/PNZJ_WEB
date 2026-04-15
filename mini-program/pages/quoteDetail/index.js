@@ -4,6 +4,16 @@ Page({
     leadId: null,
     quote: null,
     loading: true,
+    groupedItems: [],
+    showCustomModal: false,
+    customItem: {
+      name: '',
+      category: '主材',
+      price: '',
+      quantity: '1',
+      unit: '项'
+    },
+    categories: ['主材', '辅材', '软装', '家电', '人工', '定制', '套餐', '其他']
   },
 
   onLoad(options) {
@@ -29,6 +39,7 @@ Page({
     const db = wx.cloud.database();
     db.collection('quotes').doc(id).get().then(res => {
       this.setData({ quote: res.data, loading: false });
+      this.processGroupedItems(res.data.items || []);
       wx.hideLoading();
     }).catch(() => {
       wx.hideLoading();
@@ -71,6 +82,29 @@ Page({
     });
   },
 
+  processGroupedItems(items) {
+    const groupsMap = {};
+    items.forEach((item, index) => {
+      const cat = item.category || '其他';
+      if (!groupsMap[cat]) groupsMap[cat] = { category: cat, items: [], subtotal: 0 };
+      groupsMap[cat].items.push({ ...item, _originalIndex: index });
+      groupsMap[cat].subtotal += (item.total || 0);
+    });
+
+    const groupedItems = this.data.categories
+      .filter(cat => groupsMap[cat])
+      .map(cat => groupsMap[cat]);
+      
+    // Add any categories not in the predefined list
+    Object.keys(groupsMap).forEach(cat => {
+      if (!this.data.categories.includes(cat)) {
+        groupedItems.push(groupsMap[cat]);
+      }
+    });
+
+    this.setData({ groupedItems });
+  },
+
   goToSelectMaterial() {
     wx.navigateTo({ url: `/pages/materials/index?selectMode=true&quoteId=${this.data.id}` });
   },
@@ -106,6 +140,7 @@ Page({
       data: { items, total, updatedAt: db.serverDate() }
     }).then(() => {
       this.setData({ 'quote.items': items, 'quote.total': total });
+      this.processGroupedItems(items);
       wx.hideLoading();
     }).catch(() => {
       wx.hideLoading();
@@ -116,5 +151,51 @@ Page({
   saveQuote() {
     wx.showToast({ title: '保存成功', icon: 'success' });
     setTimeout(() => wx.navigateBack(), 1500);
+  },
+
+  openCustomModal() {
+    this.setData({
+      showCustomModal: true,
+      customItem: { name: '', category: '主材', price: '', quantity: '1', unit: '项' }
+    });
+  },
+
+  closeCustomModal() {
+    this.setData({ showCustomModal: false });
+  },
+
+  onCustomInput(e) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({ [`customItem.${field}`]: e.detail.value });
+  },
+
+  onCustomPickerChange(e) {
+    const cat = this.data.categories[e.detail.value];
+    this.setData({ 'customItem.category': cat });
+  },
+
+  saveCustomItem() {
+    const { name, category, price, quantity, unit } = this.data.customItem;
+    if (!name.trim()) return wx.showToast({ title: '请输入名称', icon: 'none' });
+    if (!price || isNaN(price)) return wx.showToast({ title: '请输入有效单价', icon: 'none' });
+
+    const qty = parseInt(quantity, 10) || 1;
+    const priceNum = parseFloat(price);
+    
+    const newItem = {
+      name,
+      category,
+      unit: unit || '项',
+      price: priceNum,
+      quantity: qty,
+      total: priceNum * qty,
+      sku: '非标项'
+    };
+
+    const items = this.data.quote.items || [];
+    items.push(newItem);
+    
+    this.saveQuoteData(items);
+    this.closeCustomModal();
   }
 });
