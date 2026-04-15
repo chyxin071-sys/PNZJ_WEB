@@ -51,19 +51,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '解析用户数据失败' }, { status: 500 });
     }
 
-    // 3. 校验密码 (这里暂时使用 passwordPlain 比较，因为这是真实使用的过渡方案)
-    // 之前脚本中已经将明文密码存入了 passwordPlain，也可以比较 bcrypt 哈希，但为了简化同步
-    if (user.passwordPlain !== password && user.passwordHash !== password) {
-      // 这里也提供对原始 bcrypt 校验的退路，由于 Web 端直接比较需要 bcrypt，我们可以简单判断
-      let isMatch = false;
+    // 3. 校验密码 (这里使用 passwordPlain 或 bcrypt 进行容错处理)
+    let isMatch = false;
+
+    // 先尝试明文比对
+    if (user.passwordPlain === password || user.passwordHash === password) {
+      isMatch = true;
+    } else if (user.passwordHash) {
+      // 否则尝试 bcrypt 比对
       try {
-        isMatch = user.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
+        isMatch = await bcrypt.compare(password, user.passwordHash);
       } catch (err) {
         console.error("Bcrypt compare error:", err);
       }
-      if (!isMatch) {
-        return NextResponse.json({ error: '账号不存在或密码错误' }, { status: 401 });
-      }
+    }
+
+    if (!isMatch) {
+      return NextResponse.json({ error: '账号不存在或密码错误' }, { status: 401 });
     }
 
     if (user.status !== 'active') {
