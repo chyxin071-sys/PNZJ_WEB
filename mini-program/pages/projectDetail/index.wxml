@@ -3,7 +3,88 @@
   <!-- 顶部项目概览卡片 -->
   <view class="top-overview-card" style="background: #fff; border-radius: 20rpx; padding: 32rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.03); position: relative; overflow: hidden;">
     <!-- 装饰背景 -->
-    <view style="position: absolute; top: 0; right: 0; width: 160rpx; height: 160rpx; background: linear-gradient(135deg, rgba(74,64,58,0.05) 0%, transparent 100%); border-bottom-left-radius: 160rpx; z-index: 0;"></view>
+    <view style="position: absolute; top: 0; right: 0; width: 160rpx; height: 160rpx; background: linear-gradient(135deg, rgba(74,64,58,0.05) 0%, transparent 100%); border-bottom-left-radius: 160rpx; z-index: 0;">  <!-- 弹窗部分 -->
+  
+  <!-- 1. 开工与裁剪节点弹窗 -->
+  <view class="modal-mask" wx:if="{{isStartingProject}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 40rpx;">
+    <view class="modal-content" style="background: #fff; width: 100%; border-radius: 24rpx; padding: 40rpx; position: relative;">
+      <view style="font-size: 32rpx; font-weight: bold; color: #1e293b; text-align: center; margin-bottom: 40rpx;">准备开工与工序裁剪</view>
+      
+      <view style="margin-bottom: 24rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">选择总开工日期 <text style="color: #ef4444;">*</text></view>
+        <picker mode="date" bindchange="onStartDateChange" value="{{baseStartDate}}">
+          <view style="width: 100%; height: 80rpx; background: #f8fafc; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; box-sizing: border-box; display: flex; align-items: center;">{{baseStartDate}}</view>
+        </picker>
+        <view style="font-size: 20rpx; color: #94a3b8; margin-top: 8rpx;">系统将自动使用(T+N)算法排期。</view>
+      </view>
+
+      <view style="margin-bottom: 40rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">裁剪不需要的小节点</view>
+        <view bindtap="toggleEditNodes" style="width: 100%; text-align: center; height: 80rpx; line-height: 80rpx; background: {{isEditingNodes ? '#f1f5f9' : '#fff'}}; border: 1rpx solid #e2e8f0; border-radius: 12rpx; font-size: 28rpx; color: #475569;">
+          {{isEditingNodes ? '结束裁剪，点击下方确认' : '开启裁剪模式 (点击背景中的X删除)'}}
+        </view>
+      </view>
+
+      <view style="display: flex; gap: 20rpx;">
+        <button bindtap="closeStartModal" style="flex: 1; font-size: 30rpx; background: #f1f5f9; color: #475569; padding: 20rpx 0; border-radius: 12rpx;">取消</button>
+        <button bindtap="confirmStartProject" style="flex: 1; font-size: 30rpx; background: #4a403a; color: #fff; padding: 20rpx 0; border-radius: 12rpx;">确认开工</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 2. 添加延误记录弹窗 -->
+  <view class="modal-mask" wx:if="{{showDelayModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 40rpx;">
+    <view class="modal-content" style="background: #fff; width: 100%; border-radius: 24rpx; padding: 40rpx; position: relative;">
+      <view style="font-size: 32rpx; font-weight: bold; color: #e11d48; text-align: center; margin-bottom: 40rpx;">记录停工 / 延误</view>
+      
+      <view style="margin-bottom: 24rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">延误天数 <text style="color: #ef4444;">*</text></view>
+        <input type="number" value="{{delayDays}}" bindinput="onDelayDaysInput" style="width: 100%; height: 80rpx; background: #f8fafc; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; box-sizing: border-box;" />
+      </view>
+
+      <view style="margin-bottom: 40rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">延误原因 <text style="color: #ef4444;">*</text></view>
+        <textarea value="{{delayReason}}" bindinput="onDelayReasonInput" placeholder="例如：等主材进场" style="width: 100%; height: 120rpx; background: #f8fafc; border-radius: 12rpx; padding: 20rpx 24rpx; font-size: 28rpx; box-sizing: border-box;"></textarea>
+      </view>
+
+      <view style="display: flex; gap: 20rpx;">
+        <button bindtap="closeDelayModal" style="flex: 1; font-size: 30rpx; background: #f1f5f9; color: #475569; padding: 20rpx 0; border-radius: 12rpx;">取消</button>
+        <button bindtap="confirmDelay" style="flex: 1; font-size: 30rpx; background: #e11d48; color: #fff; padding: 20rpx 0; border-radius: 12rpx;">确认并重算</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 3. 子节点验收弹窗 -->
+  <view class="modal-mask" wx:if="{{showSubNodeModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: flex-end;">
+    <view class="modal-content" style="background: #fff; width: 100%; border-radius: 32rpx 32rpx 0 0; padding: 40rpx; position: relative;">
+      <view style="font-size: 32rpx; font-weight: bold; color: #1e293b; margin-bottom: 40rpx; display: flex; justify-content: space-between;">
+        <text>工序验收: {{nodesList[subNodeMajorIdx].subNodes[subNodeIdx].name}}</text>
+        <text bindtap="closeSubNodeModal" style="color: #94a3b8;">×</text>
+      </view>
+      
+      <view style="margin-bottom: 30rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 16rpx;">现场照片 (最多9张) <text style="color: #ef4444;">*</text></view>
+        <view style="display: flex; flex-wrap: wrap; gap: 16rpx;">
+          <image wx:for="{{subNodePhotos}}" wx:key="*this" src="{{item}}" mode="aspectFill" style="width: 140rpx; height: 140rpx; border-radius: 12rpx; background: #f1f5f9;"></image>
+          <view wx:if="{{subNodePhotos.length < 9}}" bindtap="chooseSubPhotos" style="width: 140rpx; height: 140rpx; border-radius: 12rpx; border: 2rpx dashed #cbd5e1; display: flex; align-items: center; justify-content: center; background: #f8fafc;">
+            <text style="font-size: 40rpx; color: #94a3b8;">+</text>
+          </view>
+        </view>
+      </view>
+
+      <view style="margin-bottom: 40rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">验收说明 / 备注</view>
+        <textarea value="{{subNodeRemark}}" bindinput="onSubRemarkInput" placeholder="填写相关施工情况说明..." style="width: 100%; height: 160rpx; background: #f8fafc; border-radius: 12rpx; padding: 20rpx 24rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0;"></textarea>
+      </view>
+
+      <view style="display: flex; gap: 20rpx; padding-bottom: env(safe-area-inset-bottom);">
+        <button bindtap="submitSubNode" data-result="rejected" style="flex: 1; font-size: 30rpx; background: #fff1f2; color: #e11d48; border: 1rpx solid #fecdd3; padding: 20rpx 0; border-radius: 12rpx; font-weight: bold;">驳回整改</button>
+        <button bindtap="submitSubNode" data-result="approved" style="flex: 1; font-size: 30rpx; background: #10b981; color: #fff; padding: 20rpx 0; border-radius: 12rpx; font-weight: bold;">通过验收</button>
+      </view>
+    </view>
+  </view>
+
+</view>
     
     <view style="position: relative; z-index: 1;">
       <!-- 标题和健康状态 -->
@@ -49,7 +130,10 @@
 
   <!-- 快捷操作区 -->
   <view style="display: flex; justify-content: space-between; gap: 20rpx; margin-bottom: 24rpx;">
-    <view bindtap="viewFiles" style="flex: 1; background: #fff; padding: 24rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02); border: 1rpx solid #f1f5f9;">
+    <view wx:if="{{project.status === '未开工'}}" bindtap="startProjectModal" style="flex: 1; background: #f59e0b; padding: 24rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 4rpx 12rpx rgba(245,158,11,0.2);">
+      <text style="font-size: 26rpx; font-weight: bold; color: #fff;">▶ 准备开工(裁剪节点)</text>
+    </view>
+    <view wx:else bindtap="viewFiles" style="flex: 1; background: #fff; padding: 24rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02); border: 1rpx solid #f1f5f9;">
       <text style="font-size: 26rpx; font-weight: bold; color: #4a403a;">📁 项目资料/图纸</text>
     </view>
     <view bindtap="goToQuote" style="flex: 1; background: #fff; padding: 24rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.02); border: 1rpx solid #f1f5f9;">
@@ -119,8 +203,27 @@
             <view style="margin-bottom: 24rpx;">
               <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 16rpx;">包含施工工序</view>
               <view style="display: flex; flex-wrap: wrap; gap: 12rpx;">
-                <view wx:for="{{item.subNodes}}" wx:for-item="sub" wx:key="*this" style="font-size: 22rpx; color: #475569; background: #fff; border: 1rpx solid #e2e8f0; padding: 6rpx 16rpx; border-radius: 30rpx;">
-                  {{sub}}
+                <view wx:for="{{item.subNodes}}" wx:for-item="sub" wx:for-index="subIdx" wx:key="name" 
+                      bindtap="openSubNodeModal" data-major="{{idx}}" data-sub="{{subIdx}}"
+                      style="position: relative; font-size: 22rpx; padding: 6rpx 16rpx; border-radius: 30rpx; border: 1rpx solid {{sub.status==='approved' ? '#a7f3d0' : (sub.status==='rejected' ? '#fecdd3' : '#e2e8f0')}}; background: {{sub.status==='approved' ? '#ecfdf5' : (sub.status==='rejected' ? '#fff1f2' : '#fff')}}; color: {{sub.status==='approved' ? '#047857' : (sub.status==='rejected' ? '#be123c' : '#475569')}};">
+                  {{sub.status==='approved' ? '✓ ' : (sub.status==='rejected' ? '⚠ ' : '')}}{{sub.name}}
+                  
+                  <!-- 删除按钮 -->
+                  <view wx:if="{{isEditingNodes && project.status === '未开工'}}" catchtap="removeSubNode" data-major="{{idx}}" data-sub="{{subIdx}}" style="position: absolute; top: -10rpx; right: -10rpx; width: 28rpx; height: 28rpx; background: #ef4444; color: #fff; border-radius: 14rpx; display: flex; align-items: center; justify-content: center; font-size: 18rpx; font-weight: bold; z-index: 10;">×</view>
+                </view>
+              </view>
+            </view>
+
+            <!-- 延误记录 -->
+            <view style="margin-bottom: 24rpx;">
+              <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx;">
+                <text style="font-size: 22rpx; color: #94a3b8;">项目延误/停工记录</text>
+                <text wx:if="{{(item.status === 'current' || item.status === 'pending') && project.status !== '未开工'}}" bindtap="openDelayModal" data-index="{{idx}}" style="font-size: 22rpx; color: #ef4444; font-weight: bold; background: #fef2f2; padding: 4rpx 12rpx; border-radius: 8rpx;">+ 记录延误</text>
+              </view>
+              <view wx:if="{{item.delayRecords && item.delayRecords.length > 0}}">
+                <view wx:for="{{item.delayRecords}}" wx:for-item="delay" wx:key="createdAt" style="background: #fff1f2; padding: 16rpx; border-radius: 8rpx; margin-bottom: 12rpx; border: 1rpx solid #fecdd3; display: flex; justify-content: space-between; align-items: center;">
+                  <text style="font-size: 24rpx; color: #be123c; font-weight: bold;">停工延误: {{delay.days}} 天</text>
+                  <text style="font-size: 20rpx; color: #f43f5e;">{{delay.reason}}</text>
                 </view>
               </view>
             </view>
