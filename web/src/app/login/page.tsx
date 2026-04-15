@@ -3,6 +3,7 @@
 import { ArrowRight, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showContact, setShowContact] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,7 +148,7 @@ export default function LoginPage() {
           <div className="mt-16 text-center">
             <button
               type="button"
-              onClick={() => alert("请联系微信chyxinxin222")}
+              onClick={() => setShowContact(true)}
               className="text-xs text-zinc-400 font-light hover:text-zinc-600 transition-colors"
             >
               遇到登录问题？请联系系统管理员
@@ -154,6 +156,33 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showContact} onOpenChange={setShowContact}>
+        <DialogContent className="sm:max-w-md bg-white border-zinc-100 rounded-xl p-8">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-xl font-medium text-center text-zinc-900">联系管理员</DialogTitle>
+            <DialogDescription className="text-center text-zinc-500 mt-2">
+              请添加下方微信以获取账号或重置密码
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-6">
+            <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mb-6">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary-900">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <div className="text-3xl font-light tracking-wider text-zinc-900 select-all mb-8">
+              chyxinxin222
+            </div>
+            <button 
+              onClick={() => setShowContact(false)}
+              className="w-full py-3 bg-zinc-100 hover:bg-zinc-200 text-zinc-900 rounded-lg transition-colors font-medium text-sm"
+            >
+              我知道了
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
