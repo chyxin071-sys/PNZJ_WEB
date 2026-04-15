@@ -19,6 +19,7 @@ export async function POST(request: Request) {
     let url = ``;
     let bodyData: any = { env: ENV, query: `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()` };
 
+    // 获取 token
     const tokenRes = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
@@ -28,8 +29,7 @@ export async function POST(request: Request) {
     }
     url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
 
-    // 2. 查询云数据库中的用户 (支持 phone 或 account)
-    // 注意：微信 TCB HTTP API 的语法使用 db.command.or
+    // 发起查询
     const dbRes = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -37,18 +37,30 @@ export async function POST(request: Request) {
     });
     
     const dbData = await dbRes.json();
-    if (dbData.errcode !== 0 || !dbData.data || dbData.data.length === 0) {
+    
+    // 如果 dbData.data 不存在或者为空，说明查询失败或找不到数据
+    if (!dbData || dbData.errcode !== 0 || !dbData.data || dbData.data.length === 0) {
       return NextResponse.json({ error: '账号不存在或密码错误' }, { status: 401 });
     }
 
     // 微信云开发返回的 data 数组里是字符串化的 JSON 对象
-    const user = JSON.parse(dbData.data[0]);
+    let user;
+    try {
+      user = JSON.parse(dbData.data[0]);
+    } catch (e) {
+      return NextResponse.json({ error: '解析用户数据失败' }, { status: 500 });
+    }
 
     // 3. 校验密码 (这里暂时使用 passwordPlain 比较，因为这是真实使用的过渡方案)
     // 之前脚本中已经将明文密码存入了 passwordPlain，也可以比较 bcrypt 哈希，但为了简化同步
     if (user.passwordPlain !== password && user.passwordHash !== password) {
       // 这里也提供对原始 bcrypt 校验的退路，由于 Web 端直接比较需要 bcrypt，我们可以简单判断
-      const isMatch = user.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
+      let isMatch = false;
+      try {
+        isMatch = user.passwordHash ? await bcrypt.compare(password, user.passwordHash) : false;
+      } catch (err) {
+        console.error("Bcrypt compare error:", err);
+      }
       if (!isMatch) {
         return NextResponse.json({ error: '账号不存在或密码错误' }, { status: 401 });
       }
