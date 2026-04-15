@@ -54,6 +54,7 @@ Page({
       const lead = res.data;
       const newQuote = {
         leadId: lead._id,
+        customerNo: lead.customerNo || lead._id,
         customer: lead.name,
         phone: lead.phone,
         address: lead.address,

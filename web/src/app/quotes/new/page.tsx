@@ -155,6 +155,7 @@ function NewQuoteContent() {
 
     const newQuote = {
       leadId: customer.id,
+      customerNo: customer.customerNo || customer.id,
       customer: customer.name,
       phone: customer.phone,
       address: customer.address || "",
