@@ -63,7 +63,9 @@ export async function POST(request: Request) {
       passwordPlain: password,
       department: department || '未知部门',
       joinDate: joinDate || new Date().toISOString().split('T')[0],
-      status: 'active',
+      status: '在职',
+      isActive: true,
+      is_active: true,
       created_at: { $date: Date.now() },
       updated_at: { $date: Date.now() }
     });

@@ -13,10 +13,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     // 只允许更新特定的安全字段
     const updateData: any = {};
-    if (body.is_active !== undefined) updateData.status = body.is_active ? 'active' : 'inactive';
+    if (body.is_active !== undefined) {
+      updateData.isActive = body.is_active;
+      updateData.is_active = body.is_active;
+      updateData.status = body.is_active ? '在职' : '已离职';
+    }
     if (body.role) updateData.role = body.role;
     if (body.name) updateData.name = body.name;
     if (body.phone) updateData.phone = body.phone;
+    if (body.account) updateData.account = body.account;
     if (body.department) updateData.department = body.department;
     if (body.joinDate) updateData.joinDate = body.joinDate;
     if (body.password) updateData.passwordPlain = body.password; // Admin reset password

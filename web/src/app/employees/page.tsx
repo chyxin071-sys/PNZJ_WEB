@@ -83,7 +83,7 @@ export default function EmployeesPage() {
             phone: item.phone || '', // 手机号
             role: item.role || 'sales',
             department: item.department || roleMap[item.role || 'sales'].dept,
-            status: item.is_active ? 'active' : 'inactive',
+            status: item.isActive === false || item.is_active === false ? 'inactive' : 'active',
             joinDate: jDate
           };
         });
