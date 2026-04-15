@@ -256,10 +256,10 @@ export default function LeadDetailPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-2xl font-bold text-primary-900 flex items-center gap-2">
                     {lead.name}
+                    <span className="text-sm font-normal text-primary-500 font-mono mt-1">({lead.customerNo || lead.id})</span>
                     {isAssignedToMe(lead) && (
                       <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
                     )}
-                    <span className="text-sm font-normal text-primary-500 font-mono mt-1">({lead.id})</span>
                   </h1>
                   
                   {/* 状态和评级徽章移到这里，与名字同行，移动端自动折行 */}

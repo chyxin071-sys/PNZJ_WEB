@@ -28,7 +28,7 @@ function LeadsContent() {
     status: "全部",
     sales: "全部",
     designer: "全部",
-    year: "全部",
+    year: new Date().getFullYear().toString(),
     month: "全部",
     day: ""
   });
@@ -148,6 +148,9 @@ function LeadsContent() {
         fetchLeads(); // 重新拉取
         setIsModalOpen(false);
         setNewLead({ name: "", phone: "", rating: "B", address: "", requirementType: "毛坯", area: "", budget: "暂无", source: "自然进店" });
+        
+        setShowToast("录入成功！");
+        setTimeout(() => setShowToast(false), 2500);
       }
     } catch (e) {
       console.error('Failed to create lead', e);
@@ -538,7 +541,7 @@ function LeadsContent() {
                   </div>
                   <div className="pt-2 flex gap-2">
                     <button 
-                      onClick={() => setFilters({ scope: "全部线索", status: "全部", sales: "全部", designer: "全部", year: "全部", month: "全部", day: "" })}
+                      onClick={() => setFilters({ scope: "全部线索", status: "全部", sales: "全部", designer: "全部", year: new Date().getFullYear().toString(), month: "全部", day: "" })}
                       className="flex-1 px-3 py-2 border border-primary-200 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors text-sm font-medium"
                     >
                       重置

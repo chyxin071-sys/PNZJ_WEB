@@ -11,9 +11,9 @@ Page({
     signedCount: 0,
     activeTab: '全部',
     searchQuery: '',
-    timeFilterOptions: ['全部时间', '最近一周', '最近一月', '最近一年'],
-    timeFilterIndex: 2, // 默认最近一月
-    timeFilterLabel: '最近一月',
+    timeFilterOptions: ['全部时间', '最近一周', '最近一月', '今年'],
+    timeFilterIndex: 3, // 默认今年
+    timeFilterLabel: '今年',
 
     showFilterModal: false,
     filterEmployees: [],
@@ -140,14 +140,11 @@ Page({
     }
 
     wx.showLoading({ title: '保存中' });
-    const db = wx.cloud.database();
-    const userInfo = wx.getStorageSync('userInfo');
     
-    const now = new Date();
-    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-    const operatorName = userInfo.name || '未知人员';
-
-    db.collection('leads').add({
+    // 调用统一的后端云函数或 HTTP API 生成带编号的客户数据
+    wx.request({
+      url: 'https://pnzj-web-246509-5-1421470557.sh.run.tcloudbase.com/api/leads', // 替换为真实的云托管接口地址
+      method: 'POST',
       data: {
         name: (name || '').trim(),
         phone: (phone || '').trim(),
@@ -157,41 +154,22 @@ Page({
         rating,
         source,
         notes: (notes || '').trim(),
-        status: '待跟进',
-        sales: userInfo.role === 'sales' ? userInfo.name : '',
-        designer: userInfo.role === 'designer' ? userInfo.name : '',
-        lastFollowUp: nowStr,
-        createdAt: now.toISOString(),
-        createdBy: userInfo.id || userInfo._id,
-        creatorName: operatorName
+        status: '待跟进'
+      },
+      success: (res) => {
+        wx.hideLoading();
+        if (res.statusCode === 200) {
+          wx.showToast({ title: '添加成功', icon: 'success' });
+          this.closeAddModal();
+          this.fetchData();
+        } else {
+          wx.showToast({ title: '添加失败', icon: 'none' });
+        }
+      },
+      fail: () => {
+        wx.hideLoading();
+        wx.showToast({ title: '网络错误', icon: 'none' });
       }
-    }).then((res) => {
-      // --- 触发通知逻辑：新建线索 ---
-      const newLeadId = res._id;
-      
-      // 抄送给管理员
-      if (userInfo.role !== 'admin') {
-        db.collection('notifications').add({
-          data: {
-            type: 'lead',
-            title: '新增客户线索',
-            content: `${operatorName} 录入了新客户【${(name || '').trim()}】。`,
-            targetUser: 'admin',
-            isRead: false,
-            createTime: db.serverDate(),
-            link: `/pages/leadDetail/index?id=${newLeadId}`
-          }
-        });
-      }
-
-      wx.hideLoading();
-      wx.showToast({ title: '添加成功', icon: 'success' });
-      this.closeAddModal();
-      this.fetchData(); // 重新拉取云端数据
-    }).catch(err => {
-      wx.hideLoading();
-      console.error('添加线索失败', err);
-      wx.showToast({ title: '添加失败', icon: 'none' });
     });
   },
 
@@ -297,17 +275,25 @@ Page({
     // 时间范围过滤 (以 lastFollowUp 为主)
     if (this.data.timeFilterIndex > 0) {
       const now = new Date();
-      const filterMs = {
-        1: 7 * 24 * 3600 * 1000,
-        2: 30 * 24 * 3600 * 1000,
-        3: 365 * 24 * 3600 * 1000
-      };
-      const limitMs = filterMs[this.data.timeFilterIndex];
-
+      const currentYear = now.getFullYear();
+      
       filtered = filtered.filter(l => {
         if (!l.lastFollowUp) return true;
-        const diff = now.getTime() - new Date(l.lastFollowUp.replace(/-/g, '/')).getTime();
-        return Math.abs(diff) <= limitMs;
+        const followUpDate = new Date(l.lastFollowUp.replace(/-/g, '/'));
+        
+        if (this.data.timeFilterIndex === 3) {
+          // 今年
+          return followUpDate.getFullYear() === currentYear;
+        } else {
+          // 最近一周 (1), 最近一月 (2)
+          const filterMs = {
+            1: 7 * 24 * 3600 * 1000,
+            2: 30 * 24 * 3600 * 1000
+          };
+          const limitMs = filterMs[this.data.timeFilterIndex];
+          const diff = now.getTime() - followUpDate.getTime();
+          return diff >= 0 && diff <= limitMs;
+        }
       });
     }
 
