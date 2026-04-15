@@ -99,7 +99,7 @@ Page({
         phone: '',
         address: '',
         area: '',
-        requirement: '旧改',
+        requirementType: '毛坯',
         rating: 'C',
         source: '自然进店',
         notes: ''
@@ -125,8 +125,8 @@ Page({
       val = ['A', 'B', 'C', 'D'][e.detail.value];
     } else if (field === 'source') {
       val = ['自然进店', '老介新', '抖音', '小红书', '大众点评', '自有关系', '其他'][e.detail.value];
-    } else if (field === 'requirement') {
-      val = ['旧改', '毛坯'][e.detail.value];
+    } else if (field === 'requirementType') {
+      val = ['毛坯', '旧改', '精装微调'][e.detail.value];
     }
     this.setData({
       [`newLead.${field}`]: val
@@ -134,7 +134,7 @@ Page({
   },
 
   saveNewLead() {
-    const { name, phone, address, area, requirement, rating, source, notes } = this.data.newLead;
+    const { name, phone, address, area, requirementType, rating, source, notes } = this.data.newLead;
     if (!(name || '').trim() || !(phone || '').trim()) {
       return wx.showToast({ title: '请填写姓名和手机号', icon: 'none' });
     }
@@ -153,7 +153,7 @@ Page({
         phone: (phone || '').trim(),
         address: (address || '').trim(),
         area: (area || '').trim(),
-        requirement,
+        requirementType,
         rating,
         source,
         notes: (notes || '').trim(),

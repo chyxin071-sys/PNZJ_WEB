@@ -73,7 +73,7 @@
       <!-- 头部：姓名、电话、状态下拉标签 -->
       <view class="card-header">
         <view class="title-wrap">
-          <text class="title">{{item.name}}</text>
+          <text class="title">{{item.name}} <text style="font-size:24rpx; color:#666; font-weight:normal;">{{item.customerNo || item._id}}</text></text>
           <text class="phone" user-select="false">{{item.phone}}</text>
         </view>
         <view class="status-picker-wrap" catchtap="preventTap">
@@ -198,9 +198,9 @@
         </view>
         <view class="form-group">
           <text class="label">需求类型</text>
-          <picker bindchange="onNewLeadPickerChange" data-field="requirement" range="{{['旧改', '毛坯']}}">
+          <picker bindchange="onNewLeadPickerChange" data-field="requirementType" range="{{['毛坯', '旧改', '精装微调']}}">
             <view class="picker-view">
-              <text>{{newLead.requirement}}</text>
+              <text>{{newLead.requirementType}}</text>
               <view class="arrow-down"></view>
             </view>
           </picker>

@@ -4,7 +4,7 @@
   <view class="top-card">
     <view class="flex justify-between items-center">
       <view class="flex items-center gap-3">
-        <text class="name">{{lead.name}}</text>
+        <text class="name">{{lead.name}} <text style="font-size:24rpx; color:#666; font-weight:normal; margin-left:8rpx;">{{lead.customerNo || lead._id}}</text></text>
         <view class="rating-badge rating-{{lead.rating}}">{{lead.rating}}级</view>
         <view class="status-badge {{lead.status === '已签单' ? 'status-signed' : 'status-default'}}">{{lead.status}}</view>
       </view>
@@ -54,7 +54,7 @@
         </view>
         <view class="info-item">
           <text class="info-label">需求类型</text>
-          <text class="info-value">{{lead.requirement || '未填'}}</text>
+          <text class="info-value">{{lead.requirementType || lead.requirement || '未填'}}</text>
         </view>
         <view class="info-item">
           <text class="info-label">房屋面积</text>

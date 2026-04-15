@@ -1,61 +1,90 @@
 <view class="page-container" wx:if="{{!loading && quote}}">
   
-  <view class="quote-header">
-    <view class="flex justify-between items-center">
-      <view class="quote-title">报价单 - {{quote.customer}}</view>
-      <view class="status-badge">{{quote.status || '初步'}}</view>
+  <!-- 报价单顶部：Web风发票样式 -->
+  <view class="quote-header" style="background: #fff; padding: 40rpx; border-radius: 16rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.02);">
+    <view style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30rpx; border-bottom: 1rpx solid #f1f5f9; padding-bottom: 20rpx;">
+      <view>
+        <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; margin-bottom: 8rpx;">报价单 / Quote</view>
+        <view style="font-size: 24rpx; color: #64748b;">NO. {{quote.customerNo || quote.leadId || quote._id}}</view>
+      </view>
+      <view class="status-badge" style="background: #f8fafc; color: #475569; padding: 6rpx 20rpx; border-radius: 8rpx; font-size: 24rpx; border: 1rpx solid #e2e8f0;">{{quote.status || '初步'}}</view>
     </view>
-    <view class="address-text">{{quote.address}}</view>
+    
+    <view style="display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx;">
+      <view>
+        <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">客户名称</view>
+        <view style="font-size: 28rpx; color: #334155; font-weight: 500;">{{quote.customer}}</view>
+      </view>
+      <view>
+        <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">联系电话</view>
+        <view style="font-size: 28rpx; color: #334155; font-weight: 500;">{{quote.phone || '-'}}</view>
+      </view>
+      <view style="grid-column: span 2;">
+        <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">项目地址</view>
+        <view style="font-size: 28rpx; color: #334155; font-weight: 500;">{{quote.address || '-'}}</view>
+      </view>
+    </view>
   </view>
 
-  <view class="summary-card">
-    <view class="summary-row">
-      <text class="label">预估总造价</text>
-      <text class="value text-primary font-bold">¥{{quote.total || 0}}</text>
+  <view class="summary-card" style="background: #fff; padding: 30rpx 40rpx; border-radius: 16rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.02);">
+    <view class="summary-row" style="display: flex; justify-content: space-between; align-items: center;">
+      <text style="font-size: 28rpx; color: #475569;">预估总造价</text>
+      <text style="font-size: 40rpx; font-weight: bold; color: #ef4444;">¥{{quote.total || 0}}</text>
     </view>
-    <view class="summary-row mt-2">
-      <text class="label">最终成交价</text>
-      <text class="value font-bold">¥{{quote.final || 0}}</text>
+    <view class="summary-row mt-2" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx dashed #e2e8f0;" wx:if="{{quote.final > 0}}">
+      <text style="font-size: 28rpx; color: #475569;">最终成交价</text>
+      <text style="font-size: 32rpx; font-weight: bold; color: #10b981;">¥{{quote.final || 0}}</text>
     </view>
   </view>
 
-  <view class="items-section">
-    <view class="section-title flex justify-between items-center" style="display: flex; justify-content: space-between; align-items: center;">
-      <text>费用明细</text>
-      <view class="btn-add-item" bindtap="goToSelectMaterial" style="font-size: 24rpx; color: var(--primary-600); padding: 6rpx 16rpx; border: 1rpx solid var(--primary-600); border-radius: 8rpx;">+ 添加明细</view>
+  <view class="items-section" style="background: #fff; border-radius: 16rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.02); overflow: hidden; margin-bottom: 40rpx;">
+    <view class="section-title flex justify-between items-center" style="display: flex; justify-content: space-between; align-items: center; padding: 30rpx 40rpx; background: #f8fafc; border-bottom: 1rpx solid #e2e8f0;">
+      <text style="font-size: 30rpx; font-weight: bold; color: #1e293b;">费用明细</text>
+      <view bindtap="goToSelectMaterial" style="font-size: 24rpx; color: #fff; background: #4a403a; padding: 10rpx 24rpx; border-radius: 30rpx; font-weight: 500; display: flex; align-items: center; gap: 6rpx;">
+        <text style="font-size: 28rpx; margin-top: -4rpx;">+</text> 添加材料
+      </view>
     </view>
     
     <block wx:if="{{quote.items && quote.items.length > 0}}">
-      <view class="item-card" wx:for="{{quote.items}}" wx:key="name">
-        <view class="item-header">
-          <text class="item-name">{{item.name}}</text>
-          <text class="item-price">¥{{item.total || 0}}</text>
-        </view>
-        <view class="item-meta">
-          <text>单价: ¥{{item.price}}</text>
-        </view>
-        <view style="display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx;">
-          <view class="stepper" style="display: flex; align-items: center; border: 1rpx solid #ddd; border-radius: 8rpx; overflow: hidden;">
-            <view bindtap="updateQty" data-index="{{index}}" data-delta="-1" style="padding: 4rpx 20rpx; background: #f8f8f8; font-size: 28rpx; color: #666;">-</view>
-            <view style="padding: 4rpx 20rpx; font-size: 26rpx; border-left: 1rpx solid #ddd; border-right: 1rpx solid #ddd;">{{item.quantity}}</view>
-            <view bindtap="updateQty" data-index="{{index}}" data-delta="1" style="padding: 4rpx 20rpx; background: #f8f8f8; font-size: 28rpx; color: #666;">+</view>
+      <view class="table-header" style="display: flex; padding: 20rpx 40rpx; background: #f1f5f9; font-size: 24rpx; color: #64748b;">
+        <view style="flex: 2;">项目/材料</view>
+        <view style="flex: 1; text-align: center;">单价</view>
+        <view style="flex: 1; text-align: center;">数量</view>
+        <view style="flex: 1; text-align: right;">小计</view>
+      </view>
+      <view class="item-card" wx:for="{{quote.items}}" wx:key="name" style="padding: 30rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; position: relative;">
+        <view style="display: flex; align-items: flex-start; margin-bottom: 16rpx;">
+          <view style="flex: 2; padding-right: 10rpx;">
+            <view style="font-size: 28rpx; color: #334155; font-weight: 500; margin-bottom: 4rpx; line-height: 1.4;">{{item.name}}</view>
+            <view style="font-size: 22rpx; color: #94a3b8;">{{item.category || '无分类'}} | {{item.sku || '无规格'}}</view>
           </view>
-          <view style="font-size: 24rpx; color: #ef4444; padding: 6rpx 16rpx; border: 1rpx solid #fecaca; border-radius: 8rpx;" bindtap="deleteItem" data-index="{{index}}">删除</view>
+          <view style="flex: 1; text-align: center; font-size: 26rpx; color: #475569; padding-top: 4rpx;">¥{{item.price}}</view>
+          <view style="flex: 1; display: flex; justify-content: center; align-items: flex-start;">
+            <view style="display: flex; align-items: center; border: 1rpx solid #e2e8f0; border-radius: 6rpx; overflow: hidden; background: #f8fafc;">
+              <view bindtap="updateQty" data-index="{{index}}" data-delta="-1" style="padding: 4rpx 16rpx; font-size: 24rpx; color: #64748b;">-</view>
+              <view style="padding: 4rpx 16rpx; font-size: 24rpx; color: #334155; border-left: 1rpx solid #e2e8f0; border-right: 1rpx solid #e2e8f0; background: #fff;">{{item.quantity}}</view>
+              <view bindtap="updateQty" data-index="{{index}}" data-delta="1" style="padding: 4rpx 16rpx; font-size: 24rpx; color: #64748b;">+</view>
+            </view>
+          </view>
+          <view style="flex: 1; text-align: right; font-size: 28rpx; font-weight: bold; color: #ef4444; padding-top: 4rpx;">¥{{item.total || 0}}</view>
+        </view>
+        <view style="display: flex; justify-content: flex-end;">
+          <view style="font-size: 22rpx; color: #ef4444; padding: 4rpx 16rpx; border: 1rpx solid #fecaca; border-radius: 20rpx; background: #fef2f2;" bindtap="deleteItem" data-index="{{index}}">删除该项</view>
         </view>
       </view>
     </block>
-    <view class="empty-items" wx:else>
-      <view class="icon-empty"></view>
-      <text>暂无明细项</text>
-      <text class="tip">点击上方按钮从材料库添加</text>
+    <view class="empty-items" wx:else style="padding: 60rpx 0; text-align: center;">
+      <view style="font-size: 80rpx; color: #e2e8f0; margin-bottom: 20rpx;">📄</view>
+      <text style="display: block; font-size: 28rpx; color: #94a3b8; margin-bottom: 8rpx;">暂无明细项</text>
+      <text style="display: block; font-size: 24rpx; color: #cbd5e1;">点击上方按钮从材料库添加</text>
+    </view>
+  </view>
+
+  <view style="position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 20rpx 40rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.05); z-index: 100;">
+    <view class="btn-save" bindtap="saveQuote" style="width: 100%; background: #4a403a; color: #fff; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; box-shadow: 0 4rpx 12rpx rgba(74, 64, 58, 0.2);">
+      保存报价单
     </view>
   </view>
   
-  <view class="bottom-tips">
-    <text>提示：小程序端目前仅支持预览与生成报价单框架，完整的费用计算及材料添加请在PC端完成。</text>
-  </view>
-
-  <view style="display: flex; padding: 24rpx; background: #fff; margin-top: 24rpx;">
-    <view class="btn-save" bindtap="saveQuote" style="flex: 1; background: #4a403a; color: #fff; padding: 20rpx 0; border-radius: 40rpx; font-size: 28rpx; font-weight: bold; text-align: center;">保存报价单</view>
-  </view>
+  <view style="height: 160rpx;"></view> <!-- 底部占位 -->
 </view>

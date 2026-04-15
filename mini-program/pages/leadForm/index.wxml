@@ -22,9 +22,9 @@
       </view>
       <view class="form-group half">
         <view class="label">需求类型</view>
-        <picker bindchange="onPickerChange" data-field="requirement" data-options="reqOptions" value="{{reqOptions.indexOf(formData.requirement)}}" range="{{reqOptions}}">
+        <picker bindchange="onPickerChange" data-field="requirementType" data-options="reqOptions" value="{{reqOptions.indexOf(formData.requirementType)}}" range="{{reqOptions}}">
           <view class="picker-box">
-            <text>{{formData.requirement}}</text>
+            <text>{{formData.requirementType}}</text>
             <view class="arrow-down"></view>
           </view>
         </picker>

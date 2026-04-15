@@ -34,7 +34,7 @@
       <view class="quote-card" wx:for="{{filteredQuotes}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
         <view class="card-header">
           <view class="customer-info">
-            <text class="customer-name">{{item.customer}}</text>
+            <text class="customer-name">{{item.customer}} <text style="font-size:24rpx; color:#666; font-weight:normal; margin-left:8rpx;">{{item.customerNo || item.leadId}}</text></text>
             <text class="customer-phone">{{item.phone}}</text>
           </view>
           <view class="status-badge status-{{item.status === '初步' ? 'draft' : item.status === '待确认' ? 'wait' : item.status === '已确认' ? 'done' : 'cancel'}}">
