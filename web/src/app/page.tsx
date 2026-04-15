@@ -13,8 +13,8 @@ export default function Dashboard() {
   const router = useRouter();
   
   // -- 线索转化率专属筛选状态 --
-  const [conversionMonth, setConversionMonth] = useState<string>("4月"); 
-  const [conversionYear, setConversionYear] = useState<string>("2024年"); 
+  const [conversionMonth, setConversionMonth] = useState<string>("全部"); 
+  const [conversionYear, setConversionYear] = useState<string>(`${new Date().getFullYear()}年`); 
   const [conversionSales, setConversionSales] = useState<string>("全部");
   
   // 自定义下拉菜单状态
@@ -81,7 +81,7 @@ export default function Dashboard() {
   const activeProjectsCount = projectsData.length;
 
   // -- 数据计算: 月度营收与目标 --
-  const [revenueYear, setRevenueYear] = useState<string>("2024年");
+  const [revenueYear, setRevenueYear] = useState<string>(`${new Date().getFullYear()}年`);
   const [revenuePeriod, setRevenuePeriod] = useState<string>("全年"); // "全年" | "上半年" | "下半年"
   
   const [isRevenueYearDropdownOpen, setIsRevenueYearDropdownOpen] = useState(false);
@@ -259,7 +259,7 @@ export default function Dashboard() {
 
   // -- 第二排通用筛选状态 --
   const [filterMonth2, setFilterMonth2] = useState<string>("全部");
-  const [filterYear2, setFilterYear2] = useState<string>("2024年");
+  const [filterYear2, setFilterYear2] = useState<string>(`${new Date().getFullYear()}年`);
   const [filterSales2, setFilterSales2] = useState<string>("全部");
 
   const [isMonthDropdownOpen2, setIsMonthDropdownOpen2] = useState(false);
@@ -338,7 +338,7 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="sm:text-right md:block">
-              <p className="text-sm font-medium text-primary-600">2024-05-24 星期五</p>
+              <p className="text-sm font-medium text-primary-600">{new Date().toISOString().split('T')[0]} {['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][new Date().getDay()]}</p>
             </div>
           </div>
         </div>

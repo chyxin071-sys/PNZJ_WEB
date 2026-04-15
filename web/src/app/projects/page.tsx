@@ -13,7 +13,7 @@ export default function ProjectsPage() {
 
   // 高级筛选器状态
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
-  const [filterYear, setFilterYear] = useState("全部");
+  const [filterYear, setFilterYear] = useState(`${new Date().getFullYear()}年`);
   const [filterMonth, setFilterMonth] = useState("全部");
   const [filterDay, setFilterDay] = useState("");
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
@@ -127,6 +127,15 @@ export default function ProjectsPage() {
             <div>
               <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-900">施工管理</h1>
               <p className="text-primary-600 mt-2">8个标准施工节点管控，异常工地自动置顶预警</p>
+            </div>
+            <div>
+              <button 
+                onClick={() => router.push('/projects/new')}
+                className="flex items-center px-4 py-2.5 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors shadow-sm font-medium"
+              >
+                <Hammer className="w-5 h-5 mr-2" />
+                新建工地
+              </button>
             </div>
           </div>
 
@@ -347,11 +356,12 @@ export default function ProjectsPage() {
                     <div className="pt-2 flex gap-2">
                       <button 
                         onClick={() => {
-                          setFilterYear("全部");
+                          setFilterYear(`${new Date().getFullYear()}年`);
                           setFilterMonth("全部");
                           setFilterDay("");
                           setFilterManager("全部");
                           setFilterHealth("全部");
+                          setIsAdvancedFilterOpen(false);
                         }}
                         className="flex-1 px-3 py-2 border border-primary-200 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors text-sm font-medium"
                       >
@@ -411,7 +421,7 @@ export default function ProjectsPage() {
                         {project.rating === 'A' && (
                           <span className="px-2 py-0.5 bg-primary-900 text-white text-[10px] font-bold rounded uppercase tracking-wider">VIP</span>
                         )}
-                        <span className="text-sm font-mono text-primary-600 ml-2">{project.id}</span>
+                        <span className="text-sm font-mono text-primary-600 ml-2">{project.customerNo || project.id}</span>
                       </div>
                       <p className="text-sm text-primary-600 mt-0.5">项目经理: <span className="font-medium text-primary-900">{project.manager}</span></p>
                     </div>
@@ -492,7 +502,10 @@ export default function ProjectsPage() {
                       项目已交付
                     </div>
                   ) : (
-                    <button className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-900 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium w-full sm:w-auto">
+                    <button 
+                      onClick={() => router.push(`/projects/${project.id}`)}
+                      className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-900 rounded-lg hover:bg-primary-100 transition-colors text-sm font-medium w-full sm:w-auto"
+                    >
                       查看详情
                     </button>
                   )}

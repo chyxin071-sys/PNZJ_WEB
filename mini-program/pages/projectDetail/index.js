@@ -47,15 +47,21 @@ Page({
         expectedEndDate = `${sd.getFullYear()}-${String(sd.getMonth()+1).padStart(2,'0')}-${String(sd.getDate()).padStart(2,'0')}`;
       }
       
-      // 生成或恢复 11 个大节点数据
+      // 生成或恢复 8 个大节点数据
       const templateNodes = [
-        "施工准备", "拆除工程", "水电工程", "泥瓦工程", "木作工程", "油漆工程", 
-        "安装工程", "定制安装", "软装进场", "预验收", "竣工交付"
+        { name: "开工", subNodes: ["开工仪式", "现场交底", "成品保护", "墙体拆除", "砌筑新建"] },
+        { name: "水电", subNodes: ["水电交底", "开槽布管", "线管敷设", "打压测试", "水电验收"] },
+        { name: "木工", subNodes: ["木工交底", "吊顶龙骨", "石膏板封样", "隔墙制作", "木工验收"] },
+        { name: "瓦工", subNodes: ["瓦工交底", "防水涂刷", "闭水试验", "瓷砖铺贴", "瓦工验收"] },
+        { name: "墙面", subNodes: ["墙面交底", "基层找平", "挂网防裂", "腻子批刮", "乳胶漆涂刷", "墙面验收"] },
+        { name: "定制", subNodes: ["复尺测量", "柜体安装", "木门安装", "台面安装", "五金挂件"] },
+        { name: "软装", subNodes: ["灯具安装", "卫浴安装", "开关面板", "家具进场", "窗帘壁纸"] },
+        { name: "交付", subNodes: ["拓荒保洁", "室内空气治理", "竣工验收", "钥匙移交", "合影留念"] }
       ];
       
       let projectNodes = p.nodesData || [];
       if (!projectNodes || projectNodes.length === 0) {
-        projectNodes = templateNodes.map((name, index) => {
+        projectNodes = templateNodes.map((template, index) => {
           // 根据 currentNode 初始化状态和时间
           let status = 'pending';
           let startDate = '', endDate = '';
@@ -86,7 +92,8 @@ Page({
             endDate = `${ed.getFullYear()}-${String(ed.getMonth()+1).padStart(2,'0')}-${String(ed.getDate()).padStart(2,'0')}`;
           }
           return {
-            name,
+            name: template.name,
+            subNodes: template.subNodes,
             status,
             startDate,
             endDate,
