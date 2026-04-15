@@ -79,17 +79,37 @@ Page({
     const idx = e.currentTarget.dataset.index;
     const items = this.data.quote.items || [];
     items.splice(idx, 1);
+    this.saveQuoteData(items);
+  },
+
+  updateQty(e) {
+    const idx = e.currentTarget.dataset.index;
+    const delta = parseInt(e.currentTarget.dataset.delta, 10);
+    const items = this.data.quote.items || [];
+    const item = items[idx];
     
+    let newQty = item.quantity + delta;
+    if (newQty < 1) newQty = 1;
+    
+    item.quantity = newQty;
+    item.total = item.price * newQty;
+    this.saveQuoteData(items);
+  },
+
+  saveQuoteData(items) {
     // 重新计算总价
     const total = items.reduce((sum, item) => sum + (item.total || 0), 0);
     
-    wx.showLoading({ title: '删除中' });
+    wx.showLoading({ title: '保存中', mask: true });
     const db = wx.cloud.database();
     db.collection('quotes').doc(this.data.id).update({
       data: { items, total, updatedAt: db.serverDate() }
     }).then(() => {
       this.setData({ 'quote.items': items, 'quote.total': total });
       wx.hideLoading();
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '保存失败', icon: 'none' });
     });
   }
 });

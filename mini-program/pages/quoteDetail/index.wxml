@@ -33,9 +33,13 @@
         </view>
         <view class="item-meta">
           <text>单价: ¥{{item.price}}</text>
-          <text>数量: {{item.quantity}}</text>
         </view>
-        <view style="display: flex; justify-content: flex-end; margin-top: 10rpx;">
+        <view style="display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx;">
+          <view class="stepper" style="display: flex; align-items: center; border: 1rpx solid #ddd; border-radius: 8rpx; overflow: hidden;">
+            <view bindtap="updateQty" data-index="{{index}}" data-delta="-1" style="padding: 4rpx 20rpx; background: #f8f8f8; font-size: 28rpx; color: #666;">-</view>
+            <view style="padding: 4rpx 20rpx; font-size: 26rpx; border-left: 1rpx solid #ddd; border-right: 1rpx solid #ddd;">{{item.quantity}}</view>
+            <view bindtap="updateQty" data-index="{{index}}" data-delta="1" style="padding: 4rpx 20rpx; background: #f8f8f8; font-size: 28rpx; color: #666;">+</view>
+          </view>
           <view style="font-size: 24rpx; color: #ef4444; padding: 6rpx 16rpx; border: 1rpx solid #fecaca; border-radius: 8rpx;" bindtap="deleteItem" data-index="{{index}}">删除</view>
         </view>
       </view>

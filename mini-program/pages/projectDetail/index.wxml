@@ -31,22 +31,76 @@
 
   <view class="progress-section">
     <view class="section-title">
-      当前阶段: {{nodesList[currentNodeIndex]}} 
+      当前阶段: {{nodesList[currentNodeIndex].name}} 
       <text class="days-badge">已耗时 {{project.daysElapsed || 0}} 天</text>
     </view>
     
     <view class="nodes-list">
-      <view class="node-item" wx:for="{{nodesList}}" wx:key="*this" wx:for-index="idx">
-        <view class="node-line {{idx < currentNodeIndex ? 'active' : ''}}" wx:if="{{idx < nodesList.length - 1}}"></view>
-        <view class="node-circle {{idx < currentNodeIndex ? 'completed' : (idx === currentNodeIndex ? 'current' : 'pending')}}">
+      <view class="node-item" wx:for="{{nodesList}}" wx:key="name" wx:for-index="idx">
+        <view class="node-line {{item.status === 'completed' ? 'active' : ''}}" wx:if="{{idx < nodesList.length - 1}}"></view>
+        <view class="node-circle {{item.status === 'completed' ? 'completed' : (item.status === 'current' ? 'current' : 'pending')}}">
           {{idx + 1}}
         </view>
-        <view class="node-info">
-          <text class="node-name {{idx === currentNodeIndex ? 'current-text' : ''}}">{{item}}</text>
-          <text class="node-status">{{idx < currentNodeIndex ? '已完成' : (idx === currentNodeIndex ? '进行中' : '未开始')}}</text>
+        <view class="node-content" style="flex: 1;">
+          <view class="node-info" bindtap="toggleNode" data-index="{{idx}}" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+            <view>
+              <text class="node-name {{item.status === 'current' ? 'current-text' : ''}}">{{item.name}}</text>
+              <view class="node-status" style="margin-top: 6rpx;">
+                <text wx:if="{{item.status === 'completed'}}">已完成 {{item.startDate}} ~ {{item.endDate}}</text>
+                <text wx:elif="{{item.status === 'current'}}">进行中 | 开工: {{item.startDate}} | 预计完成: {{item.endDate}}</text>
+                <text wx:else>未开始 | 预计开工: {{item.startDate}} | 预计完成: {{item.endDate}}</text>
+              </view>
+            </view>
+            <view class="expand-icon" style="transform: {{item.expanded ? 'rotate(180deg)' : 'rotate(0)'}}; transition: 0.3s; font-size: 24rpx; color: #999;">▼</view>
+          </view>
+          
+          <view class="node-details" wx:if="{{item.expanded}}" style="margin-top: 20rpx; background: #f8fafc; padding: 20rpx; border-radius: 12rpx;">
+            <view class="records-list">
+              <block wx:if="{{item.records && item.records.length > 0}}">
+                <view class="record-item" wx:for="{{item.records}}" wx:for-item="record" wx:key="time" style="margin-bottom: 20rpx; border-bottom: 1rpx solid #eee; padding-bottom: 20rpx;">
+                  <view class="record-meta" style="display: flex; justify-content: space-between; font-size: 22rpx; color: #888; margin-bottom: 10rpx;">
+                    <text>{{record.uploader}}</text>
+                    <text>{{record.time}}</text>
+                  </view>
+                  <view class="record-desc" style="font-size: 26rpx; color: #333; margin-bottom: 10rpx;" wx:if="{{record.desc}}">{{record.desc}}</view>
+                  <view class="record-media" style="display: flex; flex-wrap: wrap; gap: 10rpx;" wx:if="{{record.files && record.files.length > 0}}">
+                    <image wx:for="{{record.files}}" wx:for-item="file" wx:key="url" src="{{file.url}}" mode="aspectFill" style="width: 120rpx; height: 120rpx; border-radius: 8rpx;" wx:if="{{file.type === 'image'}}"></image>
+                    <video wx:for="{{record.files}}" wx:for-item="file" wx:key="url" src="{{file.url}}" style="width: 120rpx; height: 120rpx; border-radius: 8rpx;" wx:if="{{file.type === 'video'}}"></video>
+                  </view>
+                </view>
+              </block>
+              <view wx:else style="font-size: 24rpx; color: #999; text-align: center; padding: 20rpx 0;">暂无验收记录</view>
+            </view>
+            
+            <view class="btn-upload" bindtap="openUpload" data-index="{{idx}}" style="margin-top: 20rpx; text-align: center; font-size: 26rpx; color: #10b981; border: 1rpx solid #10b981; padding: 12rpx 0; border-radius: 8rpx;">
+              + 添加工作留痕 (图片/视频)
+            </view>
+          </view>
         </view>
       </view>
     </view>
+  </view>
+  
+  <!-- 上传弹窗 -->
+  <view class="modal-mask" wx:if="{{showUploadModal}}">
+    <view class="modal-content" style="background: #fff; width: 85%; border-radius: 16rpx; padding: 30rpx; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100;">
+      <view style="font-size: 32rpx; font-weight: bold; text-align: center; margin-bottom: 30rpx;">添加验收记录</view>
+      <textarea placeholder="输入文字说明..." bindinput="onDescInput" value="{{uploadDesc}}" style="width: 100%; height: 160rpx; background: #f8fafc; padding: 20rpx; border-radius: 8rpx; font-size: 28rpx; box-sizing: border-box; margin-bottom: 20rpx;"></textarea>
+      
+      <view class="media-grid" style="display: flex; flex-wrap: wrap; gap: 10rpx; margin-bottom: 30rpx;">
+        <block wx:for="{{uploadFiles}}" wx:key="url">
+          <image src="{{item.url}}" mode="aspectFill" style="width: 120rpx; height: 120rpx; border-radius: 8rpx;" wx:if="{{item.type === 'image'}}"></image>
+          <video src="{{item.url}}" style="width: 120rpx; height: 120rpx; border-radius: 8rpx;" wx:if="{{item.type === 'video'}}"></video>
+        </block>
+        <view class="upload-btn" bindtap="chooseMedia" style="width: 120rpx; height: 120rpx; border-radius: 8rpx; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 40rpx; color: #94a3b8;">+</view>
+      </view>
+      
+      <view style="display: flex; gap: 20rpx;">
+        <button bindtap="closeUpload" style="flex: 1; font-size: 28rpx; background: #f1f5f9; color: #333;">取消</button>
+        <button bindtap="submitUpload" style="flex: 1; font-size: 28rpx; background: #4a403a; color: #fff;">提交</button>
+      </view>
+    </view>
+    <view class="modal-bg" bindtap="closeUpload" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99;"></view>
   </view>
   
   <view class="action-section">
