@@ -138,5 +138,37 @@ Page({
     if (this.data.leadId) {
       wx.navigateTo({ url: `/pages/leadForm/index?id=${this.data.leadId}` });
     }
+  },
+
+  onRatingChange(e) {
+    const ratings = ['A', 'B', 'C', 'D'];
+    const newRating = ratings[e.detail.value];
+    if (newRating === this.data.lead.rating) return;
+    this.updateLeadField('rating', newRating);
+  },
+
+  onStatusChange(e) {
+    const statuses = ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'];
+    const newStatus = statuses[e.detail.value];
+    if (newStatus === this.data.lead.status) return;
+    this.updateLeadField('status', newStatus);
+  },
+
+  updateLeadField(field, value) {
+    wx.showLoading({ title: '修改中...' });
+    const db = wx.cloud.database();
+    db.collection('leads').doc(this.data.leadId).update({
+      data: {
+        [field]: value,
+        updatedAt: db.serverDate()
+      }
+    }).then(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '修改成功', icon: 'success' });
+      this.setData({ [`lead.${field}`]: value });
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '修改失败', icon: 'none' });
+    });
   }
 });

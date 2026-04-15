@@ -2,16 +2,32 @@
   
   <!-- 顶部简要信息卡片 -->
   <view class="top-card">
-    <view class="flex justify-between items-center" style="margin-bottom: 12rpx;">
-      <view class="flex items-center gap-3">
-        <text class="name">{{lead.name}} <text style="font-size:24rpx; color:#666; font-weight:normal; margin-left:8rpx;">{{lead.customerNo || lead._id}}</text></text>
+    <view style="display: flex; justify-content: space-between; align-items: flex-start;">
+      <!-- 左侧：姓名、编号、地址等 -->
+      <view class="left-info" style="flex: 1; padding-right: 20rpx;">
+        <view style="margin-bottom: 12rpx; display: flex; align-items: center; flex-wrap: wrap;">
+          <text class="name" style="font-size: 36rpx; font-weight: bold; color: #1e293b;">{{lead.name}}</text>
+          <text style="font-size:24rpx; color:#64748b; margin-left:12rpx;">{{lead.customerNo || lead._id}}</text>
+        </view>
+        <view class="address" style="font-size: 26rpx; color: #475569; line-height: 1.4; margin-top: 12rpx;">{{lead.address || '暂无地址'}}</view>
+      </view>
+
+      <!-- 右侧：评级、状态 (竖排，可点击) -->
+      <view class="right-badges" style="display: flex; flex-direction: column; gap: 16rpx; align-items: flex-end; flex-shrink: 0;">
+        <picker bindchange="onRatingChange" range="{{['A', 'B', 'C', 'D']}}">
+          <view class="rating-badge rating-{{lead.rating}}" style="display: flex; align-items: center; justify-content: center; gap: 6rpx; padding: 6rpx 20rpx; border-radius: 8rpx;">
+            <text>{{lead.rating}}级</text>
+            <text style="font-size: 18rpx; opacity: 0.6; margin-top: 2rpx;">▼</text>
+          </view>
+        </picker>
+        <picker bindchange="onStatusChange" range="{{['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失']}}">
+          <view class="status-badge {{lead.status === '已签单' ? 'status-signed' : 'status-default'}}" style="display: flex; align-items: center; justify-content: center; gap: 6rpx; padding: 6rpx 20rpx; border-radius: 8rpx;">
+            <text>{{lead.status}}</text>
+            <text style="font-size: 18rpx; opacity: 0.6; margin-top: 2rpx;">▼</text>
+          </view>
+        </picker>
       </view>
     </view>
-    <view class="flex items-center gap-3" style="margin-bottom: 20rpx;">
-      <view class="rating-badge rating-{{lead.rating}}">{{lead.rating}}级</view>
-      <view class="status-badge {{lead.status === '已签单' ? 'status-signed' : 'status-default'}}">{{lead.status}}</view>
-    </view>
-    <view class="address mt-2">{{lead.address}}</view>
     
     <!-- 快捷操作区 (Web风格卡片) -->
     <view class="action-cards mt-4 {{lead.status === '已签单' ? 'two-cards' : 'one-card'}}">
