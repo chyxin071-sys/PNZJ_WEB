@@ -7,7 +7,8 @@ Page({
     categories: ['全部', '主材', '辅材', '软装', '家电', '人工', '定制', '套餐'],
     searchQuery: '',
     selectMode: false,
-    quoteId: null
+    quoteId: null,
+    quote: null
   },
   onLoad(options) {
     if (options.selectMode) {
@@ -17,9 +18,20 @@ Page({
   },
   onShow() {
     this.fetchData();
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ selected: 4 }); // 假设 4 是材料菜单
+    if (this.data.selectMode && this.data.quoteId) {
+      this.loadQuote();
     }
+    if (!this.data.selectMode && typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ selected: 4 });
+    }
+  },
+  loadQuote() {
+    const db = wx.cloud.database();
+    db.collection('quotes').doc(this.data.quoteId).get().then(res => {
+      this.setData({ quote: res.data }, () => {
+        this.filterData();
+      });
+    });
   },
   onPullDownRefresh() {
     this.fetchData().then(() => wx.stopPullDownRefresh());
@@ -75,6 +87,14 @@ Page({
         (m.sku && m.sku.toLowerCase().includes(sq))
       );
     }
+
+    if (this.data.selectMode && this.data.quote && this.data.quote.items) {
+      const quoteItems = this.data.quote.items.map(i => i.name);
+      list = list.map(m => ({
+        ...m,
+        added: quoteItems.includes(m.name)
+      }));
+    }
     
     this.setData({ filteredMaterials: list });
   },
@@ -82,54 +102,50 @@ Page({
     wx.navigateTo({ url: '/pages/materialForm/index' });
   },
   goToDetail(e) {
+    if (this.data.selectMode) return;
     const id = e.currentTarget.dataset.id;
-    if (this.data.selectMode) {
-      wx.showModal({
-        title: '添加数量',
-        editable: true,
-        placeholderText: '请输入添加数量',
-        success: (res) => {
-          if (res.confirm && res.content) {
-            const qty = parseInt(res.content, 10);
-            if (qty > 0) {
-              this.addItemToQuote(id, qty);
-            } else {
-              wx.showToast({ title: '数量必须大于0', icon: 'none' });
-            }
-          }
-        }
-      });
-    } else {
-      wx.navigateTo({ url: `/pages/materialForm/index?id=${id}` });
-    }
+    wx.navigateTo({ url: `/pages/materialForm/index?id=${id}` });
   },
 
-  addItemToQuote(materialId, qty) {
-    wx.showLoading({ title: '添加中' });
+  toggleItem(e) {
+    if (!this.data.selectMode) return;
+    const materialId = e.currentTarget.dataset.id;
     const material = this.data.materials.find(m => m._id === materialId);
-    if (!material) return wx.hideLoading();
+    if (!material || !this.data.quote) return;
 
-    const db = wx.cloud.database();
-    db.collection('quotes').doc(this.data.quoteId).get().then(res => {
-      const quote = res.data;
-      const items = quote.items || [];
+    let items = this.data.quote.items || [];
+    const isAdded = items.some(i => i.name === material.name);
+
+    if (isAdded) {
+      // Remove
+      items = items.filter(i => i.name !== material.name);
+    } else {
+      // Add with default qty 1
       items.push({
         name: material.name,
         price: material.price,
-        quantity: qty,
-        total: material.price * qty,
+        quantity: 1,
+        total: material.price * 1,
         category: material.category,
         sku: material.sku
       });
-      const total = items.reduce((sum, item) => sum + (item.total || 0), 0);
-      
-      db.collection('quotes').doc(this.data.quoteId).update({
-        data: { items, total, updatedAt: db.serverDate() }
-      }).then(() => {
-        wx.hideLoading();
-        wx.showToast({ title: '添加成功', icon: 'success' });
-        setTimeout(() => wx.navigateBack(), 1000);
-      });
+    }
+
+    const total = items.reduce((sum, item) => sum + (item.total || 0), 0);
+    const newQuote = { ...this.data.quote, items, total };
+    
+    this.setData({ quote: newQuote }, () => {
+      this.filterData();
     });
+
+    // Update DB
+    const db = wx.cloud.database();
+    db.collection('quotes').doc(this.data.quoteId).update({
+      data: { items, total, updatedAt: db.serverDate() }
+    });
+  },
+
+  goBack() {
+    wx.navigateBack();
   }
 });
