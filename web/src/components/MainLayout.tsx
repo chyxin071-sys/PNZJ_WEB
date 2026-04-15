@@ -25,7 +25,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     const userData = localStorage.getItem("pnzj_user");
     if (!userData) {
       if (pathname !== "/login") {
-        router.push("/login");
+        window.location.href = "/login";
       } else {
         setIsCheckingAuth(false);
       }
@@ -36,13 +36,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       } catch (e) {
         localStorage.removeItem("pnzj_user");
         if (pathname !== "/login") {
-          router.push("/login");
+          window.location.href = "/login";
         } else {
           setIsCheckingAuth(false);
         }
       }
     }
-  }, [router, pathname]);
+  }, [pathname]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
