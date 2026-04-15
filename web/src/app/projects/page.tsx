@@ -105,8 +105,15 @@ export default function ProjectsPage() {
     if (searchQuery && !p.customer.includes(searchQuery) && !p.manager.includes(searchQuery)) return false;
 
     // 高级筛选: 开工时间
-    if (filterYear !== "全部" && !p.startDate.startsWith(filterYear)) return false;
-    if (filterMonth !== "全部" && !p.startDate.startsWith(`${filterYear !== "全部" ? filterYear : new Date().getFullYear()}-${filterMonth.padStart(2, '0')}`)) return false;
+    if (filterYear !== "全部") {
+      const yearNumberStr = filterYear.replace('年', '');
+      if (!p.startDate.startsWith(yearNumberStr)) return false;
+    }
+    if (filterMonth !== "全部") {
+      const yearNumberStr = filterYear !== "全部" ? filterYear.replace('年', '') : new Date().getFullYear().toString();
+      const monthNumberStr = filterMonth.replace('月', '').padStart(2, '0');
+      if (!p.startDate.startsWith(`${yearNumberStr}-${monthNumberStr}`)) return false;
+    }
     if (filterDay && !p.startDate.endsWith(`-${filterDay.padStart(2, '0')}`)) return false;
 
     // 高级筛选: 项目经理
