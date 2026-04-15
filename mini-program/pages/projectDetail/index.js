@@ -193,6 +193,12 @@ Page({
   goToQuote() {
     if (this.data.project && this.data.project.leadId) {
       wx.navigateTo({ url: `/pages/quoteDetail/index?leadId=${this.data.project.leadId}` });
+    } else {
+      wx.showToast({ title: '暂无报价信息', icon: 'none' });
     }
+  },
+
+  showComingSoon() {
+    wx.showToast({ title: '模块正在开发中', icon: 'none' });
   }
 });

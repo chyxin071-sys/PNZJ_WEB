@@ -19,7 +19,7 @@ async function run() {
   for (const p of projects) {
     const lead = leads.find(l => l._id === p.leadId);
     if (lead) {
-      const updateQuery = `db.collection('projects').doc('${p._id}').update({ data: { phone: '${lead.phone}', sales: '${lead.sales}', designer: '${lead.designer}' } })`;
+      const updateQuery = `db.collection('projects').doc('${p._id}').update({ data: { phone: '${lead.phone}', sales: '${lead.sales}', designer: '${lead.designer}', area: '${lead.area || ""}', requirementType: '${lead.requirementType || lead.requirement || ""}' } })`;
       await fetch(`https://api.weixin.qq.com/tcb/databaseupdate?access_token=${token}`, {
         method: 'POST', body: JSON.stringify({ env: ENV, query: updateQuery })
       });

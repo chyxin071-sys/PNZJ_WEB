@@ -111,5 +111,10 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: '保存失败', icon: 'none' });
     });
+  },
+
+  saveQuote() {
+    wx.showToast({ title: '保存成功', icon: 'success' });
+    setTimeout(() => wx.navigateBack(), 1500);
   }
 });

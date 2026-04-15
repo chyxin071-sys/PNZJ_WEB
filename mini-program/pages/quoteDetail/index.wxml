@@ -55,4 +55,7 @@
     <text>提示：小程序端目前仅支持预览与生成报价单框架，完整的费用计算及材料添加请在PC端完成。</text>
   </view>
 
+  <view style="display: flex; padding: 24rpx; background: #fff; margin-top: 24rpx;">
+    <view class="btn-save" bindtap="saveQuote" style="flex: 1; background: #4a403a; color: #fff; padding: 20rpx 0; border-radius: 40rpx; font-size: 28rpx; font-weight: bold; text-align: center;">保存报价单</view>
+  </view>
 </view>

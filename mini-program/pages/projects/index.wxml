@@ -74,13 +74,13 @@
         <view class="header-main" style="display: flex; justify-content: space-between; align-items: flex-start;">
           <view class="header-text" style="flex: 1;">
             <view class="customer-row" style="margin-bottom: 12rpx;">
-              <text class="address-text" style="font-size: 32rpx; font-weight: 600; color: #1a1a1a;">{{item.address || '未知小区'}}</text>
+              <text class="address-text" style="font-size: 34rpx; font-weight: bold; color: #1a1a1a;">{{item.address || '未知小区'}}</text>
             </view>
             <view class="info-row" style="margin-bottom: 8rpx; display: flex; align-items: center;">
               <text style="font-size: 28rpx; font-weight: 500; color: #333; margin-right: 16rpx;">{{item.customer}}</text>
               <text style="font-size: 26rpx; color: #666;">{{item.phone || '暂无电话'}}</text>
             </view>
-            <view class="manager-text" style="font-size: 24rpx; color: #888;">
+            <view class="manager-text" style="font-size: 24rpx; color: #888; margin-top: 8rpx;">
               项目经理: {{item.manager || '未分配'}} | 销售: {{item.sales || '未分配'}} | 设计: {{item.designer || '未分配'}}
             </view>
           </view>
