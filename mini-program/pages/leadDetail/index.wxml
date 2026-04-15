@@ -5,9 +5,9 @@
     <view style="display: flex; justify-content: space-between; align-items: flex-start;">
       <!-- 左侧：姓名、编号、地址等 -->
       <view class="left-info" style="flex: 1; padding-right: 20rpx;">
-        <view style="margin-bottom: 12rpx; display: flex; align-items: center; flex-wrap: wrap;">
+        <view style="margin-bottom: 12rpx; display: flex; flex-direction: column; align-items: flex-start;">
           <text class="name" style="font-size: 36rpx; font-weight: bold; color: #1e293b;">{{lead.name}}</text>
-          <text style="font-size:24rpx; color:#64748b; margin-left:12rpx;">{{lead.customerNo || lead._id}}</text>
+          <text style="font-size:24rpx; color:#64748b; margin-top: 6rpx;">编号: {{lead.customerNo || lead._id}}</text>
         </view>
         <view class="address" style="font-size: 26rpx; color: #475569; line-height: 1.4; margin-top: 12rpx;">{{lead.address || '暂无地址'}}</view>
       </view>
