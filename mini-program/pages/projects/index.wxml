@@ -72,11 +72,11 @@
       <!-- 头部信息区 -->
       <view class="card-header-new">
         <view class="header-main" style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <view class="header-text" style="flex: 1;">
-            <view class="customer-row" style="margin-bottom: 12rpx;">
-              <text class="address-text" style="font-size: 34rpx; font-weight: bold; color: #1a1a1a;">{{item.address || '未知小区'}}</text>
+          <view class="header-text" style="flex: 1; text-align: left;">
+            <view class="customer-row" style="margin-bottom: 12rpx; text-align: left;">
+              <text class="address-text" style="font-size: 34rpx; font-weight: bold; color: #1a1a1a; display: block; width: 100%; text-align: left;">{{item.address || '未知小区'}}</text>
             </view>
-            <view class="info-row" style="margin-bottom: 8rpx; display: flex; align-items: center;">
+            <view class="info-row" style="margin-bottom: 8rpx; display: flex; align-items: center; justify-content: flex-start;">
               <customer-info 
                 name="{{item.customer}}" 
                 phone="{{item.phone}}" 
@@ -117,11 +117,11 @@
         
         <view class="node-progress-wrap">
           <view class="node-line-bg"></view>
-          <view class="node-line-active" style="width: calc((100% - 40rpx) * {{(item.currentNode - 1) / 7}});"></view>
+          <view class="node-line-active" style="width: calc((100% - 40rpx) * {{(item.currentNode - 1) / 7}}); background: var(--emerald-600);"></view>
           
           <view class="node-dots">
             <view class="node-dot-wrap" wx:for="{{item.nodesList}}" wx:for-item="node" wx:for-index="idx" wx:key="*this">
-              <view class="node-dot {{idx + 1 < item.currentNode ? 'completed' : (idx + 1 === item.currentNode ? 'current' : 'pending')}}"></view>
+              <view class="node-dot {{idx + 1 < item.currentNode ? 'completed' : (idx + 1 === item.currentNode ? 'current' : 'pending')}}" style="{{idx + 1 < item.currentNode ? 'background: var(--emerald-600);' : ''}}"></view>
               <text class="node-name {{idx + 1 === item.currentNode ? 'current-text' : ''}}">{{node}}</text>
             </view>
           </view>

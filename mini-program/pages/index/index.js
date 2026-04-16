@@ -54,16 +54,23 @@ Page({
   onLoad() {
     // 恢复筛选状态
     const app = getApp();
+    const userInfo = wx.getStorageSync('userInfo');
+    const isAdmin = userInfo && userInfo.role === 'admin';
+
     if (app.globalData && app.globalData.todoFilters) {
       const f = app.globalData.todoFilters;
       this.setData({
         timeFilterIndex: f.timeFilterIndex !== undefined ? f.timeFilterIndex : 1,
         timeFilterLabel: f.timeFilterLabel || '最近一周',
-        filterScope: f.filterScope || 'related',
+        filterScope: f.filterScope || (isAdmin ? 'all' : 'related'),
         filterPriority: f.filterPriority || 'all',
         filterEmployees: f.filterEmployees || this.data.filterEmployees,
         selectedEmployeeIds: f.selectedEmployeeIds || []
       });
+    } else {
+      if (isAdmin) {
+        this.setData({ filterScope: 'all' });
+      }
     }
   },
 
@@ -113,9 +120,9 @@ Page({
         }
         return t;
       }).sort((a, b) => {
-        const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dbTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dbTime - da; // 倒序
+        const timeA = a && a.createdAt ? String(a.createdAt) : '';
+        const timeB = b && b.createdAt ? String(b.createdAt) : '';
+        return timeB.localeCompare(timeA);
       });
       
       this.setData({ allTodos: list }, () => {
@@ -327,7 +334,7 @@ Page({
         const orderB = orderMap[b.title] || 3;
         if (orderA !== orderB) return orderA - orderB;
         // 日期字符串排序
-        return new Date(a.title).getTime() - new Date(b.title).getTime();
+        return (a.title || '').localeCompare(b.title || '');
       });
     } else if (this.data.groupType === 'priority') {
       const orderMap = { '紧急任务': 1, '重要任务': 2, '普通任务': 3 };

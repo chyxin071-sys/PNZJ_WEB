@@ -18,7 +18,8 @@ Component({
     }
   },
   data: {
-    formattedPhone: ''
+    formattedPhone: '',
+    displayNo: ''
   },
   observers: {
     'phone': function(phone) {
@@ -32,6 +33,14 @@ Component({
         this.setData({ formattedPhone: `${clean.slice(0, 3)} ${clean.slice(3, 7)} ${clean.slice(7)}` });
       } else {
         this.setData({ formattedPhone: phone });
+      }
+    },
+    'customerNo': function(no) {
+      if (no && no.length > 20) {
+        // 如果看起来像 MongoDB _id，只取后 8 位显示，以免过长
+        this.setData({ displayNo: no.slice(-8).toUpperCase() });
+      } else {
+        this.setData({ displayNo: no || '' });
       }
     }
   }

@@ -17,6 +17,8 @@ Page({
     showFilesModal: false,
     // 新增
     isEditingNodes: false,
+    originalNodesList: [], // 用于存储进入编辑模式前的备份
+    draggingIdx: null,
     isStartingProject: false,
     baseStartDate: '',
     showDelayModal: false,
@@ -54,6 +56,175 @@ Page({
     showEditProjectModal: false,
     editProjectStartDate: '',
     editProjectManager: ''
+  },
+
+  toggleEditNodes() {
+    if (!this.data.isEditingNodes) {
+      // 进入编辑模式前，备份当前数据
+      this.setData({ 
+        isEditingNodes: true,
+        originalNodesList: JSON.parse(JSON.stringify(this.data.nodesList))
+      });
+      return;
+    }
+
+    // 保存退出编辑模式
+    this.setData({ isEditingNodes: false });
+    
+    // 自动保存节点数据并重算排期
+    if (this.data.project && this.data.id) {
+      wx.showLoading({ title: '保存中...' });
+      
+      let newNodes = [...this.data.nodesList];
+      if (this.data.project.startDate) {
+        newNodes = this.recalculateGantt(newNodes, this.data.project.startDate);
+      }
+      const expectedEndDate = newNodes.length > 0 ? newNodes[newNodes.length - 1].endDate : this.data.project.expectedEndDate;
+
+      const db = wx.cloud.database();
+      db.collection('projects').doc(this.data.id).update({
+        data: { nodesData: newNodes, expectedEndDate: expectedEndDate }
+      }).then(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '保存成功', icon: 'success' });
+        this.setData({ 
+          nodesList: newNodes, 
+          'project.expectedEndDate': expectedEndDate,
+          'project.nodesData': newNodes,
+          originalNodesList: []
+        });
+      }).catch(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '保存失败', icon: 'error' });
+      });
+    }
+  },
+
+  cancelEditNodes() {
+    wx.showModal({
+      title: '取消修改',
+      content: '确定要放弃本次修改吗？所有未保存的更改将丢失。',
+      success: (res) => {
+        if (res.confirm) {
+          this.setData({
+            isEditingNodes: false,
+            nodesList: JSON.parse(JSON.stringify(this.data.originalNodesList)),
+            originalNodesList: []
+          });
+        }
+      }
+    });
+  },
+
+  preventBubble() {},
+
+  onEditMajorNodeName(e) {
+    const idx = e.currentTarget.dataset.index;
+    const val = e.detail.value;
+    this.setData({ [`nodesList[${idx}].name`]: val });
+  },
+
+  onEditSubNodeName(e) {
+    const { major, sub } = e.currentTarget.dataset;
+    const val = e.detail.value;
+    this.setData({ [`nodesList[${major}].subNodes[${sub}].name`]: val });
+  },
+
+  onEditSubNodeDuration(e) {
+    const { major, sub } = e.currentTarget.dataset;
+    const val = parseInt(e.detail.value) || 0;
+    this.setData({ [`nodesList[${major}].subNodes[${sub}].duration`]: val });
+  },
+
+  onNodeDragStart(e) {
+    this.setData({ draggingIdx: e.currentTarget.dataset.index });
+    this.startY = e.touches[0].pageY;
+    this.startIndex = e.currentTarget.dataset.index;
+  },
+
+  onNodeDragMove(e) {
+    if (this.data.draggingIdx === null) return;
+    const currentY = e.touches[0].pageY;
+    const diff = currentY - this.startY;
+    const itemHeight = 70; // estimated row height
+    let newIndex = this.startIndex + Math.round(diff / itemHeight);
+
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex >= this.data.nodesList.length) newIndex = this.data.nodesList.length - 1;
+
+    if (newIndex !== this.data.draggingIdx) {
+      const nodes = [...this.data.nodesList];
+      const item = nodes.splice(this.data.draggingIdx, 1)[0];
+      nodes.splice(newIndex, 0, item);
+      this.setData({ nodesList: nodes, draggingIdx: newIndex });
+      this.startIndex = newIndex;
+      this.startY = currentY;
+    }
+  },
+
+  onNodeDragEnd(e) {
+    this.setData({ draggingIdx: null });
+  },
+
+  addMajorNode() {
+    const nodes = this.data.nodesList;
+    nodes.push({
+      name: '新施工阶段',
+      duration: 5,
+      status: 'pending',
+      startDate: '',
+      endDate: '',
+      expanded: true,
+      records: [],
+      delayRecords: [],
+      subNodes: []
+    });
+    this.setData({ nodesList: nodes });
+  },
+
+  removeMajorNode(e) {
+    const idx = e.currentTarget.dataset.index;
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这个大节点及其包含的所有小工序吗？',
+      success: (res) => {
+        if (res.confirm) {
+          const nodes = this.data.nodesList;
+          nodes.splice(idx, 1);
+          this.setData({ nodesList: nodes });
+        }
+      }
+    });
+  },
+
+  addSubNode(e) {
+    const idx = e.currentTarget.dataset.index;
+    const nodes = this.data.nodesList;
+    nodes[idx].subNodes.push({
+      name: '新工序',
+      duration: 1,
+      status: 'pending',
+      startDate: '',
+      endDate: '',
+      records: []
+    });
+    nodes[idx].expanded = true;
+    this.setData({ nodesList: nodes });
+  },
+
+  removeSubNode(e) {
+    const { major, sub } = e.currentTarget.dataset;
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这个小工序吗？',
+      success: (res) => {
+        if (res.confirm) {
+          const nodes = this.data.nodesList;
+          nodes[major].subNodes.splice(sub, 1);
+          this.setData({ nodesList: nodes });
+        }
+      }
+    });
   },
 
   openEditProjectModal() {
@@ -165,6 +336,20 @@ Page({
     const db = wx.cloud.database();
     db.collection('projects').doc(id).get().then(res => {
       const p = res.data;
+      
+      // 如果没有电话或客户编号，尝试从 leads 表补全
+      if (!p.phone || !p.customerNo) {
+        if (p.leadId) {
+          db.collection('leads').doc(p.leadId).get().then(leadRes => {
+            const l = leadRes.data;
+            this.setData({
+              'project.phone': p.phone || l.phone,
+              'project.customerNo': p.customerNo || l.customerNo || l._id
+            });
+          }).catch(() => {});
+        }
+      }
+
       const userInfo = wx.getStorageSync('userInfo');
       const myName = userInfo ? userInfo.name : '';
       const isAdmin = userInfo && userInfo.role === 'admin';
@@ -259,7 +444,9 @@ Page({
         project: { ...p, daysElapsed, expectedEndDate },
         nodesList: projectNodes,
         currentNodeIndex: currentNode - 1,
-        loading: false 
+        loading: false,
+        isAdmin: isAdmin,
+        isRelated: isRelated
       });
       wx.hideLoading();
     }).catch(() => {
@@ -520,6 +707,14 @@ Page({
     });
   },
 
+  goToLead() {
+    if (this.data.project && this.data.project.leadId) {
+      wx.navigateTo({ url: `/pages/leadDetail/index?id=${this.data.project.leadId}` });
+    } else {
+      wx.showToast({ title: '无法找到关联客户', icon: 'none' });
+    }
+  },
+
   goToQuote() {
     if (this.data.project && this.data.project.leadId) {
       wx.navigateTo({ url: `/pages/quoteDetail/index?leadId=${this.data.project.leadId}` });
@@ -528,57 +723,13 @@ Page({
     }
   },
 
-  viewFiles() {
-    this.setData({ showFilesModal: true });
-  },
-
-  closeFiles() {
-    this.setData({ showFilesModal: false });
-  },
-
-  previewFile(e) {
-    const { url, type } = e.currentTarget.dataset;
-    if (type === 'image') {
-      wx.previewImage({ urls: [url], current: url });
+  goToFiles() {
+    const leadId = this.data.project.leadId || this.data.project.customerNo;
+    if (leadId) {
+      wx.navigateTo({ url: `/pages/projectFiles/index?leadId=${leadId}` });
     } else {
-      wx.showToast({ title: '视频请在相册或电脑端查看', icon: 'none' });
+      wx.showToast({ title: '缺失客户关联信息', icon: 'none' });
     }
-  },
-
-  uploadProjectFile() {
-    wx.chooseMedia({
-      count: 1,
-      success: (res) => {
-        wx.showLoading({ title: '上传中' });
-        const file = res.tempFiles[0];
-        const userInfo = wx.getStorageSync('userInfo') || { name: '未知人员' };
-        const now = new Date();
-        const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-
-        const newFile = {
-          name: '项目资料附件',
-          url: file.tempFilePath,
-          type: file.fileType,
-          uploader: userInfo.name,
-          time: timeStr
-        };
-
-        const projectFiles = this.data.project.files || [];
-        projectFiles.unshift(newFile);
-
-        const db = wx.cloud.database();
-        db.collection('projects').doc(this.data.id).update({
-          data: { files: projectFiles }
-        }).then(() => {
-          this.setData({ 'project.files': projectFiles });
-          wx.hideLoading();
-          wx.showToast({ title: '上传成功', icon: 'success' });
-        }).catch(() => {
-          wx.hideLoading();
-          wx.showToast({ title: '上传失败', icon: 'none' });
-        });
-      }
-    });
   },
 
   // ==== 节点裁剪与开工 ====
@@ -590,15 +741,6 @@ Page({
   },
   closeStartModal() {
     this.setData({ isStartingProject: false, isEditingNodes: false });
-  },
-  toggleEditNodes() {
-    this.setData({ isEditingNodes: !this.data.isEditingNodes });
-  },
-  removeSubNode(e) {
-    const { major, sub } = e.currentTarget.dataset;
-    const nodes = [...this.data.nodesList];
-    nodes[major].subNodes.splice(sub, 1);
-    this.setData({ nodesList: nodes });
   },
   onStartDateChange(e) {
     this.setData({ baseStartDate: e.detail.value });
@@ -836,8 +978,20 @@ Page({
   },
 
   chooseAcceptanceMedia() {
+    // 微信 API 单次最多选 20 张，这里我们将上限放宽到足够大（例如允许累积到 50 张）
+    const currentCount = this.data.acceptancePhotos.length;
+    const maxAllowed = 50; 
+    
+    if (currentCount >= maxAllowed) {
+      return wx.showToast({ title: `最多只能上传 ${maxAllowed} 个文件`, icon: 'none' });
+    }
+
+    const remainCount = maxAllowed - currentCount;
+    // 微信 wx.chooseMedia count 参数最大支持 20
+    const countToChoose = remainCount > 20 ? 20 : remainCount;
+
     wx.chooseMedia({
-      count: 9 - this.data.acceptancePhotos.length,
+      count: countToChoose,
       mediaType: ['image', 'video'],
       sourceType: ['album', 'camera'],
       success: (res) => {
@@ -856,14 +1010,22 @@ Page({
 
   previewAcceptancePhoto(e) {
     const idx = e.currentTarget.dataset.index;
-    const photos = this.data.acceptancePhotos;
-    const urls = photos.filter(p => !p.type || p.type === 'image').map(p => p.url || p);
-    wx.previewImage({ urls, current: photos[idx].url || photos[idx] });
+    const item = this.data.popupSub.acceptanceRecord.photos[idx];
+    const isVideo = item.type === 'video';
+    
+    if (isVideo) {
+      wx.previewMedia({
+        sources: [{ url: item.url || item, type: 'video' }]
+      });
+    } else {
+      const urls = this.data.popupSub.acceptanceRecord.photos.filter(p => !p.type || p.type === 'image').map(p => p.url || p);
+      wx.previewImage({ urls, current: item.url || item, showmenu: true });
+    }
   },
 
   submitAcceptance() {
-    if (this.data.acceptancePhotos.length === 0) {
-      return wx.showToast({ title: '请上传现场照片或视频', icon: 'none' });
+    if (this.data.acceptancePhotos.length === 0 && !this.data.acceptanceRemark.trim()) {
+      return wx.showToast({ title: '请填写现场说明或上传影像', icon: 'none' });
     }
     wx.showLoading({ title: '提交中' });
 
@@ -940,6 +1102,55 @@ Page({
           'project.status': newProjectStatus,
           'project.expectedEndDate': newExpectedEndDate
         });
+        
+        // --- 触发通知和跟进记录逻辑 ---
+        if (acceptanceMode === 'new') {
+          const p = this.data.project;
+          const operatorName = userName;
+          const leadId = p.leadId || p.customerNo;
+          const content = `工地【${p.address || p.customer || '未知'}】的【${sub.name}】工序已验收完成。${acceptanceRemark ? '现场说明：' + acceptanceRemark : ''}`;
+          
+          if (leadId) {
+            // 自动在客户跟进中更新跟进记录
+            db.collection('followUps').add({
+              data: {
+                leadId: leadId,
+                method: '系统记录',
+                content: content,
+                createdBy: operatorName,
+                createdAt: nowFull,
+                timestamp: db.serverDate()
+              }
+            });
+            db.collection('leads').doc(leadId).update({
+              data: { lastFollowUp: nowFull }
+            }).catch(() => {});
+          }
+
+          // 通知消息到所有相关人员，包括管理员
+          const notifyUsers = new Set();
+          if (p.manager && p.manager !== operatorName) notifyUsers.add(p.manager);
+          if (p.sales && p.sales !== operatorName) notifyUsers.add(p.sales);
+          if (p.designer && p.designer !== operatorName) notifyUsers.add(p.designer);
+          if (p.creatorName && p.creatorName !== operatorName) notifyUsers.add(p.creatorName);
+          if (this.data.userRole !== 'admin') notifyUsers.add('admin');
+
+          notifyUsers.forEach(u => {
+            if (!u) return;
+            db.collection('notifications').add({
+              data: {
+                type: 'project',
+                title: '工序验收完成',
+                content: `${operatorName} 完成了工地【${p.address || p.customer || '未知'}】的【${sub.name}】工序验收。`,
+                targetUser: u,
+                isRead: false,
+                createTime: db.serverDate(),
+                link: `/pages/projectDetail/index?id=${this.data.id}`
+              }
+            });
+          });
+        }
+
         wx.hideLoading();
         wx.showToast({ title: acceptanceMode === 'edit' ? '记录已更新' : '验收通过', icon: 'success' });
       });

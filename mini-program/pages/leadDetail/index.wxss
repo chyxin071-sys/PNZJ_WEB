@@ -8,19 +8,20 @@
 .address { font-size: 28rpx; color: var(--primary-600); }
 .btn-edit-icon { padding: 8rpx 28rpx; background: #f1f5f9; color: var(--primary-600); border-radius: 30rpx; font-size: 26rpx; font-weight: bold; border: 1rpx solid #e2e8f0; }
 
-/* 快捷操作�?(Web卡片风格) */
+/* 快捷操作区(Web卡片风格) */
 .action-cards { display: flex; gap: 20rpx; margin-top: 32rpx; border-top: 1rpx solid #f1f5f9; padding-top: 32rpx; }
 .action-cards.one-card { flex-direction: column; }
 .action-cards.two-cards { flex-direction: row; }
+.action-cards.three-cards { flex-direction: row; }
 
-.action-card { flex: 1; border-radius: 16rpx; padding: 24rpx 20rpx; display: flex; align-items: center; justify-content: space-between; border: 2rpx solid transparent; font-size: 28rpx; font-weight: bold; transition: all 0.2s; }
-.action-cards.two-cards .action-card { flex-direction: column; align-items: flex-start; gap: 16rpx; padding: 20rpx; }
-.action-cards.two-cards .ac-left { gap: 12rpx; }
-.action-cards.two-cards .icon-arrow-right, .action-cards.two-cards .icon-arrow-right-green { align-self: flex-end; }
+.action-card { flex: 1; border-radius: 16rpx; padding: 24rpx 20rpx; display: flex; align-items: center; justify-content: center; border: 2rpx solid transparent; font-size: 26rpx; font-weight: bold; transition: all 0.2s; background: #fff; color: #1e293b; border-color: #e2e8f0; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); }
+.action-cards.two-cards .action-card, .action-cards.three-cards .action-card { flex-direction: column; align-items: center; gap: 16rpx; padding: 20rpx; }
+.action-cards.two-cards .ac-left, .action-cards.three-cards .ac-left { gap: 12rpx; flex-direction: column; }
+.action-cards.two-cards .icon-arrow-right, .action-cards.two-cards .icon-arrow-right-green { display: none; }
 
 .ac-left { display: flex; align-items: center; gap: 16rpx; }
 
-/* 报价单卡�?*/
+/* 报价单卡片 */
 .quote-card { background: #fff; color: #1e293b; border-color: #e2e8f0; }
 .icon-doc { width: 32rpx; height: 36rpx; border: 4rpx solid #334155; border-radius: 6rpx; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6rpx; }
 .icon-doc::before { content: ''; width: 16rpx; height: 4rpx; background: #334155; border-radius: 2rpx; }
@@ -28,8 +29,11 @@
 
 .icon-arrow-right { width: 16rpx; height: 16rpx; border-top: 4rpx solid #334155; border-right: 4rpx solid #334155; transform: rotate(45deg); margin-right: 4rpx; }
 
-/* 工地大屏卡片 (改为黑白样式与报价单一�? */
+/* 工地大屏卡片 (改为黑白样式与报价单一致) */
 .project-card { background: #fff; color: #1e293b; border-color: #e2e8f0; }
+.icon-hammer { width: 36rpx; height: 36rpx; border: 4rpx solid #334155; border-radius: 6rpx; position: relative; background: #f8fafc; }
+.icon-hammer::after { content: ''; position: absolute; top: 8rpx; left: 14rpx; width: 4rpx; height: 16rpx; background: #334155; border-radius: 2rpx; transform: rotate(45deg); }
+
 .icon-folder { width: 36rpx; height: 28rpx; border: 4rpx solid #334155; border-radius: 6rpx; position: relative; }
 .icon-folder::before { content: ''; position: absolute; top: -8rpx; left: -4rpx; width: 16rpx; height: 8rpx; border: 4rpx solid #334155; border-bottom: none; border-radius: 6rpx 6rpx 0 0; }
 
@@ -71,3 +75,29 @@
 .bottom-action-bar { position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; display: flex; gap: 24rpx; box-sizing: border-box; }
 .btn-primary { flex: 2; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2); }
 .btn-danger { flex: 1; background: var(--rose-50); color: var(--rose-600); height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; border: 2rpx solid var(--rose-100); }
+
+/* 设计进度 */
+.design-section { background: #fff; margin: 24rpx; padding: 32rpx; border-radius: 24rpx; }
+.design-node { display: flex; position: relative; margin-bottom: 40rpx; }
+.design-node:last-child { margin-bottom: 0; }
+.node-line { position: absolute; left: 19rpx; top: 40rpx; bottom: -40rpx; width: 2rpx; background: #e2e8f0; }
+.node-dot { width: 40rpx; height: 40rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24rpx; color: #fff; z-index: 2; margin-right: 24rpx; flex-shrink: 0; margin-top: 4rpx; }
+.node-dot.completed { background: var(--emerald-600); }
+.node-dot.current { background: var(--amber-500); border: 6rpx solid var(--amber-100); width: 28rpx; height: 28rpx; margin-left: 6rpx; margin-right: 30rpx; }
+.node-dot.pending { background: #cbd5e1; width: 20rpx; height: 20rpx; margin-left: 10rpx; margin-right: 34rpx; margin-top: 14rpx; }
+.node-content { flex: 1; background: #f8fafc; border-radius: 16rpx; padding: 24rpx; border: 1rpx solid #f1f5f9; }
+.node-content.current { background: #fff; border-color: var(--amber-200); box-shadow: 0 4rpx 12rpx rgba(245, 158, 11, 0.05); }
+.node-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx; }
+.node-title { font-size: 28rpx; font-weight: bold; color: #1e293b; display: flex; align-items: center; }
+.node-duration { font-size: 22rpx; color: #64748b; font-weight: normal; margin-left: 12rpx; background: #e2e8f0; padding: 2rpx 12rpx; border-radius: 20rpx; }
+.btn-complete { font-size: 24rpx; color: #fff; background: var(--amber-600); padding: 8rpx 24rpx; border-radius: 30rpx; font-weight: bold; }
+.tag-completed { font-size: 24rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 6rpx 20rpx; border-radius: 30rpx; font-weight: bold; border: 1rpx solid var(--emerald-100); }
+.node-dates { font-size: 22rpx; color: #64748b; }
+
+.edit-node-item { display: flex; gap: 16rpx; align-items: center; margin-bottom: 20rpx; position: relative; transition: all 0.2s; background: #fff; z-index: 1; }
+.edit-node-item.dragging { position: relative; z-index: 99; box-shadow: 0 10rpx 30rpx rgba(0,0,0,0.1); opacity: 0.9; transform: scale(1.02); transition: none; }
+.drag-handle { width: 60rpx; height: 60rpx; display: flex; align-items: center; justify-content: center; margin-right: -8rpx; }
+.drag-icon { display: flex; flex-direction: column; gap: 6rpx; padding: 10rpx; }
+.drag-icon view { width: 32rpx; height: 4rpx; background: #cbd5e1; border-radius: 2rpx; }
+.edit-node-input { flex: 1; height: 72rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 8rpx; padding: 0 20rpx; font-size: 26rpx; }
+.edit-node-dur { width: 120rpx; height: 72rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 8rpx; padding: 0 20rpx; font-size: 26rpx; text-align: center; }

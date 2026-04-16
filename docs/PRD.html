@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>品诺筑家 (PNZJ) - 系统 PRD (V2.0)</title>
+    <title>品诺筑家 (PNZJ) - 系统 PRD (V1.0)</title>
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -280,7 +280,7 @@
     </script>
     
     <script type="text/markdown" id="prd-markdown">
-# 品诺筑家 (PNZJ) - 轻量化整装全链路管理系统 PRD (V2.0)
+# 品诺筑家 (PNZJ) - 轻量化整装全链路管理系统 PRD (V1.0)
 
 ## 1. 执行摘要 (Executive Summary)
 我们正在为“品诺筑家”（一家约20人的整装团队）打造一款**轻量化、高质感、全链路贯通**的 CRM+ERP 融合管理系统。解决当前团队在线索流转、报价制作、材料库管理与施工节点把控中存在的“数据孤岛”与“流程僵化”问题。通过解耦报价与材料库、引入客户意向评级 (A/B/C/D) 和 8个标准施工节点的可视化管控，我们将提升销售转化率至少 15%，并将工长的现场管理效率提升 30%，实现从“客户进店”到“项目竣工”的单一数据源全生命周期追踪。
@@ -553,7 +553,8 @@ graph TD
                 const li = document.createElement('li');
                 const a = document.createElement('a');
                 a.href = `#${id}`;
-                a.textContent = heading.textContent;
+                // 移除英文括号内容，使目录更加清爽
+                a.textContent = heading.textContent.replace(/\s*\([a-zA-Z0-9\s\-&?\/]+\)/g, '').trim();
                 li.appendChild(a);
 
                 if (heading.tagName.toLowerCase() === 'h2') {

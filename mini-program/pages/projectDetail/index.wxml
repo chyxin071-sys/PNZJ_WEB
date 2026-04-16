@@ -5,12 +5,12 @@
     <!-- 标题和健康状态 -->
     <view style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16rpx;">
       <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; flex: 1; padding-right: 20rpx; line-height: 1.4;">{{project.address || '未知地址'}}</view>
-      <view style="display: flex; align-items: center; gap: 12rpx; flex-shrink: 0;">
+      <view style="display: flex; flex-direction: column; align-items: flex-end; gap: 12rpx; flex-shrink: 0;">
         <view style="font-size: 22rpx; font-weight: bold; padding: 6rpx 16rpx; border-radius: 30rpx; color: {{project.health === '严重延期' ? 'var(--rose-600)' : (project.health === '预警' ? 'var(--amber-600)' : 'var(--emerald-600)')}}; background: {{project.health === '严重延期' ? 'var(--rose-50)' : (project.health === '预警' ? 'var(--amber-50)' : 'var(--emerald-50)')}};">
           {{project.health || '正常'}}
         </view>
-        <view wx:if="{{userRole === 'admin' || userRole === 'manager'}}" bindtap="openEditProjectModal" style="width: 48rpx; height: 48rpx; background: #f8fafc; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e2e8f0;">
-          <text style="font-size: 24rpx; color: #64748b;">编辑</text>
+        <view wx:if="{{userRole === 'admin' || userRole === 'manager'}}" bindtap="openEditProjectModal" style="font-size: 22rpx; font-weight: bold; padding: 6rpx 16rpx; border-radius: 30rpx; color: #64748b; background: #f1f5f9;">
+          编辑
         </view>
       </view>
     </view>
@@ -21,24 +21,40 @@
     </view>
 
     <!-- 核心数据网格 -->
-    <view style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16rpx; background: #f8fafc; padding: 20rpx; border-radius: 12rpx;">
-      <view style="display: flex; flex-direction: column;">
-        <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">实际开工日期</text>
-        <text style="font-size: 24rpx; font-weight: 500; color: #334155;">{{project.startDate || '未开工'}}</text>
+    <view style="display: flex; flex-direction: column; gap: 16rpx; background: #f8fafc; padding: 24rpx; border-radius: 12rpx;">
+      <!-- 第一行 -->
+      <view style="display: flex; justify-content: space-between; align-items: center;">
+        <view style="flex: 1; display: flex; flex-direction: column;">
+          <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">实际开工</text>
+          <text style="font-size: 26rpx; font-weight: 500; color: #334155;">{{project.startDate || '未开工'}}</text>
+        </view>
+        <view style="flex: 1; display: flex; flex-direction: column;">
+          <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">预计完工</text>
+          <text style="font-size: 26rpx; font-weight: 500; color: #334155;">{{project.expectedEndDate || '-'}}</text>
+        </view>
+        <view style="flex: 1; display: flex; flex-direction: column;">
+          <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">已耗工期</text>
+          <view style="display: flex; align-items: baseline;">
+            <text style="font-size: 28rpx; font-weight: bold; color: var(--amber-600);">{{project.daysElapsed || 0}}</text>
+            <text style="font-size: 20rpx; color: var(--amber-600); margin-left: 4rpx;">天</text>
+          </view>
+        </view>
       </view>
-      <view style="display: flex; flex-direction: column;">
-        <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">预计完工日期</text>
-        <text style="font-size: 24rpx; font-weight: 500; color: #334155;">{{project.expectedEndDate || '-'}}</text>
-      </view>
-      <view style="display: flex; flex-direction: column;">
-        <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">项目经理</text>
-        <text style="font-size: 24rpx; font-weight: 500; color: #334155;">{{project.manager || '-'}}</text>
-      </view>
-      <view style="display: flex; flex-direction: column;">
-        <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">已耗工期</text>
-        <view style="display: flex; align-items: baseline;">
-          <text style="font-size: 28rpx; font-weight: bold; color: var(--amber-600);">{{project.daysElapsed || 0}}</text>
-          <text style="font-size: 20rpx; color: var(--amber-600); margin-left: 4rpx;">天</text>
+      <!-- 分割线 -->
+      <view style="height: 1rpx; background: #e2e8f0; width: 100%; margin: 8rpx 0;"></view>
+      <!-- 第二行 -->
+      <view style="display: flex; justify-content: space-between; align-items: center;">
+        <view style="flex: 1; display: flex; flex-direction: column;">
+          <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">项目经理</text>
+          <text style="font-size: 24rpx; font-weight: 500; color: #334155;">{{project.manager || '-'}}</text>
+        </view>
+        <view style="flex: 1; display: flex; flex-direction: column;">
+          <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">销售</text>
+          <text style="font-size: 24rpx; font-weight: 500; color: #334155;">{{project.sales || '-'}}</text>
+        </view>
+        <view style="flex: 1; display: flex; flex-direction: column;">
+          <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">设计师</text>
+          <text style="font-size: 24rpx; font-weight: 500; color: #334155;">{{project.designer || '-'}}</text>
         </view>
       </view>
     </view>
@@ -46,41 +62,46 @@
 
   <!-- 快捷操作区：三块入口 -->
   <view style="display: flex; gap: 16rpx; margin-bottom: 24rpx;">
-    <view bindtap="viewFiles" style="flex: 1; background: #fff; padding: 28rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e8edf2;">
+    <view bindtap="goToLead" style="flex: 1; background: #fff; padding: 28rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e8edf2;">
+      <text style="font-size: 26rpx; font-weight: 600; color: #334155;">客户信息</text>
+    </view>
+    <view bindtap="goToFiles" style="flex: 1; background: #fff; padding: 28rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e8edf2;">
       <text style="font-size: 26rpx; font-weight: 600; color: #334155;">项目资料</text>
     </view>
     <view bindtap="goToQuote" style="flex: 1; background: #fff; padding: 28rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e8edf2;">
       <text style="font-size: 26rpx; font-weight: 600; color: #334155;">报价单</text>
     </view>
-    <view wx:if="{{project.status === '未开工'}}" bindtap="startProjectModal" style="flex: 1; background: var(--amber-600); padding: 28rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center;">
-      <text style="font-size: 26rpx; font-weight: 600; color: #fff;">准备开工</text>
-    </view>
   </view>
 
-  <!-- 8大施工节点管控看板 -->
+  <!-- 施工动态看板 -->
   <!-- 只有管理员或者相关人员才能看到编辑操作 -->
   <view wx:if="{{isAdmin || isRelated}}" style="background: #fff; border-radius: 20rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.03); overflow: hidden; margin-bottom: 60rpx;">
     <!-- 头部栏 -->
     <view style="padding: 24rpx 32rpx; background: rgba(248,250,252,0.8); border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
       <view style="font-size: 30rpx; font-weight: bold; color: #1e293b; display: flex; align-items: center;">
         <view style="width: 8rpx; height: 28rpx; background: #4a403a; border-radius: 4rpx; margin-right: 16rpx;"></view>
-        8大施工节点管控
+        施工动态
       </view>
-      <view style="font-size: 24rpx; color: #64748b; font-family: monospace;">
-        当前: <text style="font-weight: bold; color: #1e293b;">{{nodesList[currentNodeIndex] ? nodesList[currentNodeIndex].name : '已竣工'}}</text>
+      <view style="display: flex; gap: 16rpx; align-items: center;">
+        <view wx:if="{{isEditingNodes}}" bindtap="cancelEditNodes" style="font-size: 24rpx; color: #64748b; background: #f8fafc; padding: 10rpx 24rpx; border-radius: 30rpx; border: 1rpx solid #e2e8f0;">
+          取消修改
+        </view>
+        <view bindtap="toggleEditNodes" style="font-size: 24rpx; color: {{isEditingNodes ? '#fff' : 'var(--primary-600)'}}; font-weight: bold; background: {{isEditingNodes ? 'var(--primary-900)' : '#f1f5f9'}}; padding: 10rpx 24rpx; border-radius: 30rpx;">
+          {{isEditingNodes ? '保存编辑' : '编辑'}}
+        </view>
       </view>
     </view>
     
     <!-- 时间轴列表 -->
     <view style="padding: 32rpx; position: relative;">
-      <!-- 左侧贯穿连接线 -->
-      <view style="position: absolute; left: 58rpx; top: 50rpx; bottom: 50rpx; width: 4rpx; background: #f1f5f9; border-radius: 2rpx; z-index: 0;"></view>
+      <!-- 左侧贯穿连接线 (仅在非编辑模式下显示) -->
+      <view wx:if="{{!isEditingNodes}}" style="position: absolute; left: 58rpx; top: 50rpx; bottom: 50rpx; width: 4rpx; background: #f1f5f9; border-radius: 2rpx; z-index: 0;"></view>
 
-      <view wx:for="{{nodesList}}" wx:key="name" wx:for-index="idx" style="position: relative; z-index: 1; display: flex; margin-bottom: 40rpx;">
+      <view wx:for="{{nodesList}}" wx:key="name" wx:for-index="idx" style="position: relative; z-index: {{draggingIdx === idx ? 99 : 1}}; display: flex; margin-bottom: 40rpx; {{draggingIdx === idx ? 'transform: scale(1.02); box-shadow: 0 10rpx 30rpx rgba(0,0,0,0.1);' : ''}} transition: transform 0.2s;">
         
-        <!-- 左侧状态图标圈 -->
-        <view style="width: 56rpx; flex-shrink: 0; display: flex; justify-content: center; margin-right: 24rpx; padding-top: 8rpx;">
-          <view wx:if="{{item.status === 'completed'}}" style="width: 48rpx; height: 48rpx; background: #1e293b; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid #fff; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);">
+        <!-- 左侧状态图标圈 (仅在非编辑模式下显示) -->
+        <view wx:if="{{!isEditingNodes}}" style="width: 56rpx; flex-shrink: 0; display: flex; justify-content: center; margin-right: 24rpx; padding-top: 8rpx;">
+          <view wx:if="{{item.status === 'completed'}}" style="width: 48rpx; height: 48rpx; background: var(--emerald-600); border-radius: 24rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid #fff; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);">
             <text style="color: #fff; font-size: 24rpx; font-weight: bold;">✓</text>
           </view>
           <view wx:elif="{{item.status === 'current'}}" style="width: 48rpx; height: 48rpx; background: var(--amber-600); border-radius: 24rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid var(--amber-50);">
@@ -92,22 +113,47 @@
         </view>
 
         <!-- 右侧内容卡片 -->
-        <view style="flex: 1; background: {{item.status === 'current' ? '#fff' : (item.status === 'completed' ? '#fff' : '#f8fafc')}}; border: 1rpx solid {{item.status === 'current' ? '#fcd34d' : '#f1f5f9'}}; border-radius: 16rpx; overflow: hidden; transition: all 0.3s; box-shadow: {{item.status === 'current' ? '0 4rpx 12rpx rgba(245,158,11,0.05)' : 'none'}};">
+        <view style="flex: 1; background: {{isEditingNodes ? '#fff' : (item.status === 'current' ? '#fff' : (item.status === 'completed' ? '#fff' : '#f8fafc'))}}; border: 1rpx solid {{isEditingNodes ? '#e2e8f0' : (item.status === 'current' ? '#fcd34d' : '#f1f5f9')}}; border-radius: 16rpx; overflow: hidden; transition: all 0.3s; box-shadow: {{(item.status === 'current' && !isEditingNodes) ? '0 4rpx 12rpx rgba(245,158,11,0.05)' : 'none'}};">
           
+          <!-- 删除大节点按钮 (仅编辑模式下显示) -->
+          <view wx:if="{{isEditingNodes}}" catchtap="removeMajorNode" data-index="{{idx}}" style="position: absolute; right: 0; top: 0; background: var(--rose-600); color: #fff; width: 44rpx; height: 44rpx; border-radius: 0 16rpx 0 16rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; z-index: 10;">×</view>
+
           <!-- 卡片头部 (可点击展开) -->
-          <view bindtap="toggleNode" data-index="{{idx}}" style="padding: 24rpx; display: flex; justify-content: space-between; align-items: center;">
-            <view>
-              <view style="font-size: 30rpx; font-weight: bold; margin-bottom: 8rpx; color: {{item.status === 'current' ? 'var(--amber-600)' : (item.status === 'completed' ? '#1e293b' : '#94a3b8')}};">
-                {{item.name}}
-              </view>
-              <view style="font-size: 22rpx; color: #64748b;">
-                <text wx:if="{{item.status === 'completed'}}">实际开工 {{item.startDate}} · 实际完工 {{item.endDate}}</text>
-                <text wx:elif="{{item.status === 'current'}}">进行中 · 预计完工 {{item.endDate}}</text>
-                <text wx:else>未开始 · 预计开工 {{item.startDate || '-'}}</text>
+          <view style="display: flex; align-items: {{isEditingNodes ? 'flex-start' : 'stretch'}};">
+            <!-- 拖拽把手 (仅编辑模式) -->
+            <view wx:if="{{isEditingNodes}}"
+                  catchtouchstart="onNodeDragStart"
+                  catchtouchmove="onNodeDragMove"
+                  catchtouchend="onNodeDragEnd"
+                  data-index="{{idx}}"
+                  style="padding: 32rpx 16rpx 32rpx 24rpx; display: flex; align-items: center; justify-content: center;">
+              <view style="display: flex; flex-direction: column; gap: 8rpx;">
+                <view style="width: 32rpx; height: 4rpx; background: #cbd5e1; border-radius: 2rpx;"></view>
+                <view style="width: 32rpx; height: 4rpx; background: #cbd5e1; border-radius: 2rpx;"></view>
+                <view style="width: 32rpx; height: 4rpx; background: #cbd5e1; border-radius: 2rpx;"></view>
               </view>
             </view>
-            <view style="display: flex; align-items: center; gap: 16rpx;">
-              <view style="transform: {{item.expanded ? 'rotate(180deg)' : 'rotate(0)'}}; transition: 0.3s; font-size: 24rpx; color: #cbd5e1;">▼</view>
+
+            <!-- 头部内容区 -->
+            <view bindtap="toggleNode" data-index="{{idx}}" style="flex: 1; padding: 24rpx 24rpx 24rpx {{isEditingNodes ? '8rpx' : '24rpx'}}; display: flex; justify-content: space-between; align-items: center;">
+              <view style="flex: 1;">
+                <!-- 编辑模式下可修改大节点名称 -->
+                <view wx:if="{{isEditingNodes}}" style="display: flex; align-items: center; gap: 16rpx; width: 85%;">
+                  <input value="{{item.name}}" data-index="{{idx}}" catchtap="preventBubble" bindinput="onEditMajorNodeName" style="font-size: 30rpx; font-weight: bold; color: #1e293b; background: #f8fafc; padding: 8rpx 16rpx; border-radius: 8rpx; flex: 1; border: 1rpx solid #e2e8f0;" placeholder="节点名称" />
+                </view>
+                <view wx:else style="font-size: 30rpx; font-weight: bold; margin-bottom: 8rpx; color: {{item.status === 'current' ? 'var(--amber-600)' : (item.status === 'completed' ? 'var(--emerald-600)' : '#94a3b8')}};">
+                  {{item.name}}
+                </view>
+                
+                <view wx:if="{{!isEditingNodes}}" style="font-size: 22rpx; color: #64748b;">
+                  <text wx:if="{{item.status === 'completed'}}">实际开工 {{item.startDate}} · 实际完工 {{item.endDate}}</text>
+                  <text wx:elif="{{item.status === 'current'}}">进行中 · 预计完工 {{item.endDate}}</text>
+                  <text wx:else>未开始 · 预计开工 {{item.startDate || '-'}}</text>
+                </view>
+              </view>
+              <view style="display: flex; align-items: center; gap: 16rpx; margin-right: {{isEditingNodes ? '50rpx' : '0'}};">
+                <view style="transform: {{item.expanded ? 'rotate(180deg)' : 'rotate(0)'}}; transition: 0.3s; font-size: 24rpx; color: #cbd5e1;">▼</view>
+              </view>
             </view>
           </view>
 
@@ -119,21 +165,45 @@
                     bindtap="openSubNodePopup" data-major="{{idx}}" data-sub="{{subIdx}}"
                     style="background: #f8fafc; border-radius: 12rpx; padding: 20rpx 24rpx; position: relative;">
                 <!-- 删除按钮（裁剪模式） -->
-                <view wx:if="{{isEditingNodes && project.status === '未开工'}}" catchtap="removeSubNode" data-major="{{idx}}" data-sub="{{subIdx}}" style="position: absolute; top: -10rpx; right: -10rpx; width: 36rpx; height: 36rpx; background: var(--rose-600); color: #fff; border-radius: 18rpx; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: bold; z-index: 10;">×</view>
-                <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8rpx;">
-                  <text style="font-size: 28rpx; font-weight: 600; color: {{sub.status==='completed' ? '#1e293b' : '#475569'}};">{{sub.name}}</text>
-                  <view wx:if="{{sub.status==='completed'}}" style="font-size: 20rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 4rpx 14rpx; border-radius: 20rpx; font-weight: 600;">已完成</view>
-                  <view wx:else style="font-size: 20rpx; color: #94a3b8; background: #fff; padding: 4rpx 14rpx; border-radius: 20rpx; border: 1rpx solid #e2e8f0;">{{sub.duration}}天</view>
+                <view wx:if="{{isEditingNodes}}" catchtap="removeSubNode" data-major="{{idx}}" data-sub="{{subIdx}}" style="position: absolute; top: -10rpx; right: -10rpx; width: 36rpx; height: 36rpx; background: var(--rose-600); color: #fff; border-radius: 18rpx; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: bold; z-index: 10;">×</view>
+                <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: {{isEditingNodes ? '0' : '8rpx'}};">
+                  <!-- 编辑模式下的名字和工期输入框 -->
+                  <view wx:if="{{isEditingNodes}}" style="display: flex; align-items: center; gap: 12rpx; width: 100%; padding-right: 20rpx;">
+                    <input value="{{sub.name}}" data-major="{{idx}}" data-sub="{{subIdx}}" catchtap="preventBubble" bindinput="onEditSubNodeName" placeholder="工序名称" style="font-size: 28rpx; font-weight: 600; color: #1e293b; background: #fff; border: 1rpx solid #e2e8f0; border-radius: 8rpx; padding: 0 16rpx; flex: 1; height: 56rpx; min-height: 56rpx;" />
+                    <view style="display: flex; align-items: center; background: #fff; border: 1rpx solid #e2e8f0; border-radius: 8rpx; padding: 0 16rpx; height: 56rpx;">
+                      <input type="number" value="{{sub.duration}}" data-major="{{idx}}" data-sub="{{subIdx}}" catchtap="preventBubble" bindinput="onEditSubNodeDuration" style="font-size: 28rpx; font-weight: bold; color: #1e293b; width: 60rpx; text-align: center; height: 100%; min-height: 100%;" />
+                      <text style="font-size: 24rpx; color: #64748b; margin-left: 4rpx;">天</text>
+                    </view>
+                  </view>
+
+                  <!-- 非编辑模式下的正常显示 -->
+                  <block wx:else>
+                    <text style="font-size: 28rpx; font-weight: 600; color: {{sub.status==='completed' ? '#1e293b' : '#475569'}};">{{sub.name}}</text>
+                    <view wx:if="{{sub.status==='completed'}}" style="font-size: 20rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 4rpx 14rpx; border-radius: 20rpx; font-weight: 600;">已完成</view>
+                    <view wx:else style="font-size: 20rpx; color: #94a3b8; background: #fff; padding: 4rpx 14rpx; border-radius: 20rpx; border: 1rpx solid #e2e8f0;">{{sub.duration}}天</view>
+                  </block>
                 </view>
-                <text style="font-size: 22rpx; color: #94a3b8;">
+                
+                <!-- 非编辑模式下的日期显示 -->
+                <text wx:if="{{!isEditingNodes}}" style="font-size: 22rpx; color: #94a3b8;">
                   <text wx:if="{{sub.status==='completed'}}">实际：{{sub.actualStartDate || '-'}} ~ {{sub.actualEndDate || '-'}}</text>
                   <text wx:else>预计：{{sub.startDate || '-'}} ~ {{sub.endDate || '-'}}</text>
                 </text>
+              </view>
+              
+              <!-- 添加小工序按钮 -->
+              <view wx:if="{{isEditingNodes}}" bindtap="addSubNode" data-index="{{idx}}" style="margin-top: 10rpx; background: #fff; border: 2rpx dashed #cbd5e1; border-radius: 12rpx; padding: 16rpx; display: flex; justify-content: center; align-items: center; color: #64748b; font-size: 26rpx;">
+                <text style="font-weight: bold; margin-right: 8rpx; font-size: 32rpx; line-height: 1;">+</text> 添加小工序
               </view>
             </view>
           </view>
           
         </view>
+      </view>
+      
+      <!-- 添加大节点按钮 -->
+      <view wx:if="{{isEditingNodes}}" bindtap="addMajorNode" style="margin-top: 40rpx; background: #fff; border: 2rpx dashed var(--primary-400); border-radius: 16rpx; padding: 24rpx; display: flex; justify-content: center; align-items: center; color: var(--primary-600); font-size: 28rpx;">
+        <text style="font-weight: bold; margin-right: 12rpx; font-size: 36rpx; line-height: 1;">+</text> 添加大节点
       </view>
     </view>
   </view>
@@ -161,73 +231,86 @@
   </view>
 
   <!-- 子工序详情浮层 -->
-  <view wx:if="{{showSubNodePopup}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200; display: flex; align-items: flex-end;">
+  <view wx:if="{{showSubNodePopup}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200; display: flex; align-items: flex-end; justify-content: center;">
     <view bindtap="closeSubNodePopup" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);"></view>
-    <view style="position: relative; z-index: 1; width: 100%; background: #fff; border-radius: 32rpx 32rpx 0 0; padding: 40rpx 48rpx 72rpx; box-sizing: border-box;">
-      <view style="width: 72rpx; height: 8rpx; background: #e2e8f0; border-radius: 4rpx; margin: 0 auto 36rpx;"></view>
-
-      <!-- 工序名称 + 状态 -->
-      <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32rpx;">
-        <view style="font-size: 34rpx; font-weight: bold; color: #1e293b;">{{popupSub.name}}</view>
-        <view wx:if="{{popupSub.status === 'completed'}}" style="font-size: 22rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 8rpx 20rpx; border-radius: 20rpx; font-weight: 600;">已完成</view>
-        <view wx:else style="font-size: 22rpx; color: #94a3b8; background: #f1f5f9; padding: 8rpx 20rpx; border-radius: 20rpx;">待完成</view>
+    <view style="position: relative; z-index: 1; width: 100%; max-height: 85vh; background: #fff; border-radius: 32rpx 32rpx 0 0; box-sizing: border-box; display: flex; flex-direction: column;">
+      
+      <!-- 顶部固定区域：工序名称 + 状态标签 -->
+      <view style="display: flex; justify-content: space-between; align-items: center; padding: 48rpx 40rpx 24rpx;">
+        <view style="font-size: 36rpx; font-weight: bold; color: #1e293b;">{{popupSub.name}}</view>
+        <view wx:if="{{popupSub.status === 'completed'}}" style="font-size: 22rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 8rpx 24rpx; border-radius: 20rpx; font-weight: 600;">已完成</view>
+        <view wx:else style="font-size: 22rpx; color: #64748b; background: #f1f5f9; padding: 8rpx 24rpx; border-radius: 20rpx;">待完成</view>
       </view>
 
-      <!-- 时间 + 工期信息 -->
-      <view style="background: #f8fafc; border-radius: 16rpx; padding: 28rpx; margin-bottom: 32rpx;">
-        <view style="display: flex; justify-content: space-between; margin-bottom: 20rpx;">
-          <view>
-            <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 8rpx;">{{popupSub.status === 'completed' ? '实际开工' : '预计开工'}}</view>
-            <view style="font-size: 28rpx; font-weight: 600; color: #1e293b;">{{popupSub.status === 'completed' ? (popupSub.actualStartDate || '-') : (popupSub.startDate || '-')}}</view>
+      <!-- 中间可滚动区域 -->
+      <scroll-view scroll-y style="flex: 1; width: 100%;">
+        <view style="padding: 0 40rpx 40rpx; width: 100%; box-sizing: border-box;">
+          <!-- 时间与工期信息卡片 (带浅色背景) -->
+          <view style="background: #f8fafc; border-radius: 16rpx; padding: 32rpx; margin-bottom: 48rpx; display: flex; justify-content: space-between; align-items: center;">
+            <view style="display: flex; flex-direction: column; align-items: flex-start;">
+              <text style="font-size: 22rpx; color: #94a3b8; margin-bottom: 12rpx;">{{popupSub.status === 'completed' ? '实际开工' : '预计开工'}}</text>
+              <text style="font-size: 28rpx; font-weight: bold; color: #1e293b;">{{popupSub.status === 'completed' ? (popupSub.actualStartDate || '-') : (popupSub.startDate || '-')}}</text>
+            </view>
+            
+            <view style="display: flex; flex-direction: column; align-items: center;">
+              <text style="font-size: 22rpx; color: #94a3b8; margin-bottom: 12rpx;">工期</text>
+              <view style="display: flex; align-items: baseline;">
+                <text style="font-size: 30rpx; font-weight: bold; color: var(--amber-600);">{{popupSub.duration}}</text>
+                <text style="font-size: 22rpx; color: var(--amber-600); margin-left: 4rpx;">天</text>
+              </view>
+            </view>
+            
+            <view style="display: flex; flex-direction: column; align-items: flex-end;">
+              <text style="font-size: 22rpx; color: #94a3b8; margin-bottom: 12rpx;">{{popupSub.status === 'completed' ? '实际完工' : '预计完工'}}</text>
+              <text style="font-size: 28rpx; font-weight: bold; color: #1e293b;">{{popupSub.status === 'completed' ? (popupSub.actualEndDate || '-') : (popupSub.endDate || '-')}}</text>
+            </view>
           </view>
-          <view style="text-align: center;">
-            <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 8rpx;">工期</view>
-            <view style="font-size: 28rpx; font-weight: 600; color: var(--amber-600);">{{popupSub.duration}} 天</view>
-          </view>
-          <view style="text-align: right;">
-            <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 8rpx;">{{popupSub.status === 'completed' ? '实际完工' : '预计完工'}}</view>
-            <view style="font-size: 28rpx; font-weight: 600; color: #1e293b;">{{popupSub.status === 'completed' ? (popupSub.actualEndDate || '-') : (popupSub.endDate || '-')}}</view>
-          </view>
-        </view>
-        <!-- 已完成：显示验收人 -->
-        <view wx:if="{{popupSub.status === 'completed' && popupSub.acceptanceRecord}}" style="border-top: 1rpx solid #e8edf2; padding-top: 16rpx;">
-          <view style="font-size: 22rpx; color: #94a3b8;">验收人：{{popupSub.acceptanceRecord.inspector || '-'}} · {{popupSub.acceptanceRecord.createdAt || '-'}}</view>
-        </view>
-      </view>
 
-      <!-- 已完成：验收记录图片 -->
-      <view wx:if="{{popupSub.status === 'completed' && popupSub.acceptanceRecord && popupSub.acceptanceRecord.photos && popupSub.acceptanceRecord.photos.length > 0}}" style="margin-bottom: 32rpx;">
-        <view style="font-size: 24rpx; color: #64748b; margin-bottom: 16rpx; font-weight: 600;">施工影像</view>
-        <view style="display: flex; flex-wrap: wrap; gap: 12rpx;">
-          <image wx:for="{{popupSub.acceptanceRecord.photos}}" wx:key="url"
-            src="{{item.url || item}}" mode="aspectFill"
-            style="width: 180rpx; height: 180rpx; border-radius: 12rpx; border: 1rpx solid #e2e8f0;"
-            bindtap="previewAcceptancePhoto" data-index="{{index}}">
-          </image>
-        </view>
-        <view wx:if="{{popupSub.acceptanceRecord.remark}}" style="margin-top: 16rpx; font-size: 26rpx; color: #475569; line-height: 1.6;">{{popupSub.acceptanceRecord.remark}}</view>
-      </view>
+          <!-- 已完成：显示验收人 -->
+          <view wx:if="{{popupSub.status === 'completed' && popupSub.acceptanceRecord}}" style="margin-bottom: 32rpx;">
+            <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">验收人：{{popupSub.acceptanceRecord.inspector || '-'}}</view>
+            <view style="font-size: 22rpx; color: #94a3b8;">验收时间：{{popupSub.acceptanceRecord.createdAt || '-'}}</view>
+          </view>
 
-      <!-- 操作按钮：未完成才显示 -->
-      <view wx:if="{{popupSub.status !== 'completed'}}" style="display: flex; gap: 20rpx;">
-        <view wx:if="{{project.status !== '未开工'}}" bindtap="openSubNodeEdit" style="flex: 1; background: #f1f5f9; border-radius: 16rpx; padding: 28rpx 0; text-align: center; font-size: 28rpx; font-weight: 600; color: #475569;">编辑排期</view>
-        <view wx:if="{{popupMajorNode.status !== 'pending'}}" bindtap="openAcceptance" style="flex: 1; background: #1e293b; border-radius: 16rpx; padding: 28rpx 0; text-align: center; font-size: 28rpx; font-weight: 600; color: #fff;">上传影像</view>
+          <!-- 已完成：验收记录图片 -->
+          <view wx:if="{{popupSub.status === 'completed' && popupSub.acceptanceRecord && popupSub.acceptanceRecord.photos && popupSub.acceptanceRecord.photos.length > 0}}" style="margin-bottom: 32rpx; width: 100%; box-sizing: border-box;">
+            <view style="font-size: 26rpx; color: #334155; margin-bottom: 16rpx; font-weight: 600;">施工影像</view>
+            <view style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12rpx; width: 100%; box-sizing: border-box;">
+              <view wx:for="{{popupSub.acceptanceRecord.photos}}" wx:key="url" style="width: 100%; padding-bottom: 100%; position: relative;">
+                <image src="{{item.url || item}}" mode="aspectFill"
+                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 12rpx; border: 1rpx solid #e2e8f0; box-sizing: border-box;"
+                  bindtap="previewAcceptancePhoto" data-index="{{index}}">
+                </image>
+              </view>
+            </view>
+            <view wx:if="{{popupSub.acceptanceRecord.remark}}" style="margin-top: 16rpx; font-size: 26rpx; color: #475569; line-height: 1.6; word-break: break-all;">{{popupSub.acceptanceRecord.remark}}</view>
+          </view>
+        </view>
+      </scroll-view>
+
+      <!-- 底部固定区域：操作按钮组 -->
+      <view style="display: flex; gap: 24rpx; padding: 20rpx 40rpx 64rpx; background: #fff; border-top: 1rpx solid #f1f5f9;">
+        <view wx:if="{{project.status !== '未开工'}}" bindtap="openSubNodeEdit" style="flex: 1; background: #f1f5f9; border-radius: 16rpx; padding: 26rpx 0; text-align: center; font-size: 28rpx; font-weight: bold; color: #475569;">编辑排期</view>
+        <view wx:if="{{popupMajorNode.status !== 'pending'}}" bindtap="openAcceptance" style="flex: 1; background: #1e293b; border-radius: 16rpx; padding: 26rpx 0; text-align: center; font-size: 28rpx; font-weight: bold; color: #fff;">{{popupSub.status === 'completed' ? '修改记录' : '添加记录'}}</view>
       </view>
     </view>
   </view>
 
   <!-- 编辑排期弹窗 -->
-  <view wx:if="{{showSubNodeEdit}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 300; display: flex; align-items: center; justify-content: center;">
+  <view wx:if="{{showSubNodeEdit}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 300; display: flex; align-items: flex-end; justify-content: center;">
     <view bindtap="closeSubNodeEdit" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6);"></view>
-    <view style="position: relative; z-index: 1; width: 84%; background: #fff; border-radius: 24rpx; padding: 48rpx 40rpx;">
-      <view style="font-size: 32rpx; font-weight: bold; color: #1e293b; margin-bottom: 8rpx; text-align: center;">编辑排期</view>
-      <view style="font-size: 24rpx; color: #94a3b8; text-align: center; margin-bottom: 40rpx;">{{popupSub.name}}</view>
+    <view style="position: relative; z-index: 1; width: 100%; background: #fff; border-radius: 32rpx 32rpx 0 0; padding: 48rpx 40rpx 64rpx; box-sizing: border-box;">
+      <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; margin-bottom: 8rpx; text-align: left;">编辑排期</view>
+      <view style="font-size: 26rpx; color: #94a3b8; text-align: left; margin-bottom: 40rpx;">当前工序：{{popupSub.name}}</view>
 
       <!-- 开工日期 -->
       <view style="margin-bottom: 32rpx;">
         <view style="font-size: 26rpx; color: #334155; font-weight: 600; margin-bottom: 16rpx;">预计开工日期</view>
         <picker mode="date" value="{{editSubStartDate}}" bindchange="onEditSubStartDateChange">
-          <view style="padding: 28rpx 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 30rpx; color: #1e293b; font-weight: 500; border: 1rpx solid #e2e8f0;">{{editSubStartDate || '请选择日期'}}</view>
+          <view style="padding: 28rpx 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 30rpx; color: #1e293b; font-weight: 500; border: 1rpx solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <text>{{editSubStartDate || '请选择日期'}}</text>
+            <text style="color: #94a3b8; font-size: 24rpx;">▼</text>
+          </view>
         </picker>
       </view>
 
@@ -235,17 +318,20 @@
       <view style="margin-bottom: 40rpx;">
         <view style="font-size: 26rpx; color: #334155; font-weight: 600; margin-bottom: 16rpx;">预计完工日期</view>
         <picker mode="date" value="{{editSubEndDate}}" bindchange="onEditSubEndDateChange">
-          <view style="padding: 28rpx 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 30rpx; color: #1e293b; font-weight: 500; border: 1rpx solid #e2e8f0;">{{editSubEndDate || '请选择日期'}}</view>
+          <view style="padding: 28rpx 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 30rpx; color: #1e293b; font-weight: 500; border: 1rpx solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <text>{{editSubEndDate || '请选择日期'}}</text>
+            <text style="color: #94a3b8; font-size: 24rpx;">▼</text>
+          </view>
         </picker>
       </view>
 
-      <view style="font-size: 22rpx; color: var(--amber-600); background: var(--amber-50); padding: 16rpx 20rpx; border-radius: 8rpx; margin-bottom: 36rpx; line-height: 1.6;">
+      <view style="font-size: 24rpx; color: var(--amber-600); background: var(--amber-50); padding: 20rpx 24rpx; border-radius: 12rpx; margin-bottom: 48rpx; line-height: 1.6; border: 1rpx solid rgba(245, 158, 11, 0.2);">
         确认后，此工序之后的所有工序将自动顺延（跳过周末及法定节假日）
       </view>
 
-      <view style="display: flex; gap: 20rpx;">
-        <button bindtap="closeSubNodeEdit" style="flex: 1; font-size: 28rpx; background: #f1f5f9; color: #475569; border-radius: 12rpx; border: none; padding: 24rpx 0; margin: 0;">取消</button>
-        <button bindtap="confirmSubNodeEdit" style="flex: 1; font-size: 28rpx; background: #1e293b; color: #fff; border-radius: 12rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: bold;">确认保存</button>
+      <view style="display: flex; gap: 24rpx;">
+        <view bindtap="closeSubNodeEdit" style="flex: 1; font-size: 30rpx; background: #f1f5f9; color: #475569; border-radius: 16rpx; text-align: center; padding: 28rpx 0; font-weight: bold;">取消</view>
+        <view bindtap="confirmSubNodeEdit" style="flex: 1; font-size: 30rpx; background: #1e293b; color: #fff; border-radius: 16rpx; text-align: center; padding: 28rpx 0; font-weight: bold;">确认保存</view>
       </view>
     </view>
   </view>
@@ -270,12 +356,12 @@
         <!-- 现场说明 -->
         <view style="margin-bottom: 32rpx;">
           <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">现场说明</view>
-          <textarea placeholder="填写施工情况说明（选填）..." bindinput="onAcceptanceRemarkInput" value="{{acceptanceRemark}}" style="width: 100%; height: 200rpx; background: #f8fafc; padding: 24rpx; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #1e293b;"></textarea>
+          <textarea placeholder="填写施工情况说明..." bindinput="onAcceptanceRemarkInput" value="{{acceptanceRemark}}" style="width: 100%; height: 200rpx; background: #f8fafc; padding: 24rpx; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #1e293b;"></textarea>
         </view>
 
         <!-- 现场影像 -->
         <view style="margin-bottom: 40rpx;">
-          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 16rpx;">现场影像 <text style="color: var(--rose-600);">*</text></view>
+          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 16rpx;">现场影像 <text style="color: #cbd5e1; font-size: 22rpx; font-weight: normal; margin-left: 8rpx;">(选填)</text></view>
           <view style="display: flex; flex-wrap: wrap; gap: 16rpx;">
             <view wx:for="{{acceptancePhotos}}" wx:key="url" style="position: relative; width: 200rpx; height: 200rpx;">
               <image wx:if="{{item.type === 'image' || !item.type}}" src="{{item.url || item}}" mode="aspectFill" style="width: 100%; height: 100%; border-radius: 12rpx; border: 1rpx solid #e2e8f0;" bindtap="previewAcceptancePhoto" data-index="{{index}}"></image>
@@ -321,27 +407,7 @@
   </view>
 
 
-  <!-- 资料弹窗 -->
-  <view class="modal-mask" wx:if="{{showFilesModal}}">
-    <view class="modal-content" style="background: #fff; width: 90%; max-height: 80vh; border-radius: 20rpx; padding: 30rpx; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 100; overflow-y: auto;">
-      <view style="font-size: 32rpx; font-weight: bold; margin-bottom: 30rpx; display: flex; justify-content: space-between; align-items: center;">
-        <text>项目资料/图纸</text>
-        <view bindtap="uploadProjectFile" style="font-size: 24rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 8rpx 20rpx; border-radius: 30rpx;">+ 上传资料</view>
-      </view>
-      <view wx:if="{{project.files && project.files.length > 0}}">
-        <view wx:for="{{project.files}}" wx:key="url" style="display: flex; justify-content: space-between; align-items: center; padding: 20rpx; background: #f8fafc; border-radius: 12rpx; margin-bottom: 16rpx;" bindtap="previewFile" data-url="{{item.url}}" data-type="{{item.type}}">
-          <view style="display: flex; flex-direction: column;">
-            <text style="font-size: 26rpx; color: #334155; font-weight: 500;">{{item.name || '附件文件'}}</text>
-            <text style="font-size: 22rpx; color: #94a3b8; margin-top: 8rpx;">{{item.time}} | {{item.uploader}}</text>
-          </view>
-          <text style="font-size: 24rpx; color: #4a403a; background: #fff; padding: 6rpx 16rpx; border-radius: 8rpx; border: 1rpx solid #e2e8f0;">查看</text>
-        </view>
-      </view>
-      <view wx:else style="padding: 60rpx 0; text-align: center; color: #94a3b8; font-size: 26rpx;">暂无项目资料</view>
-      <button bindtap="closeFiles" style="margin-top: 30rpx; background: #f1f5f9; color: #475569; font-size: 28rpx;">关闭</button>
-    </view>
-    <view class="modal-bg" bindtap="closeFiles" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 99;"></view>
-  </view>
+  <!-- 资料弹窗已被移除，使用独立页面替代 -->
 
   <!-- 延误停工弹窗 -->
   <view class="modal-mask" wx:if="{{showDelayModal}}">

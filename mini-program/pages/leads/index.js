@@ -49,6 +49,31 @@ Page({
     selectedSources: []
   },
 
+  onLoad() {
+    const app = getApp();
+    const userInfo = wx.getStorageSync('userInfo');
+    const isAdmin = userInfo && userInfo.role === 'admin';
+
+    if (app.globalData && app.globalData.leadFilters) {
+      const f = app.globalData.leadFilters;
+      this.setData({
+        timeFilterIndex: f.timeFilterIndex !== undefined ? f.timeFilterIndex : 3,
+        timeFilterLabel: f.timeFilterLabel || '今年',
+        filterScope: f.filterScope || (isAdmin ? '全部线索' : '与我相关'),
+        filterEmployees: f.filterEmployees || this.data.filterEmployees,
+        selectedEmployeeIds: f.selectedEmployeeIds || [],
+        filterRatings: f.filterRatings || this.data.filterRatings,
+        selectedRatings: f.selectedRatings || [],
+        filterStatuses: f.filterStatuses || this.data.filterStatuses,
+        selectedStatuses: f.selectedStatuses || [],
+        filterSources: f.filterSources || this.data.filterSources,
+        selectedSources: f.selectedSources || []
+      });
+    } else {
+      this.setData({ filterScope: isAdmin ? '全部线索' : '与我相关' });
+    }
+  },
+
   onShow() {
     const userInfo = wx.getStorageSync('userInfo');
     if (!userInfo) {
@@ -259,9 +284,9 @@ Page({
         }
         return l;
       }).sort((a, b) => {
-        const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dbTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dbTime - da;
+        const timeA = a && a.createdAt ? String(a.createdAt) : '';
+        const timeB = b && b.createdAt ? String(b.createdAt) : '';
+        return timeB.localeCompare(timeA);
       });
       
       this.setData({ allLeads: list }, () => {
@@ -436,6 +461,7 @@ Page({
       timeFilterIndex: this.data.timeFilterIndex,
       timeFilterLabel: this.data.timeFilterLabel,
       filterScope: this.data.filterScope,
+      filterEmployees: this.data.filterEmployees,
       selectedEmployeeIds: this.data.selectedEmployeeIds,
       filterRatings: this.data.filterRatings,
       selectedRatings: this.data.selectedRatings,

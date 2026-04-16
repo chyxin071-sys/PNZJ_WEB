@@ -36,9 +36,9 @@ Page({
             return q;
           });
           const sorted = formattedData.sort((a, b) => {
-            const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return tb - ta;
+            const timeA = a && a.createdAt ? String(a.createdAt) : '';
+            const timeB = b && b.createdAt ? String(b.createdAt) : '';
+            return timeB.localeCompare(timeA);
           });
           this.setData({ quotes: sorted, loading: false }, () => {
             this.filterData();

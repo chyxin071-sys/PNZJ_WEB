@@ -44,11 +44,15 @@ Page({
     }
     // 恢复筛选状态
     const app = getApp();
+    const userInfo = wx.getStorageSync('userInfo');
+    const isAdmin = userInfo && userInfo.role === 'admin';
+
     if (app.globalData && app.globalData.projectFilters) {
       const f = app.globalData.projectFilters;
       this.setData({
         timeFilterIndex: f.timeFilterIndex !== undefined ? f.timeFilterIndex : 0,
         timeFilterLabel: f.timeFilterLabel || '全部时间',
+        filterScope: f.filterScope || (isAdmin ? '全部工地' : '与我相关'),
         filterEmployees: f.filterEmployees || this.data.filterEmployees,
         selectedEmployeeIds: f.selectedEmployeeIds || [],
         filterStatuses: f.filterStatuses || this.data.filterStatuses,
@@ -56,6 +60,10 @@ Page({
         filterStartDateStart: f.filterStartDateStart || '',
         filterStartDateEnd: f.filterStartDateEnd || ''
       });
+    } else {
+      if (isAdmin) {
+        this.setData({ filterScope: '全部工地' });
+      }
     }
   },
   onShow() {
@@ -114,30 +122,46 @@ Page({
 
     // 2. 获取所有工地
     db.collection('projects').get().then(res => {
-      wx.hideNavigationBarLoading();
-      wx.stopPullDownRefresh();
+      const projectsData = res.data;
       
-      const now = new Date();
-      now.setHours(0,0,0,0);
-
-      const userInfo = wx.getStorageSync('userInfo');
-      const myName = userInfo ? userInfo.name : '';
-      const isAdmin = userInfo && userInfo.role === 'admin';
-      
-      const list = res.data.sort((a, b) => {
-        const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dbTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dbTime - da;
-      }).map(p => {
-        const isRelated = isAdmin || p.manager === myName || p.sales === myName || p.designer === myName || p.creatorName === myName;
+      // 3. 获取所有客户数据，用于补全工地缺少的电话和编号
+      db.collection('leads').get().then(leadsRes => {
+        wx.hideNavigationBarLoading();
+        wx.stopPullDownRefresh();
         
-        if (!isRelated) {
-          p._isMasked = true;
-          if (p.customer) p.customer = maskName(p.customer);
-          if (p.address) p.address = maskAddress(p.address);
-        } else {
-          p._isMasked = false;
-        }
+        const leadsMap = {};
+        leadsRes.data.forEach(l => leadsMap[l._id] = l);
+
+        const now = new Date();
+        now.setHours(0,0,0,0);
+
+        const userInfo = wx.getStorageSync('userInfo');
+        const myName = userInfo ? userInfo.name : '';
+        const isAdmin = userInfo && userInfo.role === 'admin';
+        
+        const list = projectsData.sort((a, b) => {
+          const timeA = a && a.createdAt ? String(a.createdAt) : '';
+          const timeB = b && b.createdAt ? String(b.createdAt) : '';
+          return timeB.localeCompare(timeA);
+        }).map(p => {
+          // 补全缺失的客户电话和编号
+          if (!p.phone || !p.customerNo) {
+            const lead = leadsMap[p.leadId];
+            if (lead) {
+              p.phone = p.phone || lead.phone;
+              p.customerNo = p.customerNo || lead.customerNo || lead._id;
+            }
+          }
+
+          const isRelated = isAdmin || p.manager === myName || p.sales === myName || p.designer === myName || p.creatorName === myName;
+          
+          if (!isRelated) {
+            p._isMasked = true;
+            if (p.customer) p.customer = maskName(p.customer);
+            if (p.address) p.address = maskAddress(p.address);
+          } else {
+            p._isMasked = false;
+          }
 
         // 模拟数据填充，对齐网页端功能
         const nodesList = ["开工", "水电", "木工", "瓦工", "墙面", "定制", "软装", "交付"];
@@ -183,10 +207,15 @@ Page({
           daysElapsed: daysElapsed > 0 ? daysElapsed : 0,
           expectedEndDate
         };
-      });
-      
-      this.setData({ allProjects: list }, () => {
-        this.filterProjects();
+        });
+        
+        this.setData({ allProjects: list }, () => {
+          this.filterProjects();
+        });
+      }).catch(err => {
+        wx.hideNavigationBarLoading();
+        wx.stopPullDownRefresh();
+        console.error('获取客户数据失败', err);
       });
     }).catch(err => {
       wx.hideNavigationBarLoading();
@@ -443,7 +472,7 @@ Page({
 
   // ===================== 新建工地逻辑 =====================
   createProject() {
-    wx.showToast({ title: '正在开发中...', icon: 'none' });
+    wx.navigateTo({ url: '/pages/projectForm/index' });
   },
 
   goToDetail(e) {

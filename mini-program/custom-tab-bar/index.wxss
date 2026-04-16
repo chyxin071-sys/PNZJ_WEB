@@ -9,7 +9,7 @@
 
 /* 1. Todo: Check square */
 .icon-todo { width: 36rpx; height: 36rpx; border: 4rpx solid currentColor; border-radius: 10rpx; position: relative; }
-.icon-todo::after { content: ''; position: absolute; top: 2rpx; left: 10rpx; width: 8rpx; height: 16rpx; border: 4rpx solid currentColor; border-top: none; border-left: none; transform: rotate(45deg); box-sizing: border-box; }
+.icon-todo::after { content: ''; position: absolute; top: 4rpx; left: 9rpx; width: 10rpx; height: 18rpx; border: 4rpx solid currentColor; border-top: none; border-left: none; transform: rotate(45deg); box-sizing: border-box; }
 
 /* 2. Leads: Person Outline */
 .icon-leads { width: 36rpx; height: 36rpx; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }

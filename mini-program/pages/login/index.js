@@ -83,6 +83,11 @@ Page({
   doLoginSuccess(userInfo) {
     wx.hideLoading();
     wx.setStorageSync('userInfo', userInfo);
+    
+    // 每次重新登录时清空全局状态，防止上一个账号的筛选条件残留
+    const app = getApp();
+    if (app) app.globalData = {};
+
     wx.showToast({ title: '登录成功', icon: 'success' });
 
     setTimeout(() => {

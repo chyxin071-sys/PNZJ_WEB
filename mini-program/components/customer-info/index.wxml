@@ -1,8 +1,8 @@
 <view class="customer-info" style="{{customStyle}}">
   <view class="top-row">
     <text class="name">{{name}}</text>
-    <view class="tag" wx:if="{{customerNo}}">
-      <text class="tag-prefix">NO.</text>{{customerNo}}
+    <view class="tag" wx:if="{{displayNo}}">
+      <text class="tag-prefix">NO.</text>{{displayNo}}
     </view>
   </view>
   <view class="bottom-row">
