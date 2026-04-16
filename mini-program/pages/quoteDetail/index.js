@@ -38,8 +38,35 @@ Page({
     wx.showLoading({ title: '加载中' });
     const db = wx.cloud.database();
     db.collection('quotes').doc(id).get().then(res => {
-      this.setData({ quote: res.data, loading: false });
-      this.processGroupedItems(res.data.items || []);
+      let quote = res.data;
+      // 兼容老数据：如果没有面积等字段但有客户ID，尝试获取
+      if (!quote.area && quote.leadId) {
+        db.collection('leads').doc(quote.leadId).get().then(leadRes => {
+          const lead = leadRes.data;
+          this.setData({
+            'quote.area': lead.area,
+            'quote.requirementType': lead.requirementType,
+            'quote.budget': lead.budget
+          });
+        }).catch(()=>{});
+      }
+      if (quote.discount === undefined) quote.discount = 0;
+      if (quote.final === undefined) quote.final = (quote.total || 0) - quote.discount;
+
+      if (quote.updatedAt) {
+        const d = new Date(quote.updatedAt);
+        if (!isNaN(d.getTime())) {
+          quote.displayTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+      } else if (quote.createdAt) {
+        const d = new Date(quote.createdAt);
+        if (!isNaN(d.getTime())) {
+          quote.displayTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+      }
+
+      this.setData({ quote, loading: false });
+      this.processGroupedItems(quote.items || []);
       wx.hideLoading();
     }).catch(() => {
       wx.hideLoading();
@@ -58,12 +85,18 @@ Page({
         customer: lead.name,
         phone: lead.phone,
         address: lead.address,
+        area: lead.area,
+        requirementType: lead.requirementType,
+        budget: lead.budget,
         sales: lead.sales,
         designer: lead.designer,
         status: '初步',
         total: 0,
+        discount: 0,
         final: 0,
         items: [],
+        version: 1,
+        modifier: wx.getStorageSync('userInfo')?.name || '未知',
         createdAt: db.serverDate(),
         updatedAt: db.serverDate(),
       };
@@ -72,7 +105,7 @@ Page({
         newQuote._id = addRes._id;
         this.setData({ id: addRes._id, quote: newQuote, loading: false });
         wx.hideLoading();
-        wx.showToast({ title: '报价单已生成', icon: 'success' });
+        // 取消提示，直接让用户停留在空白报价单编辑页面
       }).catch(() => {
         wx.hideLoading();
         wx.showToast({ title: '生成失败', icon: 'none' });
@@ -131,27 +164,165 @@ Page({
     this.saveQuoteData(items);
   },
 
-  saveQuoteData(items) {
-    // 重新计算总价
-    const total = items.reduce((sum, item) => sum + (item.total || 0), 0);
+  onQtyInput(e) {
+    const idx = e.currentTarget.dataset.index;
+    let val = e.detail.value;
     
-    wx.showLoading({ title: '保存中', mask: true });
-    const db = wx.cloud.database();
-    db.collection('quotes').doc(this.data.id).update({
-      data: { items, total, updatedAt: db.serverDate() }
-    }).then(() => {
-      this.setData({ 'quote.items': items, 'quote.total': total });
-      this.processGroupedItems(items);
-      wx.hideLoading();
-    }).catch(() => {
-      wx.hideLoading();
-      wx.showToast({ title: '保存失败', icon: 'none' });
+    // Allow empty string temporarily while typing
+    if (val === '') {
+      return; 
+    }
+    
+    let newQty = parseFloat(val);
+    if (isNaN(newQty)) return;
+    
+    const items = this.data.quote.items || [];
+    const item = items[idx];
+    
+    item.quantity = newQty;
+    item.total = item.price * newQty;
+    this.saveQuoteData(items);
+  },
+
+  onQtyBlur(e) {
+    const idx = e.currentTarget.dataset.index;
+    let val = e.detail.value;
+    const items = this.data.quote.items || [];
+    const item = items[idx];
+    
+    let newQty = parseFloat(val);
+    if (isNaN(newQty) || newQty < 1) {
+      newQty = 1; // Fallback to 1 if invalid or < 1
+    }
+    
+    item.quantity = newQty;
+    item.total = item.price * newQty;
+    this.saveQuoteData(items);
+  },
+
+  onStatusChange(e) {
+    const statuses = ['初步', '确认版', '最终版'];
+    const newStatus = statuses[e.detail.value];
+    this.setData({ 'quote.status': newStatus });
+    this.saveQuoteData(this.data.quote.items || []);
+  },
+
+  onDiscountBlur(e) {
+    this.saveQuoteData(this.data.quote.items || []);
+  },
+
+  onDiscountInput(e) {
+    let val = e.detail.value;
+    if (val === '') {
+      this.setData({ 'quote.discount': 0, 'quote.final': this.data.quote.total });
+      return;
+    }
+    const discount = parseFloat(val);
+    if (!isNaN(discount)) {
+      const final = Math.max(0, this.data.quote.total - discount);
+      this.setData({ 'quote.discount': discount, 'quote.final': final });
+    }
+  },
+
+  saveQuoteData(items) {
+    const total = items.reduce((sum, item) => sum + (item.total || 0), 0);
+    const discount = parseFloat(this.data.quote.discount) || 0;
+    const final = Math.max(0, total - discount);
+    const status = this.data.quote.status || '初步';
+    
+    this.setData({ 
+      'quote.items': items, 
+      'quote.total': total, 
+      'quote.discount': discount, 
+      'quote.final': final, 
+      'quote.status': status 
     });
+    this.processGroupedItems(items);
   },
 
   saveQuote() {
-    wx.showToast({ title: '保存成功', icon: 'success' });
-    setTimeout(() => wx.navigateBack(), 1500);
+    const { quote, id } = this.data;
+    const userInfo = wx.getStorageSync('userInfo');
+    const modifierName = userInfo ? (userInfo.name || '未知') : '未知';
+    const db = wx.cloud.database();
+    
+    wx.showModal({
+      title: '保存报价单',
+      content: '请选择保存方式',
+      cancelText: '覆盖当前',
+      confirmText: '存为新版',
+      confirmColor: '#992933',
+      success: (res) => {
+        wx.showLoading({ title: '保存中', mask: true });
+        
+        const updateData = {
+          items: quote.items || [],
+          total: quote.total || 0,
+          discount: quote.discount || 0,
+          final: quote.final || 0,
+          status: quote.status || '初步',
+          modifier: modifierName,
+          updatedAt: db.serverDate()
+        };
+
+        if (res.confirm) {
+          // 存为新版
+          const newQuote = {
+            ...quote,
+            ...updateData,
+            createdAt: db.serverDate(),
+            version: (quote.version || 1) + 1
+          };
+          delete newQuote._id;
+          delete newQuote._openid;
+          
+          db.collection('quotes').add({ data: newQuote }).then(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '已存为新版本', icon: 'success' });
+            setTimeout(() => wx.navigateBack(), 1500);
+          }).catch(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '保存失败', icon: 'none' });
+          });
+        } else if (res.cancel) {
+          // 覆盖当前
+          db.collection('quotes').doc(id).update({
+            data: updateData
+          }).then(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '覆盖保存成功', icon: 'success' });
+            setTimeout(() => wx.navigateBack(), 1500);
+          }).catch(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '保存失败', icon: 'none' });
+          });
+        }
+      }
+    });
+  },
+
+  deleteQuote() {
+    wx.showModal({
+      title: '删除报价单',
+      content: '确定要永久删除这份报价单吗？此操作不可恢复。',
+      confirmColor: '#992933',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中', mask: true });
+          const db = wx.cloud.database();
+          db.collection('quotes').doc(this.data.id).remove().then(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '删除成功', icon: 'success' });
+            setTimeout(() => {
+              wx.navigateBack();
+            }, 1500);
+          }).catch(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '删除失败', icon: 'none' });
+          });
+        }
+      }
+    });
   },
 
   openCustomModal() {
@@ -198,5 +369,99 @@ Page({
     
     this.saveQuoteData(items);
     this.closeCustomModal();
+  },
+
+  openHistoryModal() {
+    wx.showLoading({ title: '加载历史版本' });
+    const db = wx.cloud.database();
+    db.collection('quotes').where({
+      leadId: this.data.quote.leadId
+    }).orderBy('version', 'desc').get().then(res => {
+      const historyQuotes = res.data.map(q => {
+        let fmt = '最近';
+        if (q.updatedAt) {
+          const d = new Date(q.updatedAt);
+          fmt = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+        return { ...q, slideOffset: 0, _updatedAtFormatted: fmt };
+      });
+      this.setData({ showHistoryModal: true, historyQuotes });
+      wx.hideLoading();
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '加载失败', icon: 'none' });
+    });
+  },
+
+  closeHistoryModal() {
+    this.setData({ showHistoryModal: false });
+  },
+
+  onHistoryTouchStart(e) {
+    if (e.touches.length === 1) {
+      this.setData({
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY
+      });
+    }
+  },
+
+  onHistoryTouchMove(e) {
+    if (e.touches.length === 1) {
+      const moveX = e.touches[0].clientX;
+      const moveY = e.touches[0].clientY;
+      const disX = this.data.startX - moveX;
+      const disY = this.data.startY - moveY;
+      
+      // if scrolling vertically, do not slide
+      if (Math.abs(disY) > Math.abs(disX)) return;
+      
+      const index = e.currentTarget.dataset.index;
+      const historyQuotes = this.data.historyQuotes;
+      
+      if (disX > 20) {
+        historyQuotes[index].slideOffset = -280; // show actions (2 buttons * 140rpx)
+      } else if (disX < -20) {
+        historyQuotes[index].slideOffset = 0; // hide actions
+      }
+      this.setData({ historyQuotes });
+    }
+  },
+
+  switchQuote(e) {
+    const id = e.currentTarget.dataset.id;
+    this.setData({ showHistoryModal: false });
+    wx.redirectTo({ url: `/pages/quoteDetail/index?id=${id}` });
+  },
+
+  deleteHistoryQuote(e) {
+    const id = e.currentTarget.dataset.id;
+    const index = e.currentTarget.dataset.index;
+    
+    wx.showModal({
+      title: '删除版本',
+      content: '确定要永久删除这个历史版本吗？',
+      confirmColor: '#992933',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中' });
+          const db = wx.cloud.database();
+          db.collection('quotes').doc(id).remove().then(() => {
+            wx.hideLoading();
+            const historyQuotes = this.data.historyQuotes;
+            historyQuotes.splice(index, 1);
+            this.setData({ historyQuotes });
+            wx.showToast({ title: '删除成功', icon: 'success' });
+            
+            if (id === this.data.id) {
+              setTimeout(() => { wx.navigateBack(); }, 1500);
+            }
+          }).catch(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '删除失败', icon: 'none' });
+          });
+        }
+      }
+    });
   }
 });

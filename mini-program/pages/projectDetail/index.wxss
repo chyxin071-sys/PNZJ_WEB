@@ -23,9 +23,9 @@
   font-weight: 600;
   color: #1a1a1a;
 }
-.badge-green { background: #e5f6e8; color: #10b981; }
-.badge-yellow { background: #fffbeb; color: #f59e0b; }
-.badge-red { background: #fef2f2; color: #ef4444; }
+.badge-green { background: var(--emerald-50); color: var(--emerald-600); }
+.badge-yellow { background: #fffbeb; color: var(--amber-600); }
+.badge-red { background: var(--rose-50); color: var(--rose-600); }
 .status-badge {
   font-size: 24rpx;
   padding: 4rpx 16rpx;
@@ -78,7 +78,7 @@
 }
 .days-badge {
   font-size: 22rpx;
-  color: #f59e0b;
+  color: var(--amber-600);
   background: #fffbeb;
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
@@ -104,7 +104,7 @@
   z-index: 1;
 }
 .node-line.active {
-  background: #10b981;
+  background: var(--emerald-600);
 }
 .node-circle {
   width: 40rpx;
@@ -122,13 +122,13 @@
   margin-right: 20rpx;
 }
 .node-circle.completed {
-  background: #10b981;
+  background: var(--emerald-600);
   color: #fff;
 }
 .node-circle.current {
-  background: #f59e0b;
+  background: var(--amber-600);
   color: #fff;
-  box-shadow: 0 0 0 6rpx #fef3c7;
+  box-shadow: 0 0 0 6rpx var(--amber-50);
 }
 .node-info {
   display: flex;
@@ -140,7 +140,7 @@
 }
 .node-name.current-text {
   font-weight: bold;
-  color: #f59e0b;
+  color: var(--amber-600);
 }
 .node-status {
   font-size: 22rpx;
@@ -160,3 +160,4 @@
   font-size: 30rpx;
   font-weight: bold;
 }
+

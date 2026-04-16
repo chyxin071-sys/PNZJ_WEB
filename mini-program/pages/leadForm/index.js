@@ -173,6 +173,38 @@ Page({
         const userInfo = wx.getStorageSync('userInfo');
         const operatorName = userInfo.name || '未知人员';
         
+        // --- 同步更新关联的报价单和工地数据 ---
+        const syncData = {
+          customer: d.name,
+          phone: d.phone,
+          address: d.address,
+          sales: d.sales,
+          designer: d.designer,
+          area: d.area,
+          budget: d.budget,
+          requirementType: d.requirementType
+        };
+        
+        // 微信小程序云开发不支持直接通过 where update 更新多条记录的 API 调用（除非通过云函数）
+        // 在客户端直接调用需要循环，或者尽量通过云函数。这里为了快速实现，我们先查询再循环更新
+        db.collection('quotes').where({ leadId: this.data.id }).get().then(res => {
+          res.data.forEach(q => {
+            db.collection('quotes').doc(q._id).update({ data: syncData });
+          });
+        });
+        
+        db.collection('projects').where({ leadId: this.data.id }).get().then(res => {
+          res.data.forEach(p => {
+            db.collection('projects').doc(p._id).update({ 
+              data: {
+                address: d.address,
+                sales: d.sales,
+                designer: d.designer
+              } 
+            });
+          });
+        });
+
         const notifyUsers = new Set();
         if (d.sales && d.sales !== operatorName) notifyUsers.add(d.sales);
         if (d.designer && d.designer !== operatorName) notifyUsers.add(d.designer);
@@ -184,6 +216,7 @@ Page({
               title: '客户线索已更新',
               content: `${operatorName} 更新了客户【${d.name}】的资料。`,
               targetUser: userName,
+              senderName: operatorName,
               isRead: false,
               createTime: db.serverDate(),
               link: `/pages/leadDetail/index?id=${this.data.id}`
@@ -198,6 +231,7 @@ Page({
               title: '客户线索已更新',
               content: `${operatorName} 更新了客户【${d.name}】的资料。`,
               targetUser: 'admin',
+              senderName: operatorName,
               isRead: false,
               createTime: db.serverDate(),
               link: `/pages/leadDetail/index?id=${this.data.id}`

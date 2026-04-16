@@ -19,7 +19,7 @@ page { background: #f5f4f2; }
 .search-wrap input { flex: 1; font-size: 28rpx; color: var(--primary-900); width: 100%; }
 .ph { color: var(--primary-400); }
 
-/* 列表区 */
+/* 列表�?*/
 .list-scroll { flex: 1; overflow-y: hidden; }
 .employee-card { margin: 0 40rpx 24rpx; background: #fff; border-radius: 24rpx; padding: 32rpx; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4rpx 16rpx rgba(74, 64, 58, 0.04); }
 
@@ -28,8 +28,8 @@ page { background: #f5f4f2; }
 /* 头像颜色映射 */
 .avatar.admin { background: #faf5ff; color: #7e22ce; border: 2rpx solid #f3e8ff; }
 .avatar.sales { background: #eff6ff; color: #1d4ed8; border: 2rpx solid #dbeafe; }
-.avatar.designer { background: #ecfdf5; color: #047857; border: 2rpx solid #d1fae5; }
-.avatar.manager { background: #fffbeb; color: #b45309; border: 2rpx solid #fef3c7; }
+.avatar.designer { background: var(--emerald-50); color: var(--emerald-600); border: 2rpx solid var(--emerald-100); }
+.avatar.manager { background: #fffbeb; color: var(--amber-600); border: 2rpx solid var(--amber-50); }
 
 .info { flex: 1; display: flex; flex-direction: column; gap: 12rpx; }
 .name-row { display: flex; align-items: center; gap: 12rpx; margin-bottom: 8rpx; }
@@ -39,11 +39,11 @@ page { background: #f5f4f2; }
 .role-badge { padding: 4rpx 16rpx; border-radius: 8rpx; font-size: 22rpx; font-weight: bold; }
 .role-admin { background: #faf5ff; color: #7e22ce; }
 .role-sales { background: #eff6ff; color: #1d4ed8; }
-.role-designer { background: #ecfdf5; color: #047857; }
-.role-manager { background: #fffbeb; color: #b45309; }
+.role-designer { background: var(--emerald-50); color: var(--emerald-600); }
+.role-manager { background: #fffbeb; color: var(--amber-600); }
 
 .status-badge { padding: 4rpx 12rpx; border-radius: 8rpx; font-size: 20rpx; font-weight: bold; border: 1rpx solid transparent; }
-.status-badge.active { background: #ecfdf5; color: #059669; border-color: #a7f3d0; }
+.status-badge.active { background: var(--emerald-50); color: var(--emerald-600); border-color: var(--emerald-100); }
 .status-badge.inactive { background: #f1f5f9; color: #64748b; border-color: #cbd5e1; }
 
 .meta-row { display: flex; align-items: center; font-size: 24rpx; color: var(--primary-600); font-family: monospace; }
@@ -61,12 +61,14 @@ page { background: #f5f4f2; }
 
 /* 弹窗样式 */
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; }
-.modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; display: flex; flex-direction: column; background: #fff; border-radius: 24rpx; z-index: 1000; overflow: hidden; box-shadow: 0 10rpx 40rpx rgba(0,0,0,0.1); }
+.modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; height: 75vh; display: flex; flex-direction: column; background: #fff; border-radius: 24rpx; z-index: 1000; overflow: hidden; box-shadow: 0 10rpx 40rpx rgba(0,0,0,0.1); }
 .modal-header { padding: 32rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; font-size: 32rpx; font-weight: bold; color: var(--primary-900); flex-shrink: 0; }
 .btn-close { font-size: 28rpx; color: #94a3b8; font-weight: normal; padding: 10rpx; margin: -10rpx; }
-.modal-body { padding: 40rpx; padding-bottom: 160rpx; overflow-y: auto; flex: 1; }
+.modal-scroll { flex: 1; height: 100%; overflow: hidden; }
+.modal-body { padding: 40rpx; padding-bottom: 120rpx; }
 .form-group { margin-bottom: 32rpx; }
 .label { display: block; font-size: 28rpx; font-weight: bold; color: var(--primary-900); margin-bottom: 16rpx; }
 .input, .picker-view { background: #f8fafc; border-radius: 16rpx; padding: 0 24rpx; height: 88rpx; border: 2rpx solid #e2e8f0; font-size: 30rpx; color: var(--primary-900); display: flex; align-items: center; justify-content: space-between; }
 .arrow-down { width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 10rpx solid #94a3b8; }
 .btn-save { background: var(--primary-900); color: #fff; text-align: center; padding: 24rpx 0; border-radius: 16rpx; font-size: 32rpx; font-weight: bold; margin-top: 48rpx; }
+

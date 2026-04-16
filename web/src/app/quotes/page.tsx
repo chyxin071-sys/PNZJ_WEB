@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Search, Filter, MoreHorizontal, FileEdit, FileCheck, FileX, Printer, Calculator, PackagePlus, X, ArrowRight, Building2, SlidersHorizontal, ChevronDown } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
+import CustomerInfo from "../../components/CustomerInfo";
 
 export default function QuotesPage() {
   const router = useRouter();
@@ -337,10 +338,10 @@ export default function QuotesPage() {
                 {quotesData
                   .filter(q => activeStatus === "全部" || q.status === activeStatus)
                   .filter(q => 
-                    q.customer.includes(searchQuery) || 
-                    q.phone.includes(searchQuery) || 
+                    (q.customer || '').includes(searchQuery) || 
+                    (q.phone || '').includes(searchQuery) || 
                     (q.address && q.address.includes(searchQuery)) ||
-                    q.id.toLowerCase().includes(searchQuery.toLowerCase())
+                    (q.id || '').toLowerCase().includes(searchQuery.toLowerCase())
                   )
                   .filter(q => {
                     // 高级筛选: 金额范围
@@ -366,13 +367,11 @@ export default function QuotesPage() {
                     className="hover:bg-primary-50/50 transition-colors group cursor-pointer"
                   >
                     <td className="py-4 px-6 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-primary-900">{quote.customer}</span>
-                          <span className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded font-mono group-hover:text-primary-900 transition-colors">{quote.id}</span>
-                        </div>
-                        <p className="text-xs text-primary-600 font-mono mt-1">{quote.phone}</p>
-                      </div>
+                      <CustomerInfo 
+                        name={quote.customer}
+                        phone={quote.phone}
+                        customerNo={quote.customerNo || quote.id}
+                      />
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
@@ -390,15 +389,15 @@ export default function QuotesPage() {
                       <div className="space-y-1">
                         <div className="flex justify-between text-xs">
                           <span className="text-primary-600">总价:</span>
-                          <span className="font-mono">¥{quote.total.toLocaleString()}</span>
+                          <span className="font-mono">¥{(quote.total || 0).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-xs text-rose-500">
                           <span>优惠:</span>
-                          <span className="font-mono">-¥{quote.discount.toLocaleString()}</span>
+                          <span className="font-mono">-¥{(quote.discount || 0).toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-sm font-bold text-primary-900 pt-1 border-t border-primary-100 border-dashed">
                           <span>成交价:</span>
-                          <span className="font-mono">¥{quote.final.toLocaleString()}</span>
+                          <span className="font-mono">¥{(quote.final || 0).toLocaleString()}</span>
                         </div>
                       </div>
                     </td>
@@ -441,7 +440,7 @@ export default function QuotesPage() {
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
                 {leadsData
                   .filter(l => !quotesData.some(q => q.customer === l.name && q.phone === l.phone))
-                  .filter(l => l.name.includes(leadSearchQuery) || l.phone.includes(leadSearchQuery))
+                  .filter(l => (l.name || '').includes(leadSearchQuery) || (l.phone || '').includes(leadSearchQuery))
                   .map(lead => (
                   <div 
                     key={lead.id}
@@ -449,12 +448,14 @@ export default function QuotesPage() {
                     className="flex items-center justify-between p-4 border border-primary-100 rounded-xl hover:bg-primary-50 hover:border-primary-300 transition-all cursor-pointer group bg-white"
                   >
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-base font-bold text-primary-900">{lead.name}</p>
-                        <span className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded font-mono">{lead.id}</span>
+                      <div className="mb-2">
+                        <CustomerInfo 
+                          name={lead.name}
+                          phone={lead.phone}
+                          customerNo={lead.customerNo || lead.id}
+                        />
                       </div>
                       <div className="flex items-center gap-3">
-                        <p className="text-sm text-primary-600 font-mono">{lead.phone}</p>
                         {lead.address && (
                           <div className="flex items-center text-xs text-primary-500 bg-primary-50 px-2 py-0.5 rounded border border-primary-100">
                             <Building2 className="w-3 h-3 mr-1" />
@@ -469,7 +470,7 @@ export default function QuotesPage() {
                     </div>
                   </div>
                 ))}
-                {leadsData.filter(l => !quotesData.some(q => q.customer === l.name && q.phone === l.phone)).filter(l => l.name.includes(leadSearchQuery) || l.phone.includes(leadSearchQuery)).length === 0 && (
+                {leadsData.filter(l => !quotesData.some(q => q.customer === l.name && q.phone === l.phone)).filter(l => (l.name || '').includes(leadSearchQuery) || (l.phone || '').includes(leadSearchQuery)).length === 0 && (
                   <div className="py-12 text-center text-primary-500 text-sm">
                     没有找到匹配的客户线索，或该客户已存在报价单
                   </div>

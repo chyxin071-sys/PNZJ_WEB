@@ -101,6 +101,8 @@ Page({
       designerId: selectedLead.designerId || '',
       sales: selectedLead.sales || '',
       salesId: selectedLead.salesId || '',
+      signDate: selectedLead.signDate || '',
+      signer: selectedLead.signer || '',
       startDate: d.startDate,
       status: status,
       currentNode: currentNode,

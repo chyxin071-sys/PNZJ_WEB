@@ -5,32 +5,51 @@
     <view style="display: flex; justify-content: space-between; align-items: flex-start;">
       <!-- 左侧：姓名、编号、地址等 -->
       <view class="left-info" style="flex: 1; padding-right: 20rpx;">
-        <view style="margin-bottom: 12rpx; display: flex; flex-direction: column; align-items: flex-start;">
-          <text class="name" style="font-size: 36rpx; font-weight: bold; color: #1e293b;">{{lead.name}}</text>
-          <text style="font-size:24rpx; color:#64748b; margin-top: 6rpx;">编号: {{lead.customerNo || lead._id}}</text>
+        <view style="margin-bottom: 12rpx;">
+          <customer-info 
+            name="{{lead.name}}" 
+            phone="{{lead.phone}}" 
+            customerNo="{{lead.customerNo || lead._id}}" 
+          />
         </view>
         <view class="address" style="font-size: 26rpx; color: #475569; line-height: 1.4; margin-top: 12rpx;">{{lead.address || '暂无地址'}}</view>
       </view>
 
       <!-- 右侧：评级、状态 (竖排，可点击) -->
       <view class="right-badges" style="display: flex; flex-direction: column; gap: 16rpx; align-items: flex-end; flex-shrink: 0;">
-        <picker bindchange="onRatingChange" range="{{['A', 'B', 'C', 'D']}}">
-          <view class="rating-badge rating-{{lead.rating}}" style="display: flex; align-items: center; justify-content: center; gap: 6rpx; padding: 6rpx 20rpx; border-radius: 8rpx;">
-            <text>{{lead.rating}}级</text>
-            <text style="font-size: 18rpx; opacity: 0.6; margin-top: 2rpx;">▼</text>
+        <block wx:if="{{isAdmin || isRelated}}">
+          <picker bindchange="onRatingChange" range="{{['A', 'B', 'C', 'D']}}">
+            <view class="rating-badge rating-{{lead.rating}}" style="display: flex; align-items: center; justify-content: center; gap: 6rpx; padding: 6rpx 20rpx; border-radius: 8rpx;">
+              <text>{{lead.rating}}级</text>
+              <text style="font-size: 18rpx; opacity: 0.6; margin-top: 2rpx;">▼</text>
+            </view>
+          </picker>
+          <picker bindchange="onStatusChange" range="{{['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失']}}">
+            <view class="status-badge {{lead.status === '已签单' ? 'status-signed' : 'status-default'}}" style="display: flex; align-items: center; justify-content: center; gap: 6rpx; padding: 6rpx 20rpx; border-radius: 8rpx;">
+              <text>{{lead.status}}</text>
+              <text style="font-size: 18rpx; opacity: 0.6; margin-top: 2rpx;">▼</text>
+            </view>
+          </picker>
+        </block>
+        <block wx:else>
+          <view bindtap="showNoPermissionToast">
+            <view class="rating-badge rating-{{lead.rating}}" style="display: flex; align-items: center; justify-content: center; gap: 6rpx; padding: 6rpx 20rpx; border-radius: 8rpx;">
+              <text>{{lead.rating}}级</text>
+              <text style="font-size: 18rpx; opacity: 0.6; margin-top: 2rpx;">▼</text>
+            </view>
           </view>
-        </picker>
-        <picker bindchange="onStatusChange" range="{{['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失']}}">
-          <view class="status-badge {{lead.status === '已签单' ? 'status-signed' : 'status-default'}}" style="display: flex; align-items: center; justify-content: center; gap: 6rpx; padding: 6rpx 20rpx; border-radius: 8rpx;">
-            <text>{{lead.status}}</text>
-            <text style="font-size: 18rpx; opacity: 0.6; margin-top: 2rpx;">▼</text>
+          <view bindtap="showNoPermissionToast">
+            <view class="status-badge {{lead.status === '已签单' ? 'status-signed' : 'status-default'}}" style="display: flex; align-items: center; justify-content: center; gap: 6rpx; padding: 6rpx 20rpx; border-radius: 8rpx;">
+              <text>{{lead.status}}</text>
+              <text style="font-size: 18rpx; opacity: 0.6; margin-top: 2rpx;">▼</text>
+            </view>
           </view>
-        </picker>
+        </block>
       </view>
     </view>
     
     <!-- 快捷操作区 (Web风格卡片) -->
-    <view class="action-cards mt-4 {{lead.status === '已签单' ? 'two-cards' : 'one-card'}}">
+    <view class="action-cards mt-4 {{hasProject ? 'two-cards' : 'one-card'}}">
       <view class="action-card quote-card hover-scale" bindtap="goToQuote">     
         <view class="ac-left">
           <view class="icon-doc"></view>
@@ -38,7 +57,7 @@
         </view>
       </view>
 
-      <view class="action-card project-card hover-scale" wx:if="{{lead.status === '已签单'}}" bindtap="goToProject">
+      <view class="action-card project-card hover-scale" wx:if="{{hasProject}}" bindtap="goToProject">
         <view class="ac-left">
           <view class="icon-folder"></view>
           <text>工地管理</text>
@@ -50,7 +69,7 @@
   <!-- 选项卡 -->
   <view class="tabs">
     <view class="tab {{activeTab === 'info' ? 'active' : ''}}" bindtap="switchTab" data-tab="info">详情信息</view>
-    <view class="tab {{activeTab === 'follow' ? 'active' : ''}}" bindtap="switchTab" data-tab="follow">跟进记录</view>
+    <view class="tab {{activeTab === 'follow' ? 'active' : ''}}" wx:if="{{isAdmin || isRelated}}" bindtap="switchTab" data-tab="follow">跟进记录</view>
   </view>
 
   <scroll-view scroll-y class="tab-content">
@@ -91,6 +110,14 @@
           <text class="info-label">指派设计师</text>
           <text class="info-value">{{lead.designer}}</text>
         </view>
+        <view class="info-item" wx:if="{{lead.status === '已签单'}}">
+          <text class="info-label">签单人</text>
+          <text class="info-value" style="color: var(--rose-600); font-weight: 500;">{{lead.signer || '-'}}</text>
+        </view>
+        <view class="info-item" wx:if="{{lead.status === '已签单'}}">
+          <text class="info-label">签单时间</text>
+          <text class="info-value">{{lead.signDate || '-'}}</text>
+        </view>
       </view>
     </view>
 
@@ -117,8 +144,48 @@
     <view class="bottom-padding"></view>
   </scroll-view>
 
-  <view class="bottom-action-bar" style="display: flex; gap: 20rpx;">
+  <!-- 底部操作栏（如果不是管理员且与自己无关，则隐藏底部操作栏） -->
+  <view class="bottom-action-bar" style="display: flex; gap: 20rpx;" wx:if="{{isAdmin || isRelated}}">
     <view class="btn-primary hover-scale" bindtap="addFollowUp" wx:if="{{activeTab === 'follow'}}" style="flex: 1; text-align: center;">添加跟进</view>
     <view class="btn-primary hover-scale" bindtap="goToEdit" wx:else style="flex: 1; text-align: center;">编辑资料</view>
+  </view>
+
+  <!-- 恭喜签单弹窗 -->
+  <view class="modal-mask" wx:if="{{showSignModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 40rpx;">
+    <view class="sign-modal-content" style="background: #fff; width: 85%; border-radius: 32rpx; padding: 60rpx 40rpx 50rpx; position: relative; box-sizing: border-box; text-align: center; box-shadow: 0 20rpx 40rpx rgba(0,0,0,0.1);">
+      
+      <!-- 庆祝图标与标题 -->
+      <view style="width: 120rpx; height: 120rpx; background: var(--rose-50); border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin: 0 auto 36rpx; border: 4rpx solid #fff; box-shadow: 0 8rpx 16rpx rgba(153, 41, 51, 0.1);">
+        <icon type="success_no_circle" size="40" color="#992933"/>
+      </view>
+      <view style="font-size: 40rpx; font-weight: bold; color: var(--rose-600); margin-bottom: 12rpx; letter-spacing: 2rpx;">品诺筑家恭喜开单</view>
+      <view style="font-size: 26rpx; color: #64748b; margin-bottom: 50rpx;">【{{lead.name}}】项目已成功签单</view>
+      
+      <!-- 表单内容 -->
+      <view style="text-align: left; margin-bottom: 30rpx;">
+        <view style="font-size: 26rpx; color: #475569; margin-bottom: 16rpx; font-weight: 500;">签单时间</view>
+        <picker mode="date" value="{{signDate}}" bindchange="onSignDateChange">
+          <view style="width: 100%; height: 88rpx; line-height: 88rpx; padding: 0 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #334155;">
+            {{signDate || '请选择签单日期'}}
+          </view>
+        </picker>
+      </view>
+
+      <view style="text-align: left; margin-bottom: 50rpx;">
+        <view style="font-size: 26rpx; color: #475569; margin-bottom: 16rpx; font-weight: 500;">签单人</view>
+        <picker bindchange="onSignerChange" value="{{signerIndex}}" range="{{signersList}}">
+          <view style="width: 100%; height: 88rpx; min-height: 88rpx; padding: 0 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #334155; display: flex; align-items: center; justify-content: space-between;">
+            <text>{{signer || '请选择签单人'}}</text>
+            <text style="font-size: 20rpx; color: #94a3b8;">▼</text>
+          </view>
+        </picker>
+      </view>
+      
+      <!-- 按钮 -->
+      <view style="display: flex; gap: 24rpx;">
+        <button bindtap="closeSignModal" style="flex: 1; font-size: 30rpx; background: #f1f5f9; color: #475569; border-radius: 16rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: 500; line-height: 1;">取消</button>
+        <button bindtap="confirmSign" style="flex: 1; font-size: 30rpx; background: var(--rose-600); color: #fff; border-radius: 16rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: bold; line-height: 1; box-shadow: 0 8rpx 20rpx rgba(153, 41, 51, 0.25);">确认签单</button>
+      </view>
+    </view>
   </view>
 </view>

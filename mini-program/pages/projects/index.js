@@ -1,4 +1,6 @@
 
+import { maskName, maskAddress } from '../../utils/format.js';
+
 // 移除 mock 数据
 // const projectsData = require('../../mock/projects.js');
 
@@ -16,6 +18,8 @@ Page({
     timeFilterIndex: 0, // 默认全部
     timeFilterLabel: '全部时间',
 
+    filterScope: '与我相关',
+    
     showFilterModal: false,
     filterEmployees: [],
     selectedEmployeeIds: [],
@@ -75,6 +79,7 @@ Page({
 
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 2 });
+      this.getTabBar().fetchGlobalUnread();
     }
     
     this.fetchData();
@@ -114,12 +119,26 @@ Page({
       
       const now = new Date();
       now.setHours(0,0,0,0);
+
+      const userInfo = wx.getStorageSync('userInfo');
+      const myName = userInfo ? userInfo.name : '';
+      const isAdmin = userInfo && userInfo.role === 'admin';
       
       const list = res.data.sort((a, b) => {
         const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dbTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dbTime - da;
       }).map(p => {
+        const isRelated = isAdmin || p.manager === myName || p.sales === myName || p.designer === myName || p.creatorName === myName;
+        
+        if (!isRelated) {
+          p._isMasked = true;
+          if (p.customer) p.customer = maskName(p.customer);
+          if (p.address) p.address = maskAddress(p.address);
+        } else {
+          p._isMasked = false;
+        }
+
         // 模拟数据填充，对齐网页端功能
         const nodesList = ["开工", "水电", "木工", "瓦工", "墙面", "定制", "软装", "交付"];
         const currentNode = p.currentNode || 1;
@@ -180,9 +199,32 @@ Page({
   updateGroupedEmployees() {
     const depts = ['管理部', '项目部', '销售部', '设计部', '财务部', '其他'];
     const grouped = [];
+    
+    // Preserve expanded state
+    const currentGroups = this.data.groupedEmployees || [];
+    const expandedMap = {};
+    currentGroups.forEach(g => {
+      expandedMap[g.dept] = g.expanded;
+    });
+
     depts.forEach(dept => {
       const emps = this.data.filterEmployees.filter(e => e.dept === dept);
-      if (emps.length > 0) grouped.push({ dept, employees: emps });
+      if (emps.length > 0) {
+        grouped.push({
+          dept,
+          employees: emps,
+          expanded: expandedMap[dept] !== undefined ? expandedMap[dept] : false
+        });
+      }
+    });
+    this.setData({ groupedEmployees: grouped });
+  },
+
+  toggleDept(e) {
+    const dept = e.currentTarget.dataset.dept;
+    const grouped = this.data.groupedEmployees.map(g => {
+      if (g.dept === dept) g.expanded = !g.expanded;
+      return g;
     });
     this.setData({ groupedEmployees: grouped });
   },
@@ -211,8 +253,19 @@ Page({
         const cusMatch = p.customer ? String(p.customer).toLowerCase().includes(q) : false;
         const mgrMatch = p.manager ? String(p.manager).toLowerCase().includes(q) : false;
         const addMatch = p.address ? String(p.address).toLowerCase().includes(q) : false;
-        return cusMatch || mgrMatch || addMatch;
+        const customerNoMatch = p.customerNo ? String(p.customerNo).toLowerCase().includes(q) : false;
+        return cusMatch || mgrMatch || addMatch || customerNoMatch;
       });
+    }
+
+    // 范围过滤 (与我相关 vs 全部工地)
+    if (this.data.filterScope === '与我相关') {
+      const userInfo = wx.getStorageSync('userInfo');
+      if (userInfo && userInfo.name) {
+        filtered = filtered.filter(p => {
+          return p.manager === userInfo.name || p.sales === userInfo.name || p.designer === userInfo.name || p.creatorName === userInfo.name;
+        });
+      }
     }
 
     // 时间范围过滤 (右上角)
@@ -344,11 +397,20 @@ Page({
   onStartDateEndChange(e) {
     this.setData({ filterStartDateEnd: e.detail.value });
   },
+  switchScope(e) {
+    const scope = e.currentTarget.dataset.scope;
+    this.setData({ filterScope: scope }, () => {
+      this.saveFilterState();
+      this.filterProjects();
+    });
+  },
+
   resetFilter() {
     const emps = this.data.filterEmployees.map(e => ({...e, selected: false}));
     const stats = this.data.filterStatuses.map(s => ({...s, selected: false}));
     
     this.setData({
+      filterScope: '与我相关',
       filterEmployees: emps,
       filterStatuses: stats,
       selectedEmployeeIds: [],
@@ -381,7 +443,7 @@ Page({
 
   // ===================== 新建工地逻辑 =====================
   createProject() {
-    wx.navigateTo({ url: '/pages/projectForm/index' });
+    wx.showToast({ title: '正在开发中...', icon: 'none' });
   },
 
   goToDetail(e) {

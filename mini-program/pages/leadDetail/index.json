@@ -2,5 +2,8 @@
   "navigationBarTitleText": "客户详情",
   "navigationBarBackgroundColor": "#faf9f8",
   "navigationBarTextStyle": "black",
-  "backgroundColor": "#faf9f8"
+  "backgroundColor": "#faf9f8",
+  "usingComponents": {
+    "customer-info": "../../components/customer-info/index"
+  }
 }

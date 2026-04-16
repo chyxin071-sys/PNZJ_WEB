@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "工地"
+  "navigationBarTitleText": "工地",
+  "usingComponents": {
+    "customer-info": "../../components/customer-info/index"
+  }
 }

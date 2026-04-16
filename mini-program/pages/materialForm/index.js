@@ -62,6 +62,10 @@ Page({
       stock: parseInt(stock, 10) || 0,
       updatedAt: db.serverDate()
     };
+    
+    // 删除云数据库不支持更新的保留字段
+    delete dataToSave._id;
+    delete dataToSave._openid;
 
     if (this.data.id) {
       db.collection('materials').doc(this.data.id).update({
@@ -70,9 +74,14 @@ Page({
         wx.hideLoading();
         wx.showToast({ title: '保存成功', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 1500);
-      }).catch(() => {
+      }).catch((err) => {
+        console.error('Update Error:', err);
         wx.hideLoading();
-        wx.showToast({ title: '保存失败', icon: 'none' });
+        if (err.errCode === -502003 || String(err).includes('permission')) {
+          wx.showModal({ title: '权限不足', content: '无法修改导入的初始数据。请在云开发控制台将 materials 集合权限改为“自定义(read:true, write:true)”。', showCancel: false });
+        } else {
+          wx.showToast({ title: '保存失败', icon: 'none' });
+        }
       });
     } else {
       dataToSave.createdAt = db.serverDate();
@@ -82,7 +91,8 @@ Page({
         wx.hideLoading();
         wx.showToast({ title: '添加成功', icon: 'success' });
         setTimeout(() => wx.navigateBack(), 1500);
-      }).catch(() => {
+      }).catch((err) => {
+        console.error('Add Error:', err);
         wx.hideLoading();
         wx.showToast({ title: '添加失败', icon: 'none' });
       });
@@ -101,9 +111,14 @@ Page({
               wx.hideLoading();
               wx.showToast({ title: '已删除', icon: 'success' });
               setTimeout(() => wx.navigateBack(), 1500);
-            }).catch(() => {
+            }).catch((err) => {
+              console.error('Delete Error:', err);
               wx.hideLoading();
-              wx.showToast({ title: '删除失败', icon: 'none' });
+              if (err.errCode === -502003 || String(err).includes('permission')) {
+                wx.showModal({ title: '权限不足', content: '无法删除导入的初始数据。请在云开发控制台将 materials 集合权限改为“自定义(read:true, write:true)”。', showCancel: false });
+              } else {
+                wx.showToast({ title: '删除失败', icon: 'none' });
+              }
             });
         }
       }

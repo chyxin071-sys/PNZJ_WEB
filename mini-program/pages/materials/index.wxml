@@ -43,15 +43,15 @@
             </view>
             <text class="material-brand">品牌: {{item.brand || '暂无'}} | 型号: {{item.sku || '暂无'}}</text>
           </view>
-          <view class="status-badge {{item.status === 'active' ? 'status-active' : 'status-inactive'}}">
-            {{item.status === 'active' ? '已上架' : '已下架'}}
+          <view class="status-badge {{item.status === '在售' || item.status === 'active' ? 'status-active' : 'status-inactive'}}">
+            {{item.status === '在售' || item.status === 'active' ? '已上架' : '已下架'}}
           </view>
         </view>
         
         <view class="card-body">
           <view class="info-row">
             <text class="info-icon">📦</text>
-            <text class="info-text">当前库存：<text class="font-mono font-bold {{item.stock < 20 ? 'text-danger' : 'text-primary-900'}}">{{item.stock || 0}}</text> {{item.unit}}</text>
+            <text class="info-text">当前库存: <text class="font-mono font-bold {{item.stock < 20 ? 'text-danger' : 'text-primary-900'}}">{{item.stock || 0}}</text> {{item.unit}}</text>
           </view>
         </view>
 
@@ -77,8 +77,8 @@
   <!-- 底部购物车栏 (仅在选择模式下显示) -->
   <view wx:if="{{selectMode}}" class="cart-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1rpx solid #e2e8f0; padding: 20rpx 30rpx; display: flex; justify-content: space-between; align-items: center; z-index: 100; box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.05); padding-bottom: calc(20rpx + env(safe-area-inset-bottom));">
     <view class="cart-info" style="display: flex; flex-direction: column;">
-      <text style="font-size: 24rpx; color: #64748b; margin-bottom: 4rpx;">已选: <text style="color: #ef4444; font-weight: bold;">{{quote.items.length || 0}}</text> 项材料</text>
-      <text style="font-size: 32rpx; font-weight: bold; color: #1e293b;">预估总额: <text style="color: #ef4444;">¥{{quote.total || 0}}</text></text>
+      <text style="font-size: 24rpx; color: #64748b; margin-bottom: 4rpx;">已选 <text style="color: var(--rose-600); font-weight: bold;">{{quote.items.length || 0}}</text> 项材料</text>
+      <text style="font-size: 32rpx; font-weight: bold; color: #1e293b;">预估总额: <text style="color: var(--rose-600);">¥{{quote.total || 0}}</text></text>
     </view>
     <view class="btn-done" bindtap="goBack" style="background: #4a403a; color: #fff; padding: 16rpx 40rpx; border-radius: 40rpx; font-size: 28rpx; font-weight: bold; box-shadow: 0 4rpx 12rpx rgba(74, 64, 58, 0.2);">
       返回编辑

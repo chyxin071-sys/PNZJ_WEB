@@ -19,6 +19,11 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
+    const role = request.headers.get('x-user-role');
+    if (role === 'designer' || role === 'sales') {
+      return NextResponse.json({ error: '权限不足：只读组（设计/销售）禁止修改项目信息' }, { status: 403 });
+    }
+
     const { id } = params;
     const body = await request.json();
     

@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "报价单",
   "navigationBarBackgroundColor": "#ffffff",
-  "navigationBarTextStyle": "black"
+  "navigationBarTextStyle": "black",
+  "usingComponents": {
+    "customer-info": "../../components/customer-info/index"
+  }
 }

@@ -1,9 +1,13 @@
 
+import { maskName } from '../../utils/format.js';
+
 Page({
   data: {
     mode: 'create', // 'create' | 'view' | 'edit'
     id: null,
     isEdit: false,
+    isAdmin: false,
+    isRelated: true,
     formData: {
       title: '',
       priority: 'medium',
@@ -74,16 +78,41 @@ Page({
     db.collection('todos').doc(id).get().then(res => {
       const todo = res.data;
       if (todo) {
-        // 选中执行人
+        const userInfo = wx.getStorageSync('userInfo');
+        const myName = userInfo ? userInfo.name : '';
+        const isAdmin = userInfo && userInfo.role === 'admin';
+        
+        // 判断当前用户是否与该待办相关
         const assignees = todo.assignees || [];
         const assigneeIds = assignees.map(a => a.id);
+        const isRelated = isAdmin || todo.creatorName === myName || assignees.some(a => a.name === myName);
+        
         const emps = this.data.employees.map(e => ({
           ...e,
           selected: assigneeIds.includes(e.id)
         }));
         const selectedNames = emps.filter(e => e.selected).map(e => e.name).join(', ');
+        
+        let relatedName = '';
+        if (todo.relatedTo && todo.relatedTo.name) {
+          if (todo.relatedTo.type === 'lead') {
+            db.collection('leads').doc(todo.relatedTo.id).get().then(lRes => {
+              const l = lRes.data;
+              const isLeadRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
+              this.setData({
+                'formData._displayRelatedName': isLeadRelated ? l.name : maskName(l.name)
+              });
+            }).catch(() => {
+              this.setData({ 'formData._displayRelatedName': maskName(todo.relatedTo.name) });
+            });
+          } else {
+            relatedName = todo.relatedTo.name;
+          }
+        }
 
         this.setData({
+          isAdmin,
+          isRelated,
           formData: {
             title: todo.title || '',
             priority: todo.priority || 'medium',
@@ -91,7 +120,8 @@ Page({
             relatedId: todo.relatedTo ? todo.relatedTo.id : '',
             dueDate: todo.dueDate || '',
             assignees: assignees,
-            description: todo.description || ''
+            description: todo.description || '',
+            _displayRelatedName: relatedName
           },
           employees: emps,
           selectedEmployeeNames: selectedNames
@@ -117,11 +147,23 @@ Page({
     const collectionName = typeVal === 'lead' ? 'leads' : 'projects';
     
     db.collection(collectionName).get().then(res => {
+      const userInfo = wx.getStorageSync('userInfo');
+      const myName = userInfo ? userInfo.name : '';
+      const isAdmin = userInfo && userInfo.role === 'admin';
+
       let relatedOps = [];
       if (typeVal === 'lead') {
-        relatedOps = res.data.map(l => ({ id: l._id, name: `${l.name} - ${l.status}` }));
+        relatedOps = res.data.map(l => {
+          const isLeadRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
+          const displayName = isLeadRelated ? l.name : maskName(l.name);
+          return { id: l._id, name: `${displayName} - ${l.status}` };
+        });
       } else if (typeVal === 'project') {
-        relatedOps = res.data.map(p => ({ id: p._id, name: `${p.customer} - ${p.address}` }));
+        relatedOps = res.data.map(p => {
+          const isProjRelated = isAdmin || p.creatorName === myName || p.manager === myName || p.designer === myName;
+          const displayName = isProjRelated ? p.customer : maskName(p.customer);
+          return { id: p._id, name: `${displayName} - ${p.address}` };
+        });
       }
 
       const rIndex = relatedOps.findIndex(r => r.id === relatedId);
@@ -174,11 +216,23 @@ Page({
     const collectionName = typeVal === 'lead' ? 'leads' : 'projects';
     
     db.collection(collectionName).get().then(res => {
+      const userInfo = wx.getStorageSync('userInfo');
+      const myName = userInfo ? userInfo.name : '';
+      const isAdmin = userInfo && userInfo.role === 'admin';
+
       let relatedOps = [];
       if (typeVal === 'lead') {
-        relatedOps = res.data.map(l => ({ id: l._id, name: `${l.name} - ${l.status}` }));
+        relatedOps = res.data.map(l => {
+          const isLeadRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
+          const displayName = isLeadRelated ? l.name : maskName(l.name);
+          return { id: l._id, name: `${displayName} - ${l.status}` };
+        });
       } else if (typeVal === 'project') {
-        relatedOps = res.data.map(p => ({ id: p._id, name: `${p.customer} - ${p.address}` }));
+        relatedOps = res.data.map(p => {
+          const isProjRelated = isAdmin || p.creatorName === myName || p.manager === myName || p.designer === myName;
+          const displayName = isProjRelated ? p.customer : maskName(p.customer);
+          return { id: p._id, name: `${displayName} - ${p.address}` };
+        });
       }
 
       this.setData({
@@ -204,7 +258,6 @@ Page({
   },
   
   goToRelated() {
-    if (this.data.mode !== 'view') return;
     const type = this.data.formData.relatedType;
     const id = this.data.formData.relatedId;
     if (!id || type === 'none') return;

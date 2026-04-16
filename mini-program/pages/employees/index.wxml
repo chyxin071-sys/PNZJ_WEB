@@ -75,35 +75,40 @@
       <text>{{modalType === 'add' ? '添加员工' : '编辑员工'}}</text>
       <view class="btn-close" bindtap="closeModal">取消</view>
     </view>
-    <scroll-view scroll-y style="height: 65vh;">
+    <scroll-view scroll-y class="modal-scroll">
       <view class="modal-body">
-      <view class="form-group">
-        <text class="label">姓名</text>
-        <input class="input" placeholder="请输入姓名" value="{{formData.name}}" bindinput="onInput" data-field="name" />
-      </view>
-      <view class="form-group">
-        <text class="label">手机号/账号</text>
-        <input class="input" type="text" placeholder="请输入手机号或字母账号" value="{{formData.phone}}" bindinput="onInput" data-field="phone" />
-      </view>
-      <view class="form-group">
-        <text class="label">身份</text>
-        <picker bindchange="onRoleChange" value="{{roleIndex}}" range="{{roleOptions}}" range-key="name">
-          <view class="picker-view">
-            <text>{{roleOptions[roleIndex].name || '请选择身份'}}</text>
-            <view class="arrow-down"></view>
-          </view>
-        </picker>
-      </view>
-      <view class="form-group">
-        <text class="label">入职时间</text>
-        <picker mode="date" value="{{formData.joinDate}}" bindchange="onJoinDateChange">
-          <view class="picker-view">
-            <text>{{formData.joinDate || '请选择入职时间'}}</text>
-            <view class="arrow-down"></view>
-          </view>
-        </picker>
-      </view>
-      <view class="btn-save hover-scale" bindtap="saveEmployee">保 存</view>
+        <view class="form-group">
+          <text class="label">姓名</text>
+          <input class="input" placeholder="请输入姓名" value="{{formData.name}}" bindinput="onInput" data-field="name" />
+        </view>
+        <view class="form-group">
+          <text class="label">手机号</text>
+          <input class="input" type="number" placeholder="请输入11位手机号" value="{{formData.phone}}" bindinput="onInput" data-field="phone" />
+        </view>
+        <view class="form-group">
+          <text class="label">登录账号</text>
+          <input class="input" type="text" placeholder="请输入字母账号 (手机号或账号均可登录)" value="{{formData.account}}" bindinput="onInput" data-field="account" />
+        </view>
+        <view class="form-group">
+          <text class="label">身份</text>
+          <picker bindchange="onRoleChange" value="{{roleIndex}}" range="{{roleOptions}}" range-key="name">
+            <view class="picker-view">
+              <text>{{roleOptions[roleIndex].name || '请选择身份'}}</text>
+              <view class="arrow-down"></view>
+            </view>
+          </picker>
+        </view>
+        <view class="form-group">
+          <text class="label">入职时间</text>
+          <picker mode="date" value="{{formData.joinDate}}" bindchange="onJoinDateChange">
+            <view class="picker-view">
+              <text>{{formData.joinDate || '请选择入职时间'}}</text>
+              <view class="arrow-down"></view>
+            </view>
+          </picker>
+        </view>
+        <view style="font-size: 24rpx; color: var(--rose-600); margin-bottom: 30rpx; text-align: center;">注：新员工默认登录密码为 888888</view>
+        <view class="btn-save hover-scale" bindtap="saveEmployee">保 存</view>
       </view>
     </scroll-view>
   </view>

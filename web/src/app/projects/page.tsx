@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Search, Filter, AlertCircle, CheckCircle2, Clock, Camera, HardHat, AlertTriangle, PlayCircle, X, ChevronDown, Check, Activity, FolderOpen, Hammer } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
 import { useRouter } from "next/navigation";
+import CustomerInfo from "../../components/CustomerInfo";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -420,15 +421,18 @@ export default function ProjectsPage() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${project.health === "严重延期" ? "bg-rose-100 text-rose-700" : "bg-primary-900 text-white"}`}>
-                      {project.customer.charAt(0)}
+                      {project.customer?.charAt(0) || '-'}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-primary-900 text-lg">{project.customer}</h3>
+                      <div className="flex items-center gap-2 mb-1">
+                        <CustomerInfo 
+                          name={project.customer}
+                          phone={project.phone}
+                          customerNo={project.customerNo || project.id}
+                        />
                         {project.rating === 'A' && (
-                          <span className="px-2 py-0.5 bg-primary-900 text-white text-[10px] font-bold rounded uppercase tracking-wider">VIP</span>
+                          <span className="px-2 py-0.5 bg-primary-900 text-white text-[10px] font-bold rounded uppercase tracking-wider ml-2">VIP</span>
                         )}
-                        <span className="text-sm font-mono text-primary-600 ml-2">{project.customerNo || project.id}</span>
                       </div>
                       <p className="text-sm text-primary-600 mt-0.5">项目经理: <span className="font-medium text-primary-900">{project.manager}</span></p>
                     </div>

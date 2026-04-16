@@ -45,39 +45,43 @@ Page({
     const userName = this.data.userInfo.name;
     const isAdmin = this.data.userInfo.role === 'admin';
 
-    // 去掉复杂的 where 查询，直接全部拉下来在前端过滤
-    // 这样彻底避免任何因为云数据库版本/索引/字段缺失导致的拉取失败
-    db.collection('notifications')
+    let query = db.collection('notifications');
+    
+    let targetCondition;
+    if (isAdmin) {
+      targetCondition = _.or([
+        _.eq(userName),
+        _.eq('all'),
+        _.eq('admin'),
+        _.exists(false)
+      ]);
+    } else {
+      targetCondition = _.or([
+        _.eq(userName),
+        _.eq('all')
+      ]);
+    }
+
+    // 组合基本条件
+    const baseWhere = { targetUser: targetCondition };
+
+    // 为了防止旧的未读消息被 100 条限制冲掉，当处于“未读” tab 时，必须加上未读的条件查询
+    if (this.data.activeTab === 'unread') {
+      baseWhere.isRead = _.neq(true);
+    } else if (this.data.activeTab === 'starred') {
+      baseWhere.isStarred = true;
+    }
+
+    query = query.where(baseWhere);
+
+    query
       .orderBy('createTime', 'desc')
-      .limit(100) // 考虑到前端过滤，多拉取一些
+      .limit(100)
       .get()
       .then(res => {
         wx.stopPullDownRefresh();
         
-        // --- 核心：将条件过滤转移到前端执行 ---
-        let filteredList = res.data.filter(item => {
-          // 1. 权限过滤
-          const target = item.targetUser;
-          const hasPermission = isAdmin 
-            ? (target === userName || target === 'all' || target === 'admin' || !target) 
-            : (target === userName || target === 'all');
-            
-          if (!hasPermission) return false;
-
-          // 2. 未读过滤
-          if (this.data.activeTab === 'unread' && item.isRead === true) {
-            return false;
-          }
-          
-          // 3. 收藏过滤
-          if (this.data.activeTab === 'starred' && !item.isStarred) {
-            return false;
-          }
-          
-          return true;
-        });
-
-        const list = filteredList.map(item => {
+        let list = res.data.map(item => {
           // 格式化时间
           const date = new Date(item.createTime);
           const now = new Date();
@@ -85,16 +89,27 @@ Page({
           item.createTimeStr = isToday 
             ? `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
             : `${date.getMonth() + 1}-${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+
+          let senderName = item.senderName;
+          if (!senderName && item.content) {
+            const match = item.content.match(/^([^\s]+)\s*(更新|指派|创建|删除)/);
+            if (match) {
+              senderName = match[1];
+            }
+          }
+          item.senderName = senderName || null;
+          
+          // 给默认角色，如果后续需要精准角色可以在这加联查，这里先用默认的即可
+          item.senderRole = item.senderRole || 'default';
+
           return item;
         });
 
         this.setData({ notifications: list, loading: false });
         
-        // 更新未读数到 tab bar
-        if (this.data.activeTab === 'unread') {
-          if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-            this.getTabBar().updateUnread(list.length);
-          }
+        // 使用全局方法更新未读数到 tab bar
+        if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+          this.getTabBar().fetchGlobalUnread();
         }
       })
       .catch(err => {

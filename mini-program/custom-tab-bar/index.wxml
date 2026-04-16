@@ -1,7 +1,8 @@
-<view class="tab-bar">
+<view class="tab-bar" style="display: {{hidden ? 'none' : 'flex'}}">
   <view class="tab-bar-item" wx:for="{{list}}" wx:key="index" bindtap="switchTab" data-path="{{item.pagePath}}" data-index="{{index}}">
     <view class="icon-wrap {{selected === index ? 'active' : ''}}">
-      <view class="icon {{item.iconClass}}">
+      <view style="position: relative; display: inline-block;">
+        <view class="icon {{item.iconClass}}"></view>
         <view class="badge" wx:if="{{index === 3 && unreadCount > 0}}">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
       </view>
       <text class="tab-text">{{item.text}}</text>

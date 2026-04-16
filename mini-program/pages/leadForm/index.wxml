@@ -12,7 +12,7 @@
 
     <view class="form-group">
       <view class="label">小区地址 <text class="required">*</text></view>    
-      <input class="input-box" placeholder="如：恒大绿洲3栋201..." placeholder-class="ph" value="{{formData.address}}" bindinput="onInput" data-field="address" />
+      <input class="input-box" placeholder="如：恒大绿洲3栋101..." placeholder-class="ph" value="{{formData.address}}" bindinput="onInput" data-field="address" />
     </view>
 
     <view class="form-row-group">
@@ -75,7 +75,7 @@
 
     <view class="form-group">
       <view class="label">指派销售</view>
-      <picker bindchange="onEmpChange" data-field="salesId" data-list="salesList" data-index="salesIndex" value="{{salesIndex}}" range="{{salesList}}" range-key="name">
+      <picker bindchange="onEmpChange" data-field="sales" data-list="salesList" data-index="salesIndex" value="{{salesIndex}}" range="{{salesList}}" range-key="name">
         <view class="picker-box">
           <text class="{{salesIndex === -1 ? 'ph' : ''}}">{{salesIndex !== -1 ? salesList[salesIndex].name : '请选择销售人员'}}</text>
           <view class="arrow-down"></view>
@@ -85,7 +85,7 @@
 
     <view class="form-group">
       <view class="label">指派设计师</view>
-      <picker bindchange="onEmpChange" data-field="designerId" data-list="designerList" data-index="designerIndex" value="{{designerIndex}}" range="{{designerList}}" range-key="name">
+      <picker bindchange="onEmpChange" data-field="designer" data-list="designerList" data-index="designerIndex" value="{{designerIndex}}" range="{{designerList}}" range-key="name">
         <view class="picker-box">
           <text class="{{designerIndex === -1 ? 'ph' : ''}}">{{designerIndex !== -1 ? designerList[designerIndex].name : '请选择设计师'}}</text>
           <view class="arrow-down"></view>
@@ -121,7 +121,7 @@
 
     <view class="sign-actions">
       <view class="btn-cancel hover-scale" bindtap="closeSignModal">再想想</view>
-      <view class="btn-save hover-scale" bindtap="confirmSign" style="background: #f59e0b; color: #fff;">确认签单</view>
+      <view class="btn-save hover-scale" bindtap="confirmSign" style="background: var(--amber-600); color: #fff;">确认签单</view>
     </view>
   </view>
 
@@ -135,6 +135,7 @@
       <view class="success-title">品诺筑家 恭喜签约</view>
       <view class="success-desc">成功签约客户：<text class="highlight">{{formData.name}}</text></view>
     </view>
-    <view class="btn-save hover-scale" bindtap="closeSuccessAndBack" style="margin-top: 60rpx; width: 80%; background: linear-gradient(135deg, #f59e0b, #ef4444); border-radius: 40rpx;">返回线索列表</view>
+    <view class="btn-save hover-scale" bindtap="closeSuccessAndBack" style="margin-top: 60rpx; width: 80%; background: linear-gradient(135deg, var(--amber-600), var(--rose-600)); border-radius: 40rpx;">返回线索列表</view>
   </view>
 </view>
+

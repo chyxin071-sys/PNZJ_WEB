@@ -17,8 +17,8 @@
 .status-badge {
   font-size: 22rpx;
   padding: 4rpx 16rpx;
-  background: #e5f6e8;
-  color: #10b981;
+  background: var(--emerald-50);
+  color: var(--emerald-600);
   border-radius: 8rpx;
 }
 .address-text {
@@ -82,7 +82,7 @@
 }
 .item-price {
   font-size: 28rpx;
-  color: #e11d48;
+  color: var(--rose-600);
   font-weight: bold;
 }
 .item-meta {
@@ -117,3 +117,4 @@
   text-align: center;
   line-height: 1.6;
 }
+

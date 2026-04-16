@@ -22,7 +22,7 @@
 .icon-projects::after { content: ''; position: absolute; top: 12rpx; left: 14rpx; width: 8rpx; height: 22rpx; background: currentColor; border-radius: 4rpx; box-sizing: border-box; }
 
 /* 4. Message: Bubble */
-.icon-message { width: 36rpx; height: 36rpx; border: 4rpx solid currentColor; border-radius: 12rpx; position: relative; box-sizing: border-box; }
-.icon-message::before { content: ''; position: absolute; bottom: -8rpx; left: 4rpx; border-width: 6rpx 6rpx 0 0; border-style: solid; border-color: currentColor transparent transparent transparent; transform: skewX(-20deg); }
+.icon-message { width: 40rpx; height: 36rpx; border: 4rpx solid currentColor; border-radius: 12rpx; position: relative; box-sizing: border-box; margin-bottom: 4rpx; }
+.icon-message::after { content: ''; position: absolute; bottom: -10rpx; left: 8rpx; width: 0; height: 0; border-left: 8rpx solid transparent; border-right: 8rpx solid transparent; border-top: 10rpx solid currentColor; transform: rotate(-30deg); transform-origin: top center; }
 
-.badge { position: absolute; top: -10rpx; right: -16rpx; background: #ef4444; color: white; font-size: 20rpx; padding: 2rpx 8rpx; border-radius: 20rpx; font-weight: bold; border: 2rpx solid #fff; line-height: 1; }
+.badge { position: absolute; top: -12rpx; right: -20rpx; background: #992933; color: white; font-size: 18rpx; padding: 2rpx 8rpx; border-radius: 20rpx; font-weight: bold; border: 2rpx solid #fff; line-height: 1.2; z-index: 100; box-shadow: 0 2rpx 6rpx rgba(153, 41, 51, 0.4); }

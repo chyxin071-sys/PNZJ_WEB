@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { Plus, Search, Filter, MoreHorizontal, MessageSquare, UserPlus, FileText, ChevronDown, X, Check } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "../../components/MainLayout";
+import CustomerInfo from "../../components/CustomerInfo";
 
 function LeadsContent() {
   const router = useRouter();
@@ -39,6 +40,7 @@ function LeadsContent() {
   // 控制自定义下拉框的展开状态
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showToast, setShowToast] = useState<string | false>(false);
+  const [signModal, setSignModal] = useState({ isOpen: false, leadId: '', leadName: '', date: '', signer: '' });
 
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -135,7 +137,8 @@ function LeadsContent() {
       designer: "",
       lastFollowUp: "暂无",
       unread: false,
-      notes: "新录入客户"
+      notes: "新录入客户",
+      creatorName: currentUser?.name || '未知'
     };
 
     try {
@@ -183,12 +186,64 @@ function LeadsContent() {
   const ratings = ["全部", "A", "B", "C", "D"];
 
   const updateLeadStatus = async (id: string, newStatus: string) => {
+    if (newStatus === "已签单") {
+      const leadToSign = leadsData.find(l => l.id === id);
+      if (leadToSign) {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        
+        setSignModal({
+          isOpen: true,
+          leadId: id,
+          leadName: leadToSign.name,
+          date: `${yyyy}-${mm}-${dd}`,
+          signer: currentUser?.name || ''
+        });
+      }
+      return;
+    }
+
     setLeadsData(leadsData.map(lead => lead.id === id ? { ...lead, status: newStatus } : lead));
     await fetch(`/api/leads/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus })
     });
+  };
+
+  const handleConfirmSign = async () => {
+    if (!signModal.date || !signModal.signer) {
+      alert('请填写签单时间和签单人');
+      return;
+    }
+    
+    setLeadsData(leadsData.map(lead => lead.id === signModal.leadId ? { 
+      ...lead, 
+      status: '已签单', 
+      signDate: signModal.date, 
+      signer: signModal.signer 
+    } : lead));
+
+    try {
+      const res = await fetch(`/api/leads/${signModal.leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: '已签单',
+          signDate: signModal.date,
+          signer: signModal.signer
+        })
+      });
+      if (res.ok) {
+        setSignModal({ ...signModal, isOpen: false });
+        setShowToast('签单保存成功');
+        setTimeout(() => setShowToast(false), 2500);
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const updateLeadDesigner = async (id: string, newDesigner: string) => {
@@ -585,6 +640,7 @@ function LeadsContent() {
             <thead>
               <tr className="bg-primary-50/50 border-b border-primary-100 text-primary-600 text-sm">
                 <th className="py-4 px-6 font-medium whitespace-nowrap">客户编号 / 姓名</th>
+                <th className="py-4 px-6 font-medium whitespace-nowrap">评级</th>
                 <th className="py-4 px-6 font-medium whitespace-nowrap">状态</th>
                 <th className="py-4 px-6 font-medium whitespace-nowrap">房屋信息</th>
                 <th className="py-4 px-6 font-medium whitespace-nowrap">负责人员</th>
@@ -597,7 +653,11 @@ function LeadsContent() {
                 .map((lead) => (
                 <tr 
                   key={lead.id} 
-                  onClick={() => {
+                  onClick={(e) => {
+                    // 如果点击的是下拉菜单相关的内容，不触发跳转
+                    if ((e.target as HTMLElement).closest('.prevent-row-click')) {
+                      return;
+                    }
                     if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
                       router.push(`/leads/${lead.id}`);
                     } else {
@@ -620,49 +680,52 @@ function LeadsContent() {
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-bold text-primary-900">
-                            {lead.customerNo || lead.id.substring(0, 6)} - {maskName(lead.name, lead)}
-                            {isAssignedToMe(lead) && (
-                              <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
-                            )}
-                          </p>
-                          <div className="relative inline-block w-auto" title="点击修改评级">
-                            <div 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
-                                  setOpenDropdown(openDropdown === `rating-${lead.id}` ? null : `rating-${lead.id}`);
-                                }
-                              }}
-                              className={currentUser?.role === 'admin' || isAssignedToMe(lead) ? "cursor-pointer hover:opacity-80" : ""}
-                            >
-                              {getRatingBadge(lead.rating)}
-                            </div>
-                            {openDropdown === `rating-${lead.id}` && (
-                              <>
-                                <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)} />
-                                <div className="absolute z-20 w-16 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-0">
-                                  {["A", "B", "C", "D"].map(option => (
-                                    <div 
-                                      key={option}
-                                      onClick={() => { updateLeadRating(lead.id, option); setOpenDropdown(null); }}
-                                      className="px-1 py-0.5 mx-1"
-                                    >
-                                      <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${lead.rating === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
-                                        <span className="text-sm">{option}</span>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </>
-                            )}
-                          </div>
+                          <CustomerInfo 
+                            name={maskName(lead.name, lead)}
+                            phone={maskPhone(lead.phone, lead)}
+                            customerNo={lead.customerNo || lead.id.substring(0, 6)}
+                          />
+                          {isAssignedToMe(lead) && (
+                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
+                          )}
                         </div>
-                        <p className="text-xs text-primary-600 font-mono">{maskPhone(lead.phone, lead)}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-6 whitespace-nowrap">
+                  <td className="py-4 px-6 whitespace-nowrap prevent-row-click">
+                    <div className="relative inline-block w-auto" title="点击修改评级">
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
+                            setOpenDropdown(openDropdown === `rating-${lead.id}` ? null : `rating-${lead.id}`);
+                          }
+                        }}
+                        className={currentUser?.role === 'admin' || isAssignedToMe(lead) ? "cursor-pointer hover:opacity-80" : ""}
+                      >
+                        {getRatingBadge(lead.rating)}
+                      </div>
+                      {openDropdown === `rating-${lead.id}` && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
+                          <div className="absolute z-20 w-16 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-0">
+                            {["A", "B", "C", "D"].map(option => (
+                              <div 
+                                key={option}
+                                onClick={(e) => { e.stopPropagation(); updateLeadRating(lead.id, option); setOpenDropdown(null); }}
+                                className="px-1 py-0.5 mx-1"
+                              >
+                                <div className={`flex items-center justify-center px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${lead.rating === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
+                                  <span className="text-sm">{option}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-4 px-6 whitespace-nowrap prevent-row-click">
                     <div className="relative inline-block w-auto">
                       <div 
                         onClick={(e) => {
@@ -685,7 +748,7 @@ function LeadsContent() {
                             {["待跟进", "沟通中", "已量房", "方案阶段", "已交定金", "已签单", "已流失"].map(option => (
                               <div 
                                 key={option}
-                                onClick={() => { updateLeadStatus(lead.id, option); setOpenDropdown(null); }}
+                                onClick={(e) => { e.stopPropagation(); updateLeadStatus(lead.id, option); setOpenDropdown(null); }}
                                 className="px-2 py-1 mx-1"
                               >
                                 <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.status === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
@@ -703,7 +766,7 @@ function LeadsContent() {
                     <p className="text-sm font-medium text-primary-900 truncate max-w-[200px]" title={lead.address}>{maskAddress(lead.address, lead)}</p>
                     <p className="text-xs text-primary-600 mt-0.5">{lead.requirementType} · {lead.area}m² · 预算: {lead.budget}</p>
                   </td>
-                  <td className="py-4 px-6 whitespace-nowrap">
+                  <td className="py-4 px-6 whitespace-nowrap prevent-row-click">
                     <div className="text-sm text-primary-900 flex items-center relative">
                       <span className="text-primary-600 w-12 text-xs">销售:</span>
                       <div 

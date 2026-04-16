@@ -25,7 +25,17 @@ Page({
       const db = wx.cloud.database();
       db.collection('quotes').get()
         .then(res => {
-          const sorted = res.data.sort((a, b) => {
+          const formattedData = res.data.map(q => {
+            if (q.updatedAt) {
+              const d = new Date(q.updatedAt);
+              q._updatedAtFormatted = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            } else if (q.createdAt) {
+              const d = new Date(q.createdAt);
+              q._updatedAtFormatted = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            }
+            return q;
+          });
+          const sorted = formattedData.sort((a, b) => {
             const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return tb - ta;

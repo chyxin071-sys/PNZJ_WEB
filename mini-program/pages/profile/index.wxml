@@ -52,10 +52,20 @@
     <view class="menu-item" hover-class="menu-hover">
       <view class="menu-left">
         <view class="icon-menu icon-phone"></view>
-        <text>账号</text>
+        <text>手机号</text>
       </view>
       <view class="menu-right">
         <text class="menu-val">{{userInfo.phone || '未绑定'}}</text>
+      </view>
+    </view>
+    
+    <view class="menu-item" hover-class="menu-hover">
+      <view class="menu-left">
+        <view class="icon-menu icon-account"></view>
+        <text>登录账号</text>
+      </view>
+      <view class="menu-right">
+        <text class="menu-val">{{userInfo.account || '未设置'}}</text>
       </view>
     </view>
 

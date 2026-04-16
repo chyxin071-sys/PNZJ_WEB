@@ -46,6 +46,13 @@
       <icon type="search" size="16" color="#b5a49a" />
       <input placeholder="搜索待办..." placeholder-class="ph" bindinput="onSearch" />
     </view>
+    <!-- 排序/分组图标 -->
+    <view class="btn-filter hover-scale" bindtap="openGroupActionSheet" style="margin-right: -10rpx;">
+      <view class="icon-sort">
+        <view class="line-mid"></view>
+      </view>
+      <view class="filter-badge" wx:if="{{groupType !== 'none'}}"></view>
+    </view>
     <!-- 人员高级筛选器 (三横线图标) -->
     <view class="btn-filter hover-scale" bindtap="openAdvancedFilter">
       <view class="icon-filter">
@@ -61,69 +68,128 @@
 
   <!-- 待办列表区 -->
   <scroll-view scroll-y class="list-container">
-    <view class="todo-card {{item.status === 'completed' ? 'opacity-60' : ''}}" hover-class="card-hover" hover-stay-time="100" wx:for="{{todos}}" wx:key="_id" bindtap="onTodoTap" data-id="{{item._id}}">
-      
-      <!-- 头部：标题与打勾 -->
-      <view class="card-header">
-        <view class="checkbox {{item.status === 'completed' ? 'checked' : ''}}" catchtap="toggleTodo" data-id="{{item._id}}">
-          <view wx:if="{{item.status === 'completed'}}" class="checkmark"></view>
+    <block wx:if="{{groupType === 'none'}}">
+      <view class="todo-card {{item.status === 'completed' ? 'opacity-60' : ''}}" hover-class="card-hover" hover-stay-time="100" wx:for="{{todos}}" wx:key="_id" bindtap="onTodoTap" data-id="{{item._id}}">
+        
+        <!-- 头部：标题与打勾 -->
+        <view class="card-header">
+          <view class="checkbox {{item.status === 'completed' ? 'checked' : ''}}" catchtap="toggleTodo" data-id="{{item._id}}">
+            <view wx:if="{{item.status === 'completed'}}" class="checkmark"></view>
+          </view>
+          <view class="title-wrap">
+            <text class="title {{item.status === 'completed' ? 'line-through' : ''}}">{{item.title}}</text>
+            
+            <!-- 标题下方：优先级与截止日期并排 (圆角框) -->
+            <view class="meta-tags-row mt-1">
+              <view class="meta-badge priority-badge-{{item.priority}}">
+                <view class="priority-dot priority-bg-{{item.priority}}"></view>  
+                <text>{{item.priorityText}}</text>
+              </view>
+              <view class="meta-badge meta-date date-{{item.dueStatus}}" wx:if="{{item.dueDate && item.status !== 'completed'}}">
+                <view class="icon-calendar"></view>
+                <text>{{item.dueDate}} 截止</text>
+              </view>
+              <view class="meta-badge meta-completed-date" wx:if="{{item.status === 'completed' && item.completedAt}}">
+                <view class="icon-check-circle"></view>
+                <text>{{item.completedAt}} 完成</text>
+              </view>
+            </view>
+          </view>
         </view>
-        <view class="title-wrap">
-          <text class="title {{item.status === 'completed' ? 'line-through' : ''}}">{{item.title}}</text>
+
+        <!-- 主体：描述、附件 -->
+        <view class="card-body">
+          <text class="desc" wx:if="{{item.description}}">{{item.description}}</text>
           
-          <!-- 标题下方：优先级与截止日期并排 (圆角框) -->
-          <view class="meta-tags-row mt-1">
-            <view class="meta-badge priority-badge-{{item.priority}}">
-              <view class="priority-dot priority-bg-{{item.priority}}"></view>  
-              <text>{{item.priorityText}}</text>
-            </view>
-            <view class="meta-badge meta-date date-{{item.dueStatus}}" wx:if="{{item.dueDate && item.status !== 'completed'}}">
-              <view class="icon-calendar"></view>
-              <text>{{item.dueDate}} 截止</text>
-            </view>
-            <view class="meta-badge meta-completed-date" wx:if="{{item.status === 'completed' && item.completedAt}}">
-              <view class="icon-check-circle"></view>
-              <text>{{item.completedAt}} 完成</text>
+          <view class="attachments" wx:if="{{item.attachments && item.attachments.length > 0}}">
+            <view class="att-pill" wx:for="{{item.attachments}}" wx:key="name" wx:for-item="att">
+              <view class="icon-clip"></view>
+              <text>{{att.name}}</text>
             </view>
           </view>
         </view>
-      </view>
 
-      <!-- 主体：描述、附件 -->
-      <view class="card-body">
-        <text class="desc" wx:if="{{item.description}}">{{item.description}}</text>
-        
-        <view class="attachments" wx:if="{{item.attachments && item.attachments.length > 0}}">
-          <view class="att-pill" wx:for="{{item.attachments}}" wx:key="name" wx:for-item="att">
-            <view class="icon-clip"></view>
-            <text>{{att.name}}</text>
+        <!-- 底部：关联对象、执行人 -->
+        <view class="card-footer meta-stack">
+          <!-- 关联对象标签 (带图标) -->
+          <view class="meta-badge meta-related" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
+            <view class="icon-target"></view>
+            <text>{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
+          </view>
+          
+          <!-- 执行人多选展示 (隐藏派发人) -->
+          <view class="meta-assignee">
+            <view class="icon-user"></view>
+            <text>{{item.assignedNames}}</text>
           </view>
         </view>
-      </view>
 
-      <!-- 底部：关联对象、执行人 -->
-      <view class="card-footer meta-stack">
-        <!-- 关联对象标签 (带图标) -->
-        <view class="meta-badge meta-related" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
-          <view class="icon-target"></view>
-          <text>{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
-        </view>
-        
-        <!-- 执行人多选展示 (隐藏派发人) -->
-        <view class="meta-assignee">
-          <view class="icon-user"></view>
-          <text>{{item.assignedNames}}</text>
-        </view>
       </view>
+    </block>
 
-    </view>
+    <!-- 分组模式 -->
+    <block wx:else>
+      <block wx:for="{{groupedTodos}}" wx:key="title" wx:for-item="group">
+        <!-- 分组标题 -->
+        <view class="group-title">
+          <text>{{group.title}}</text>
+          <text class="group-count">{{group.items.length}}</text>
+        </view>
+
+        <!-- 分组内的卡片 -->
+        <view class="todo-card {{item.status === 'completed' ? 'opacity-60' : ''}}" hover-class="card-hover" hover-stay-time="100" wx:for="{{group.items}}" wx:key="_id" bindtap="onTodoTap" data-id="{{item._id}}">
+          <!-- 卡片内容同上 -->
+          <view class="card-header">
+            <view class="checkbox {{item.status === 'completed' ? 'checked' : ''}}" catchtap="toggleTodo" data-id="{{item._id}}">
+              <view wx:if="{{item.status === 'completed'}}" class="checkmark"></view>
+            </view>
+            <view class="title-wrap">
+              <text class="title {{item.status === 'completed' ? 'line-through' : ''}}">{{item.title}}</text>
+              <view class="meta-tags-row mt-1">
+                <view class="meta-badge priority-badge-{{item.priority}}">
+                  <view class="priority-dot priority-bg-{{item.priority}}"></view>  
+                  <text>{{item.priorityText}}</text>
+                </view>
+                <view class="meta-badge meta-date date-{{item.dueStatus}}" wx:if="{{item.dueDate && item.status !== 'completed'}}">
+                  <view class="icon-calendar"></view>
+                  <text>{{item.dueDate}} 截止</text>
+                </view>
+                <view class="meta-badge meta-completed-date" wx:if="{{item.status === 'completed' && item.completedAt}}">
+                  <view class="icon-check-circle"></view>
+                  <text>{{item.completedAt}} 完成</text>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="card-body">
+            <text class="desc" wx:if="{{item.description}}">{{item.description}}</text>
+            <view class="attachments" wx:if="{{item.attachments && item.attachments.length > 0}}">
+              <view class="att-pill" wx:for="{{item.attachments}}" wx:key="name" wx:for-item="att">
+                <view class="icon-clip"></view>
+                <text>{{att.name}}</text>
+              </view>
+            </view>
+          </view>
+          <view class="card-footer meta-stack">
+            <view class="meta-badge meta-related" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
+              <view class="icon-target"></view>
+              <text>{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
+            </view>
+            <view class="meta-assignee">
+              <view class="icon-user"></view>
+              <text>{{item.assignedNames}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+    </block>
     
     <view class="empty-state" wx:if="{{todos.length === 0}}">
       <view class="empty-icon"></view>
       <text>暂无相关待办</text>
     </view>
     
-    <view class="bottom-padding"></view>
+    <view class="pb-tabbar"></view>
   </scroll-view>
 
   <!-- 高级人员筛选弹窗 -->

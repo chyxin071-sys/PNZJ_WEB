@@ -6,6 +6,25 @@ page {
   --primary-600: #8c7a6e;
   --primary-900: #4a403a;
   
+  /* 高级酒红与深绿色调覆盖 */
+  --rose-50: #fbf3f4;
+  --rose-100: #f6e6e8;
+  --rose-500: #a83b44;
+  --rose-600: #992933;
+  --rose-700: #7a1d25;
+
+  --emerald-50: #f2f7f5;
+  --emerald-100: #e0eee9;
+  --emerald-500: #126b4f;
+  --emerald-600: #0B513A;
+  --emerald-700: #073a28;
+
+  --amber-50: #faf5ee;
+  --amber-100: #f4e8d5;
+  --amber-500: #d09c52;
+  --amber-600: #C0893B;
+  --amber-700: #9e6d2b;
+  
   background-color: var(--primary-50);
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Segoe UI, Arial, Roboto, 'PingFang SC', sans-serif;
   color: var(--primary-900);
@@ -34,6 +53,13 @@ page {
 .text-primary-900 { color: var(--primary-900); }
 
 /* 全局多选弹窗样式 */
+::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  color: transparent;
+}
+
 .modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; }
 .modal-content { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 40rpx 40rpx 0 0; z-index: 101; padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; max-height: 85vh; }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 40rpx; font-size: 34rpx; font-weight: bold; border-bottom: 1rpx solid #f1f5f9; flex-shrink: 0; }
@@ -55,16 +81,19 @@ page {
 .filter-tag { padding: 12rpx 32rpx; background: #f8fafc; border: 2rpx solid #e2e8f0; border-radius: 40rpx; font-size: 28rpx; color: var(--primary-600); transition: all 0.2s; }
 .filter-tag.active { background: var(--primary-900); border-color: var(--primary-900); color: #fff; }
 
-/* 高级感人员筛选图标 (等长三横线) */
+/* 高级感人员筛选图标 (纯漏斗形) */
 .btn-filter { background: #fff; border-radius: 20rpx; width: 80rpx; height: 80rpx; display: flex; align-items: center; justify-content: center; box-shadow: 0 4rpx 12rpx rgba(0,0,0,0.02); border: 1rpx solid transparent; flex-shrink: 0; position: relative; transition: all 0.15s; }
-.icon-filter { width: 36rpx; height: 32rpx; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
-.icon-filter::before { content: ''; width: 36rpx; height: 4rpx; background: var(--primary-900); border-radius: 2rpx; }
-.icon-filter .line-mid { width: 36rpx; height: 4rpx; background: var(--primary-900); border-radius: 2rpx; }
-.icon-filter::after { content: ''; width: 36rpx; height: 4rpx; background: var(--primary-900); border-radius: 2rpx; }
-.filter-badge { position: absolute; top: 16rpx; right: 16rpx; width: 14rpx; height: 14rpx; background: #ef4444; border-radius: 50%; border: 3rpx solid #fff; }
+.icon-filter { width: 36rpx; height: 36rpx; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234a403a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3'/%3E%3C/svg%3E"); background-size: 100% 100%; }
+.icon-filter::before, .icon-filter::after, .icon-filter .line-mid { display: none; }
+.filter-badge { position: absolute; top: 16rpx; right: 16rpx; width: 14rpx; height: 14rpx; background: var(--rose-600); border-radius: 50%; border: 3rpx solid #fff; }
 
 /* 顶部时间筛选器 */
 .date-filter-box { background: #f8fafc; padding: 8rpx 24rpx; border-radius: 30rpx; display: inline-flex; align-items: center; justify-content: center; border: 1rpx solid transparent; transition: all 0.2s; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); }
 .date-filter-box:active { transform: scale(0.96); background: #f1f5f9; }
 .date-filter-box text { font-size: 26rpx; color: var(--primary-600); font-weight: bold; }
 .date-filter-box::after { content: ''; width: 0; height: 0; border-left: 8rpx solid transparent; border-right: 8rpx solid transparent; border-top: 10rpx solid var(--primary-600); margin-left: 10rpx; border-radius: 2rpx; }
+
+/* 底部安全距离与导航栏留白 */
+.pb-tabbar { height: calc(160rpx + env(safe-area-inset-bottom)) !important; width: 100%; }
+
+

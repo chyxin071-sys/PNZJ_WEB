@@ -98,13 +98,15 @@ Page({
       wx.showToast({ title: "姓名不能为空", icon: "none" });
       return;
     }
-    if (newName === this.data.userInfo.name) {
+    const oldName = this.data.userInfo.name;
+    if (newName === oldName) {
       this.closeEditName();
       return;
     }
 
-    wx.showLoading({ title: "保存中" });
+    wx.showLoading({ title: "保存中", mask: true });
     const db = wx.cloud.database();
+    const _ = db.command;
     const userId = this.data.userInfo.id || this.data.userInfo._id;
     
     console.log("准备更新的用户ID:", userId, "新姓名:", newName);
@@ -118,6 +120,91 @@ Page({
       })
       .then((res) => {
         console.log("更新姓名成功:", res);
+        
+        // --- 开始全局名字同步联动 ---
+        // 1. 同步客户线索 (leads)
+        db.collection('leads').where(_.or([
+          { creatorName: oldName },
+          { sales: oldName },
+          { designer: oldName },
+          { signer: oldName }
+        ])).get().then(res => {
+          res.data.forEach(item => {
+            let updateData = {};
+            if (item.creatorName === oldName) updateData.creatorName = newName;
+            if (item.sales === oldName) updateData.sales = newName;
+            if (item.designer === oldName) updateData.designer = newName;
+            if (item.signer === oldName) updateData.signer = newName;
+            db.collection('leads').doc(item._id).update({ data: updateData });
+          });
+        });
+
+        // 2. 同步工地 (projects)
+        db.collection('projects').where(_.or([
+          { manager: oldName },
+          { sales: oldName },
+          { designer: oldName }
+        ])).get().then(res => {
+          res.data.forEach(item => {
+            let updateData = {};
+            if (item.manager === oldName) updateData.manager = newName;
+            if (item.sales === oldName) updateData.sales = newName;
+            if (item.designer === oldName) updateData.designer = newName;
+            db.collection('projects').doc(item._id).update({ data: updateData });
+          });
+        });
+
+        // 3. 同步报价单 (quotes)
+        db.collection('quotes').where(_.or([
+          { sales: oldName },
+          { modifier: oldName }
+        ])).get().then(res => {
+          res.data.forEach(item => {
+            let updateData = {};
+            if (item.sales === oldName) updateData.sales = newName;
+            if (item.modifier === oldName) updateData.modifier = newName;
+            db.collection('quotes').doc(item._id).update({ data: updateData });
+          });
+        });
+
+        // 4. 同步待办 (todos)
+        db.collection('todos').where(_.or([
+          { creatorName: oldName },
+          { 'assignees.name': oldName }
+        ])).get().then(res => {
+          res.data.forEach(item => {
+            let updateData = {};
+            if (item.creatorName === oldName) updateData.creatorName = newName;
+            if (item.assignees) {
+              let assignees = item.assignees.map(a => a.name === oldName ? { ...a, name: newName } : a);
+              updateData.assignees = assignees;
+              updateData.assignedNames = assignees.map(a => a.name).join(', ');
+            }
+            db.collection('todos').doc(item._id).update({ data: updateData });
+          });
+        });
+
+        // 5. 同步跟进记录 (followUps)
+        db.collection('followUps').where({ createdBy: oldName }).get().then(res => {
+          res.data.forEach(item => {
+            db.collection('followUps').doc(item._id).update({ data: { createdBy: newName } });
+          });
+        });
+
+        // 6. 同步消息通知 (notifications)
+        db.collection('notifications').where(_.or([
+          { senderName: oldName },
+          { targetUser: oldName }
+        ])).get().then(res => {
+          res.data.forEach(item => {
+            let updateData = {};
+            if (item.senderName === oldName) updateData.senderName = newName;
+            if (item.targetUser === oldName) updateData.targetUser = newName;
+            db.collection('notifications').doc(item._id).update({ data: updateData });
+          });
+        });
+        // --- 结束全局同步 ---
+
         wx.hideLoading();
         wx.showToast({ title: "修改成功", icon: "success" });
 

@@ -8,6 +8,28 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        // 覆盖 tailwind 默认颜色为高级色调
+        rose: {
+          50: 'var(--color-rose-50)',
+          100: 'var(--color-rose-100)',
+          500: 'var(--color-rose-500)',
+          600: 'var(--color-rose-600)',
+          700: 'var(--color-rose-700)',
+        },
+        emerald: {
+          50: 'var(--color-emerald-50)',
+          100: 'var(--color-emerald-100)',
+          500: 'var(--color-emerald-500)',
+          600: 'var(--color-emerald-600)',
+          700: 'var(--color-emerald-700)',
+        },
+        amber: {
+          50: 'var(--color-amber-50)',
+          100: 'var(--color-amber-100)',
+          500: 'var(--color-amber-500)',
+          600: 'var(--color-amber-600)',
+          700: 'var(--color-amber-700)',
+        },
         // 使用 CSS 变量支持多主题切换
         background: "var(--bg-color)",
         foreground: "var(--text-main)", 

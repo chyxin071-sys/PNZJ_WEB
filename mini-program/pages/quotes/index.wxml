@@ -34,8 +34,11 @@
       <view class="quote-card" wx:for="{{filteredQuotes}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
         <view class="card-header">
           <view class="customer-info">
-            <text class="customer-name">{{item.customer}} <text style="font-size:24rpx; color:#666; font-weight:normal; margin-left:8rpx;">{{item.customerNo || item.leadId}}</text></text>
-            <text class="customer-phone">{{item.phone}}</text>
+            <customer-info 
+              name="{{item.customer}}" 
+              phone="{{item.phone}}" 
+              customerNo="{{item.customerNo || item.leadId}}" 
+            />
           </view>
           <view class="status-badge status-{{item.status === '初步' ? 'draft' : item.status === '待确认' ? 'wait' : item.status === '已确认' ? 'done' : 'cancel'}}">
             {{item.status || '初步'}}
@@ -43,13 +46,23 @@
         </view>
         
         <view class="card-body">
-          <view class="info-row">
-            <text class="info-icon">🏠</text>
-            <text class="info-text truncate">{{item.address || '暂无地址'}}</text>
+          <view class="info-row" style="display: flex; justify-content: space-between;">
+            <view style="display: flex; align-items: center; max-width: 65%;">
+              <text class="info-icon">🏠</text>
+              <text class="info-text truncate">{{item.address || '暂无地址'}}</text>
+            </view>
+            <view style="font-size: 22rpx; color: var(--rose-600); background: var(--rose-50); padding: 4rpx 16rpx; border-radius: 8rpx; font-weight: bold;">
+              V{{item.version || 1}} 版
+            </view>
           </view>
-          <view class="info-row">
-            <text class="info-icon">👤</text>
-            <text class="info-text">销售：{{item.sales || '未分配'}}</text>
+          <view class="info-row" style="display: flex; justify-content: space-between;">
+            <view style="display: flex; align-items: center;">
+              <text class="info-icon">👤</text>
+              <text class="info-text">最后修改：{{item.modifier || item.sales || '未知'}}</text>
+            </view>
+            <view style="font-size: 22rpx; color: #94a3b8;">
+              {{item._updatedAtFormatted || '最近'}}
+            </view>
           </view>
         </view>
 
@@ -88,12 +101,16 @@
         <block wx:if="{{leadsList.length > 0}}">
           <view wx:for="{{leadsList}}" wx:key="_id" bindtap="selectLead" data-id="{{item._id}}" style="padding: 30rpx 0; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
             <view>
-              <view style="font-size: 30rpx; font-weight: bold; color: #334155; margin-bottom: 8rpx;">
-                {{item.name}} <text style="font-size:24rpx; color:#94a3b8; font-weight:normal; margin-left:8rpx;">{{item.customerNo || item._id}}</text>
+              <view style="margin-bottom: 12rpx;">
+                <customer-info 
+                  name="{{item.name}}" 
+                  phone="{{item.phone}}" 
+                  customerNo="{{item.customerNo || item._id}}" 
+                />
               </view>
-              <view style="font-size: 24rpx; color: #64748b;">{{item.phone || '无电话'}} | {{item.address || '无地址'}}</view>
+              <view style="font-size: 24rpx; color: #64748b;">{{item.address || '无地址'}}</view>
             </view>
-            <view style="font-size: 24rpx; color: #fff; background: #10b981; padding: 8rpx 20rpx; border-radius: 30rpx;">选择</view>
+            <view style="font-size: 24rpx; color: #fff; background: var(--emerald-600); padding: 8rpx 20rpx; border-radius: 30rpx;">选择</view>
           </view>
         </block>
         <view wx:else style="padding: 100rpx 0; text-align: center; color: #94a3b8; font-size: 28rpx;">

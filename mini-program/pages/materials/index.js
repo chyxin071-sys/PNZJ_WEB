@@ -41,24 +41,51 @@ Page({
       this.setData({ loading: true });
       wx.showNavigationBarLoading();
       const db = wx.cloud.database();
-      db.collection('materials').get()
-        .then(res => {
-          const sorted = res.data.sort((a, b) => {
-            const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return tb - ta;
-          });
-          this.setData({ materials: sorted, loading: false }, () => {
-            this.filterData();
-          });
-          wx.hideNavigationBarLoading();
-          resolve();
-        })
-        .catch(err => {
-          this.setData({ loading: false });
-          wx.hideNavigationBarLoading();
-          resolve();
+      const MAX_LIMIT = 20; // 每次最多拉取20条
+      
+      // 为了支持较多材料，这里做个简单的多次拉取（最多拉取100条作为展示）
+      const fetchBatch = (skip) => {
+        return db.collection('materials')
+          .orderBy('createdAt', 'desc')
+          .skip(skip)
+          .limit(MAX_LIMIT)
+          .get();
+      };
+
+      Promise.all([
+        fetchBatch(0),
+        fetchBatch(20),
+        fetchBatch(40),
+        fetchBatch(60),
+        fetchBatch(80)
+      ]).then(results => {
+        let allData = [];
+        results.forEach(res => {
+          allData = allData.concat(res.data);
         });
+        
+        // 去重（以防在拉取过程中有新数据插入导致重复）
+        const uniqueData = [];
+        const ids = new Set();
+        allData.forEach(item => {
+          if (!ids.has(item._id)) {
+            ids.add(item._id);
+            uniqueData.push(item);
+          }
+        });
+
+        this.setData({ materials: uniqueData, loading: false }, () => {
+          this.filterData();
+        });
+        wx.hideNavigationBarLoading();
+        resolve();
+      }).catch(err => {
+        console.error('Fetch materials error:', err);
+        this.setData({ loading: false });
+        wx.hideNavigationBarLoading();
+        wx.showToast({ title: '加载失败，请检查权限', icon: 'none' });
+        resolve();
+      });
     });
   },
   switchCategory(e) {

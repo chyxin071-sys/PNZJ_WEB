@@ -7,7 +7,7 @@
   box-sizing: border-box;
 }
 
-/* 顶部标题与新建按钮区域 */
+/* 顶部标题与新建按钮区�?*/
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -52,7 +52,7 @@
   margin-top: -4rpx;
 }
 
-/* 搜索与状态切换区域 */
+/* 搜索与状态切换区�?*/
 .search-filter-section {
   background-color: #ffffff;
   padding: 0 40rpx 24rpx;
@@ -62,7 +62,7 @@
   gap: 24rpx;
 }
 
-/* 状态滑动选择器 */
+/* 状态滑动选择�?*/
 .status-scroll {
   width: 100%;
   white-space: nowrap;
@@ -91,7 +91,7 @@
   box-shadow: 0 4rpx 12rpx rgba(74, 64, 58, 0.15);
 }
 
-/* 搜索框 */
+/* 搜索�?*/
 .search-box {
   display: flex;
   align-items: center;
@@ -169,7 +169,7 @@
   font-family: monospace;
 }
 
-/* 状态标签 */
+/* 状态标�?*/
 .status-badge {
   font-size: 22rpx;
   font-weight: 600;
@@ -178,9 +178,9 @@
 }
 
 .status-draft { background: #f8fafc; color: #64748b; border: 1rpx solid #e2e8f0; }
-.status-wait { background: #fffbeb; color: #d97706; border: 1rpx solid #fef3c7; }
-.status-done { background: #ecfdf5; color: #059669; border: 1rpx solid #d1fae5; }
-.status-cancel { background: #fff1f2; color: #e11d48; border: 1rpx solid #ffe4e6; }
+.status-wait { background: #fffbeb; color: var(--amber-600); border: 1rpx solid var(--amber-50); }
+.status-done { background: var(--emerald-50); color: var(--emerald-600); border: 1rpx solid var(--emerald-100); }
+.status-cancel { background: var(--rose-50); color: var(--rose-600); border: 1rpx solid #ffe4e6; }
 
 /* 卡片主体内容 */
 .card-body {
@@ -241,9 +241,9 @@
 }
 
 .text-gray { color: var(--primary-500); }
-.text-primary { color: #d97706; font-size: 36rpx; }
+.text-primary { color: var(--amber-600); font-size: 36rpx; }
 
-/* 空状态 */
+/* 空状�?*/
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -262,3 +262,4 @@
   font-size: 28rpx;
   color: var(--primary-400);
 }
+

@@ -11,6 +11,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ error: '缺失员工 ID' }, { status: 400 });
     }
 
+    // 获取老用户信息以便进行全局名字同步
+    const userQuery = `db.collection("users").doc("${id}").get()`;
+    const userData = await tcbQuery(userQuery);
+    let oldName = '';
+    if (userData && userData.length > 0) {
+      oldName = userData[0].name;
+    }
+
     // 只允许更新特定的安全字段
     const updateData: any = {};
     if (body.is_active !== undefined) {
@@ -33,6 +41,53 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     const query = `db.collection("users").doc("${id}").update({ data: ${docData} })`;
     await tcbUpdate(query);
+
+    // 如果名字发生改变，全局同步名字
+    if (body.name && oldName && body.name !== oldName) {
+      const newName = body.name;
+      const syncQueries = [
+        `db.collection("leads").where({ creatorName: "${oldName}" }).update({ data: { creatorName: "${newName}" } })`,
+        `db.collection("leads").where({ sales: "${oldName}" }).update({ data: { sales: "${newName}" } })`,
+        `db.collection("leads").where({ designer: "${oldName}" }).update({ data: { designer: "${newName}" } })`,
+        `db.collection("leads").where({ signer: "${oldName}" }).update({ data: { signer: "${newName}" } })`,
+
+        `db.collection("projects").where({ manager: "${oldName}" }).update({ data: { manager: "${newName}" } })`,
+        `db.collection("projects").where({ sales: "${oldName}" }).update({ data: { sales: "${newName}" } })`,
+        `db.collection("projects").where({ designer: "${oldName}" }).update({ data: { designer: "${newName}" } })`,
+
+        `db.collection("quotes").where({ sales: "${oldName}" }).update({ data: { sales: "${newName}" } })`,
+        `db.collection("quotes").where({ modifier: "${oldName}" }).update({ data: { modifier: "${newName}" } })`,
+
+        `db.collection("todos").where({ creatorName: "${oldName}" }).update({ data: { creatorName: "${newName}" } })`,
+
+        `db.collection("followUps").where({ createdBy: "${oldName}" }).update({ data: { createdBy: "${newName}" } })`,
+        
+        `db.collection("notifications").where({ senderName: "${oldName}" }).update({ data: { senderName: "${newName}" } })`,
+        `db.collection("notifications").where({ targetUser: "${oldName}" }).update({ data: { targetUser: "${newName}" } })`
+      ];
+
+      for (const sq of syncQueries) {
+        try {
+          await tcbUpdate(sq);
+        } catch (e) {
+          console.error('Sync update failed:', sq, e);
+        }
+      }
+      
+      // todos assignees 处理
+      try {
+        const todosData = await tcbQuery(`db.collection("todos").where({ "assignees.name": "${oldName}" }).get()`);
+        for (const t of todosData) {
+          if (t.assignees) {
+            const newAssignees = t.assignees.map((a: any) => a.name === oldName ? { ...a, name: newName } : a);
+            const assignedNames = newAssignees.map((a: any) => a.name).join(', ');
+            await tcbUpdate(`db.collection("todos").doc("${t._id}").update({ data: { assignees: ${JSON.stringify(newAssignees)}, assignedNames: "${assignedNames}" } })`);
+          }
+        }
+      } catch (e) {
+        console.error('Sync todos assignees failed:', e);
+      }
+    }
 
     return NextResponse.json({ message: '员工信息已更新' }, { status: 200 });
 

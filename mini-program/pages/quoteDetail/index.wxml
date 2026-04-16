@@ -2,38 +2,72 @@
   
   <!-- 报价单顶部：Web风发票样式 -->
   <view class="quote-header" style="background: #fff; padding: 40rpx; border-radius: 16rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.02);">
-    <view style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 30rpx; border-bottom: 1rpx solid #f1f5f9; padding-bottom: 20rpx;">
-      <view>
-        <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; margin-bottom: 8rpx;">报价单 / Quote</view>
-        <view style="font-size: 24rpx; color: #64748b;">NO. {{quote.customerNo || quote.leadId || quote._id}}</view>
-      </view>
-      <view class="status-badge" style="background: #f8fafc; color: #475569; padding: 6rpx 20rpx; border-radius: 8rpx; font-size: 24rpx; border: 1rpx solid #e2e8f0;">{{quote.status || '初步'}}</view>
+    <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30rpx; border-bottom: 1rpx solid #f1f5f9; padding-bottom: 20rpx;">
+      <view style="font-size: 36rpx; font-weight: bold; color: #1e293b;">报价单</view>
+      <picker bindchange="onStatusChange" range="{{['初步', '确认版', '最终版']}}">
+        <view class="status-badge" style="background: #f8fafc; color: #475569; padding: 8rpx 24rpx; border-radius: 8rpx; font-size: 26rpx; border: 1rpx solid #e2e8f0; display: flex; align-items: center; gap: 8rpx;">
+          <text>{{quote.status || '初步'}}</text>
+          <text style="font-size: 20rpx; color: #94a3b8;">▼</text>
+        </view>
+      </picker>
     </view>
     
-    <view style="display: grid; grid-template-columns: 1fr 1fr; gap: 20rpx;">
+    <view style="margin-bottom: 20rpx; display: flex; justify-content: space-between; align-items: flex-start;">
       <view>
-        <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">客户名称</view>
-        <view style="font-size: 28rpx; color: #334155; font-weight: 500;">{{quote.customer}}</view>
+        <customer-info 
+          name="{{quote.customer}}" 
+          phone="{{quote.phone}}" 
+          customerNo="{{quote.customerNo || quote.leadId || quote._id}}" 
+        />
+        <view style="font-size: 22rpx; color: #94a3b8; margin-top: 12rpx; line-height: 1.6;">
+          <view>版本: V{{quote.version || 1}} | 修改人: {{quote.modifier || quote.sales || '未知'}}</view>
+          <view>最近修改: {{quote.displayTime || '未知'}}</view>
+        </view>
+      </view>
+      
+      <view bindtap="openHistoryModal" style="font-size: 24rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 8rpx 20rpx; border-radius: 30rpx; border: 1rpx solid var(--emerald-100); display: flex; align-items: center; gap: 8rpx;">
+        <text style="font-size: 24rpx;">🕒</text> 历史报价
+      </view>
+    </view>
+    <view style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20rpx; margin-bottom: 20rpx;">
+      <view>
+        <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">房屋面积</view>
+        <view style="font-size: 26rpx; color: #334155; font-weight: 500;">{{quote.area ? quote.area + 'm²' : '-'}}</view>
       </view>
       <view>
-        <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">联系电话</view>
-        <view style="font-size: 28rpx; color: #334155; font-weight: 500;">{{quote.phone || '-'}}</view>
+        <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">需求类型</view>
+        <view style="font-size: 26rpx; color: #334155; font-weight: 500;">{{quote.requirementType || '-'}}</view>
       </view>
-      <view style="grid-column: span 2;">
+      <view>
+        <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">客户预算</view>
+        <view style="font-size: 26rpx; color: #334155; font-weight: 500;">{{quote.budget || '-'}}</view>
+      </view>
+    </view>
+    <view style="display: grid; grid-template-columns: 1fr; gap: 20rpx;">
+      <view>
         <view style="font-size: 22rpx; color: #94a3b8; margin-bottom: 4rpx;">项目地址</view>
-        <view style="font-size: 28rpx; color: #334155; font-weight: 500;">{{quote.address || '-'}}</view>
+        <view style="font-size: 26rpx; color: #334155; font-weight: 500;">{{quote.address || '-'}}</view>
       </view>
     </view>
   </view>
 
   <view class="summary-card" style="background: #fff; padding: 30rpx 40rpx; border-radius: 16rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.02);">
     <view class="summary-row" style="display: flex; justify-content: space-between; align-items: center;">
-      <text style="font-size: 28rpx; color: #475569;">预估总造价</text>
-      <text style="font-size: 40rpx; font-weight: bold; color: #ef4444;">¥{{quote.total || 0}}</text>
+      <text style="font-size: 28rpx; color: #475569; font-weight: bold;">总报价</text>
+      <text style="font-size: 40rpx; font-weight: bold; color: #1e293b;">¥{{quote.total || 0}}</text>
     </view>
-    <view class="summary-row mt-2" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx dashed #e2e8f0;" wx:if="{{quote.final > 0}}">
-      <text style="font-size: 28rpx; color: #475569;">最终成交价</text>
-      <text style="font-size: 32rpx; font-weight: bold; color: #10b981;">¥{{quote.final || 0}}</text>
+    
+    <view class="summary-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 24rpx;">
+      <text style="font-size: 28rpx; color: #475569;">优惠减免</text>
+      <view style="display: flex; align-items: center;">
+        <text style="font-size: 28rpx; color: var(--rose-600); margin-right: 8rpx;">-¥</text>
+        <input type="digit" value="{{quote.discount}}" bindinput="onDiscountInput" bindblur="onDiscountBlur" placeholder="0" style="width: 140rpx; text-align: right; font-size: 32rpx; font-weight: bold; color: var(--rose-600); background: var(--rose-50); padding: 4rpx 16rpx; border-radius: 8rpx; border: 1rpx solid var(--rose-100);" />
+      </view>
+    </view>
+
+    <view class="summary-row" style="display: flex; justify-content: space-between; align-items: center; margin-top: 24rpx; padding-top: 24rpx; border-top: 1rpx dashed #e2e8f0;">
+      <text style="font-size: 28rpx; color: #1e293b; font-weight: bold;">最终成交价</text>
+      <text style="font-size: 44rpx; font-weight: bold; color: var(--rose-600);">¥{{quote.final !== undefined ? quote.final : (quote.total || 0)}}</text>
     </view>
   </view>
 
@@ -51,43 +85,40 @@
     </view>
     
     <block wx:if="{{groupedItems && groupedItems.length > 0}}">
-      <view class="table-header" style="display: flex; padding: 20rpx 40rpx; background: #f1f5f9; font-size: 24rpx; color: #64748b;">
-        <view style="flex: 2;">项目/材料</view>
-        <view style="flex: 1; text-align: center;">单价</view>
-        <view style="flex: 1; text-align: center;">数量</view>
-        <view style="flex: 1; text-align: right;">小计</view>
-      </view>
-      
       <block wx:for="{{groupedItems}}" wx:key="category" wx:for-item="group">
         <!-- 分类表头 -->
-        <view style="padding: 16rpx 40rpx; background: #f8fafc; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
-          <view style="font-size: 26rpx; font-weight: bold; color: #1e293b; display: flex; align-items: center;">
-            <view style="width: 6rpx; height: 24rpx; background: #4a403a; margin-right: 12rpx; border-radius: 4rpx;"></view>
+        <view style="padding: 24rpx 40rpx; background: #f8fafc; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+          <view style="font-size: 28rpx; font-weight: bold; color: #1e293b; display: flex; align-items: center;">
+            <view style="width: 8rpx; height: 28rpx; background: #4a403a; margin-right: 16rpx; border-radius: 4rpx;"></view>
             {{group.category}}
           </view>
           <view style="font-size: 24rpx; color: #64748b; font-weight: 500;">
-            小计: <text style="color: #ef4444;">¥{{group.subtotal}}</text>
+            小计: <text style="color: var(--rose-600); font-weight: bold; font-size: 28rpx;">¥{{group.subtotal}}</text>
           </view>
         </view>
         
         <view class="item-card" wx:for="{{group.items}}" wx:key="name" style="padding: 30rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; position: relative;">
-          <view style="display: flex; align-items: flex-start; margin-bottom: 16rpx;">
-            <view style="flex: 2; padding-right: 10rpx;">
-              <view style="font-size: 28rpx; color: #334155; font-weight: 500; margin-bottom: 4rpx; line-height: 1.4;">{{item.name}}</view>
-              <view style="font-size: 22rpx; color: #94a3b8;">{{item.sku || '无规格'}}</view>
+          <!-- 上半部分：名称、单价、小计 -->
+          <view style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24rpx;">
+            <view style="flex: 1; padding-right: 20rpx;">
+              <view style="font-size: 30rpx; color: #334155; font-weight: bold; margin-bottom: 8rpx; line-height: 1.4;">{{item.name}}</view>
+              <view style="font-size: 24rpx; color: #94a3b8;">{{item.sku || '建筑面积'}}</view>
             </view>
-            <view style="flex: 1; text-align: center; font-size: 26rpx; color: #475569; padding-top: 4rpx;">¥{{item.price}}</view>
-            <view style="flex: 1; display: flex; justify-content: center; align-items: flex-start;">
-              <view style="display: flex; align-items: center; border: 1rpx solid #e2e8f0; border-radius: 6rpx; overflow: hidden; background: #f8fafc;">
-                <view bindtap="updateQty" data-index="{{item._originalIndex}}" data-delta="-1" style="padding: 4rpx 16rpx; font-size: 24rpx; color: #64748b;">-</view>
-                <view style="padding: 4rpx 16rpx; font-size: 24rpx; color: #334155; border-left: 1rpx solid #e2e8f0; border-right: 1rpx solid #e2e8f0; background: #fff;">{{item.quantity}}</view>
-                <view bindtap="updateQty" data-index="{{item._originalIndex}}" data-delta="1" style="padding: 4rpx 16rpx; font-size: 24rpx; color: #64748b;">+</view>
-              </view>
+            <view style="text-align: right; min-width: 140rpx;">
+              <view style="font-size: 32rpx; font-weight: bold; color: var(--rose-600); margin-bottom: 6rpx;">¥{{item.total || 0}}</view>
+              <view style="font-size: 24rpx; color: #64748b;">单价: ¥{{item.price}}</view>
             </view>
-            <view style="flex: 1; text-align: right; font-size: 28rpx; font-weight: bold; color: #ef4444; padding-top: 4rpx;">¥{{item.total || 0}}</view>
           </view>
-          <view style="display: flex; justify-content: flex-end;">
-            <view style="font-size: 22rpx; color: #ef4444; padding: 4rpx 16rpx; border: 1rpx solid #fecaca; border-radius: 20rpx; background: #fef2f2;" bindtap="deleteItem" data-index="{{item._originalIndex}}">删除</view>
+          
+          <!-- 下半部分：左侧步进器，右侧删除 -->
+          <view style="display: flex; justify-content: space-between; align-items: center;">
+            <view style="display: flex; align-items: center; border: 1rpx solid #e2e8f0; border-radius: 8rpx; overflow: hidden; background: #f8fafc; height: 60rpx;">
+              <view bindtap="updateQty" data-index="{{item._originalIndex}}" data-delta="-1" style="width: 60rpx; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32rpx; color: #64748b; font-weight: bold; background: #f1f5f9;">-</view>
+              <input type="digit" value="{{item.quantity}}" bindinput="onQtyInput" data-index="{{item._originalIndex}}" bindblur="onQtyBlur" style="width: 90rpx; height: 100%; min-height: 100%; text-align: center; font-size: 28rpx; color: #334155; font-weight: bold; border-left: 1rpx solid #e2e8f0; border-right: 1rpx solid #e2e8f0; background: #fff;" />
+              <view bindtap="updateQty" data-index="{{item._originalIndex}}" data-delta="1" style="width: 60rpx; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32rpx; color: #64748b; font-weight: bold; background: #f1f5f9;">+</view>
+            </view>
+            
+            <view style="font-size: 24rpx; color: var(--rose-600); padding: 10rpx 30rpx; border: 1rpx solid var(--rose-100); border-radius: 30rpx; background: var(--rose-50); font-weight: 500;" bindtap="deleteItem" data-index="{{item._originalIndex}}">删除</view>
           </view>
         </view>
       </block>
@@ -105,7 +136,7 @@
     </view>
   </view>
   
-  <view style="height: 160rpx;"></view> <!-- 底部占位 -->
+  <view style="height: calc(280rpx + env(safe-area-inset-bottom));"></view> <!-- 底部占位 -->
   
   <!-- 添加自定义项（非标项）弹窗 -->
   <view class="modal-mask" wx:if="{{showCustomModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 40rpx;">
@@ -113,13 +144,13 @@
       <view style="font-size: 32rpx; font-weight: bold; color: #1e293b; text-align: center; margin-bottom: 40rpx;">添加非标项</view>
       
       <view style="margin-bottom: 24rpx;">
-        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">项目名称 <text style="color: #ef4444;">*</text></view>
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">项目名称 <text style="color: var(--rose-600);">*</text></view>
         <input placeholder="如：墙体拆除人工费" value="{{customItem.name}}" bindinput="onCustomInput" data-field="name" style="width: 100%; height: 80rpx; background: #f8fafc; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; box-sizing: border-box;" />
       </view>
 
       <view style="display: flex; gap: 20rpx; margin-bottom: 24rpx;">
         <view style="flex: 1;">
-          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">分类 <text style="color: #ef4444;">*</text></view>
+          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">分类 <text style="color: var(--rose-600);">*</text></view>
           <picker bindchange="onCustomPickerChange" range="{{categories}}">
             <view style="width: 100%; height: 80rpx; background: #f8fafc; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;">
               <text>{{customItem.category}}</text>
@@ -128,14 +159,14 @@
           </picker>
         </view>
         <view style="flex: 1;">
-          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">单价 (¥) <text style="color: #ef4444;">*</text></view>
+          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">单价 (¥) <text style="color: var(--rose-600);">*</text></view>
           <input type="digit" placeholder="0.00" value="{{customItem.price}}" bindinput="onCustomInput" data-field="price" style="width: 100%; height: 80rpx; background: #f8fafc; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; box-sizing: border-box;" />
         </view>
       </view>
 
       <view style="display: flex; gap: 20rpx; margin-bottom: 40rpx;">
         <view style="flex: 1;">
-          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">数量 <text style="color: #ef4444;">*</text></view>
+          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">数量 <text style="color: var(--rose-600);">*</text></view>
           <input type="number" placeholder="1" value="{{customItem.quantity}}" bindinput="onCustomInput" data-field="quantity" style="width: 100%; height: 80rpx; background: #f8fafc; border-radius: 12rpx; padding: 0 24rpx; font-size: 28rpx; box-sizing: border-box;" />
         </view>
         <view style="flex: 1;">
@@ -148,6 +179,50 @@
         <button bindtap="closeCustomModal" style="flex: 1; font-size: 30rpx; background: #f1f5f9; color: #475569; padding: 20rpx 0; border-radius: 12rpx;">取消</button>
         <button bindtap="saveCustomItem" style="flex: 1; font-size: 30rpx; background: #4a403a; color: #fff; padding: 20rpx 0; border-radius: 12rpx;">确定添加</button>
       </view>
+    </view>
+  </view>
+
+  <!-- 历史报价单弹窗 -->
+  <view class="modal-mask" wx:if="{{showHistoryModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: flex-end;">
+    <view bindtap="closeHistoryModal" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;"></view>
+    <view style="background: #fff; width: 100%; height: 75vh; border-radius: 32rpx 32rpx 0 0; position: relative; display: flex; flex-direction: column; z-index: 2001;">
+      <view style="padding: 30rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+        <view style="font-size: 32rpx; font-weight: bold; color: #1e293b;">历史报价版本</view>
+        <view bindtap="closeHistoryModal" style="font-size: 40rpx; color: #94a3b8; padding: 10rpx;">×</view>
+      </view>
+      
+      <scroll-view scroll-y style="flex: 1; padding: 20rpx 0;">
+        <block wx:if="{{historyQuotes.length > 0}}">
+          <view wx:for="{{historyQuotes}}" wx:key="_id" style="position: relative; width: 100%; overflow: hidden; margin-bottom: 2rpx; background: #fff;">
+            <!-- 操作层 (底层) -->
+            <view style="position: absolute; right: 0; top: 0; bottom: 0; display: flex; z-index: 1;">
+              <view bindtap="switchQuote" data-id="{{item._id}}" style="width: 140rpx; background: var(--emerald-500); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: bold;">查看</view>
+              <view bindtap="deleteHistoryQuote" data-id="{{item._id}}" data-index="{{index}}" style="width: 140rpx; background: var(--rose-600); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: bold;">删除</view>
+            </view>
+            <!-- 展现层 (顶层) -->
+            <view bindtouchstart="onHistoryTouchStart" bindtouchmove="onHistoryTouchMove" data-index="{{index}}" style="position: relative; z-index: 2; background: #fff; transition: transform 0.2s; transform: translateX({{item.slideOffset || 0}}rpx); padding: 30rpx 40rpx; border-bottom: 1rpx solid #f1f5f9;">
+              <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx;">
+                <view style="display: flex; align-items: center; gap: 16rpx;">
+                  <view style="font-size: 30rpx; font-weight: bold; color: #1e293b; display: flex; align-items: center; gap: 12rpx;">
+                    <text>V{{item.version || 1}} 版</text>
+                    <text style="font-size: 20rpx; font-weight: normal; padding: 2rpx 12rpx; border-radius: 6rpx; background: #f1f5f9; color: #475569;">{{item.status || '初步'}}</text>
+                  </view>
+                  <view wx:if="{{item._id === quote._id}}" style="font-size: 20rpx; background: var(--amber-50); color: var(--amber-600); padding: 4rpx 12rpx; border-radius: 8rpx; font-weight: bold;">当前查看</view>
+                </view>
+                <view style="font-size: 32rpx; font-weight: bold; color: var(--rose-600);">¥{{item.final !== undefined ? item.final : item.total}}</view>
+              </view>
+              <view style="display: flex; justify-content: space-between; font-size: 24rpx; color: #64748b;">
+                <text>修改人: {{item.modifier || item.sales || '未知'}}</text>
+                <text>{{item._updatedAtFormatted || '最近'}}</text>
+              </view>
+              <view style="font-size: 22rpx; color: #94a3b8; margin-top: 16rpx;">← 左滑查看操作</view>
+            </view>
+          </view>
+        </block>
+        <view wx:else style="padding: 100rpx 0; text-align: center; color: #94a3b8; font-size: 28rpx;">
+          暂无其他历史版本
+        </view>
+      </scroll-view>
     </view>
   </view>
 </view>

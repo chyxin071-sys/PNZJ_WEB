@@ -77,8 +77,11 @@
               <text class="address-text" style="font-size: 34rpx; font-weight: bold; color: #1a1a1a;">{{item.address || '未知小区'}}</text>
             </view>
             <view class="info-row" style="margin-bottom: 8rpx; display: flex; align-items: center;">
-              <text style="font-size: 28rpx; font-weight: 500; color: #333; margin-right: 16rpx;">{{item.customer}} <text style="font-size:24rpx; color:#666; font-weight:normal;">{{item.customerNo || item.leadId}}</text></text>
-              <text style="font-size: 26rpx; color: #666;">{{item.phone || '暂无电话'}}</text>
+              <customer-info 
+                name="{{item.customer}}" 
+                phone="{{item.phone}}" 
+                customerNo="{{item.customerNo || item.leadId}}" 
+              />
             </view>
             <view class="manager-text" style="font-size: 24rpx; color: #888; margin-top: 8rpx;">
               项目经理: {{item.manager || '未分配'}} | 销售: {{item.sales || '未分配'}} | 设计: {{item.designer || '未分配'}}
@@ -139,7 +142,7 @@
       <text>暂无相关工地</text>
     </view>
     
-    <view class="bottom-padding"></view>
+    <view class="pb-tabbar"></view>
   </scroll-view>
 
   <!-- 高级筛选弹窗 (修改为团队待办样式的居中弹窗) -->
@@ -150,6 +153,14 @@
       <view class="btn-close" bindtap="applyFilter">确定</view>
     </view>
     <scroll-view scroll-y class="modal-list" style="height: 60vh;">
+      <view class="filter-section">
+        <view class="filter-title">范围</view>
+        <view class="filter-tags">
+          <view class="filter-tag {{filterScope === '与我相关' ? 'active' : ''}}" bindtap="switchScope" data-scope="与我相关">与我相关</view>
+          <view class="filter-tag {{filterScope === '全部工地' ? 'active' : ''}}" bindtap="switchScope" data-scope="全部工地">全部工地</view>
+        </view>
+      </view>
+
       <view class="filter-section">
         <view class="filter-title">状态</view>
         <view class="filter-tags">
@@ -177,12 +188,17 @@
       <view class="filter-section">
         <view class="filter-title">负责人员</view>
         <block wx:for="{{groupedEmployees}}" wx:key="dept">
-          <view class="dept-title">{{item.dept}}</view>
-          <view class="employee-item" wx:for="{{item.employees}}" wx:for-item="emp" wx:key="id" bindtap="toggleEmployee" data-id="{{emp.id}}">
-            <view class="checkbox {{emp.selected ? 'checked' : ''}}">
-              <view wx:if="{{emp.selected}}" class="checkmark"></view>
+          <view class="dept-title" bindtap="toggleDept" data-dept="{{item.dept}}">
+            <text>{{item.dept}}</text>
+            <view class="arrow {{item.expanded ? 'up' : 'down'}}"></view>
+          </view>
+          <view class="dept-employees" wx:if="{{item.expanded}}">
+            <view class="employee-item" wx:for="{{item.employees}}" wx:for-item="emp" wx:key="id" bindtap="toggleEmployee" data-id="{{emp.id}}">
+              <view class="checkbox {{emp.selected ? 'checked' : ''}}">
+                <view wx:if="{{emp.selected}}" class="checkmark"></view>
+              </view>
+              <text class="emp-name">{{emp.name}}</text>
             </view>
-            <text class="emp-name">{{emp.name}}</text>
           </view>
         </block>
       </view>

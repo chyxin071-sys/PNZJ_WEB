@@ -17,6 +17,7 @@ Page({
     formData: {
       name: '',
       phone: '',
+      account: '',
       joinDate: ''
     },
     roleIndex: 0,
@@ -178,6 +179,7 @@ Page({
       formData: {
         name: emp.name || '',
         phone: emp.phone || '',
+        account: emp.account || '',
         joinDate: emp.joinDate || ''
       },
       roleIndex: idx >= 0 ? idx : 0
@@ -210,7 +212,7 @@ Page({
     const db = wx.cloud.database();
     const roleKey = roleOptions[roleIndex].key;
 
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.joinDate) {
+    if (!formData.name.trim() || !formData.phone.trim() || !formData.account.trim() || !formData.joinDate) {
       return wx.showToast({ title: '请填写完整信息', icon: 'none' });
     }
 
@@ -222,6 +224,7 @@ Page({
         data: {
           name: formData.name.trim(),
           phone: formData.phone.trim(),
+          account: formData.account.trim(),
           role: roleKey,
           status: 'active',
           joinDate: formData.joinDate,
@@ -245,6 +248,7 @@ Page({
         data: { 
           name: formData.name.trim(),
           phone: formData.phone.trim(),
+          account: formData.account.trim(),
           role: roleKey,
           joinDate: formData.joinDate
         }
@@ -254,20 +258,19 @@ Page({
         
         // 如果修改的是当前登录用户自己，同步更新本地缓存
         if (currentEditId === this.data.currentUserId) {
-          const userInfo = wx.getStorageSync('userInfo') || {};
-          const updatedUserInfo = {
-            ...userInfo,
-            name: formData.name.trim(),
-            phone: formData.phone.trim(),
-            role: roleKey
-          };
-          wx.setStorageSync('userInfo', updatedUserInfo);
+          const userInfo = wx.getStorageSync('userInfo');
+          userInfo.name = formData.name.trim();
+          userInfo.phone = formData.phone.trim();
+          userInfo.account = formData.account.trim();
+          userInfo.role = roleKey;
+          wx.setStorageSync('userInfo', userInfo);
         }
 
         this.closeModal();
         this.fetchEmployees();
       }).catch(err => {
         wx.hideLoading();
+        console.error(err);
         wx.showToast({ title: '修改失败', icon: 'none' });
       });
     }

@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { ChevronLeft, MapPin, Phone, User, Calendar, MessageSquare, FileText, FolderOpen, ArrowRight, Upload, Plus, Edit2, Check, ChevronDown, Trash2, X } from "lucide-react";
 import MainLayout from "../../../components/MainLayout";
 import CustomerDocuments from "../../../../src/components/CustomerDocuments";
+import CustomerInfo from "../../../components/CustomerInfo";
 
 export default function LeadDetailPage() {
   const params = useParams();
@@ -28,6 +29,7 @@ export default function LeadDetailPage() {
   // 确认更换人员的弹窗状态
   const [personnelConfirm, setPersonnelConfirm] = useState<{ role: string, oldName: string, newName: string } | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [signModal, setSignModal] = useState({ isOpen: false, date: '', signer: '' });
 
   const [currentUser, setCurrentUser] = useState<any>(null);
 
@@ -186,6 +188,72 @@ export default function LeadDetailPage() {
     setDeleteConfirmId(null);
   };
 
+  const handleRatingChange = async (option: string) => {
+    if (lead.rating === option) return;
+    setOpenDropdown(null);
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rating: option })
+      });
+      if (res.ok) setLead({ ...lead, rating: option });
+    } catch (e) {}
+  };
+
+  const handleStatusChange = async (option: string) => {
+    if (lead.status === option) return;
+    setOpenDropdown(null);
+
+    if (option === '已签单') {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      
+      setSignModal({
+        isOpen: true,
+        date: `${yyyy}-${mm}-${dd}`,
+        signer: currentUser?.name || ''
+      });
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: option })
+      });
+      if (res.ok) setLead({ ...lead, status: option });
+    } catch (e) {}
+  };
+
+  const handleConfirmSign = async () => {
+    if (!signModal.date || !signModal.signer) {
+      alert('请填写签单时间和签单人');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          status: '已签单',
+          signDate: signModal.date,
+          signer: signModal.signer
+        })
+      });
+      if (res.ok) {
+        setLead({ ...lead, status: '已签单', signDate: signModal.date, signer: signModal.signer });
+        setSignModal({ ...signModal, isOpen: false });
+        
+        // 成功提示
+        setTimeout(() => alert('签单保存成功'), 100);
+      }
+    } catch (e) {}
+  };
+
   const handleUpdateInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -255,8 +323,12 @@ export default function LeadDetailPage() {
               <div className="space-y-3 flex-1">
                 <div className="flex flex-wrap items-center gap-3">
                   <h1 className="text-2xl font-bold text-primary-900 flex items-center gap-2">
-                    {lead.name}
-                    <span className="text-sm font-normal text-primary-500 font-mono mt-1">({lead.customerNo || lead.id})</span>
+                    <CustomerInfo 
+                      name={maskName(lead.name, lead)}
+                      phone={maskPhone(lead.phone, lead)}
+                      customerNo={lead.customerNo || lead.id}
+                      className="text-2xl"
+                    />
                     {isAssignedToMe(lead) && (
                       <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
                     )}
@@ -285,7 +357,7 @@ export default function LeadDetailPage() {
                             {['A', 'B', 'C', 'D'].map(option => (
                               <div 
                                 key={option}
-                                onClick={() => { setLead({...lead, rating: option}); setOpenDropdown(null); }}
+                                onClick={() => handleRatingChange(option)}
                                 className="px-2 py-1 mx-1"
                               >
                                 <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.rating === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
@@ -315,7 +387,7 @@ export default function LeadDetailPage() {
                             {["沟通中", "已量房", "方案阶段", "已交定金", "已签单", "已流失"].map(option => (
                               <div 
                                 key={option}
-                                onClick={() => { setLead({...lead, status: option}); setOpenDropdown(null); }}
+                                onClick={() => handleStatusChange(option)}
                                 className="px-2 py-1 mx-1"
                               >
                                 <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.status === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
@@ -386,7 +458,6 @@ export default function LeadDetailPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3 text-sm text-primary-700">
-                  <span className="flex items-center"><Phone className="w-4 h-4 mr-2 text-primary-400" /> {maskPhone(lead.phone, lead)}</span>
                   <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-primary-400" /> {maskAddress(lead.address, lead)}</span>
                   <span className="flex items-center"><Calendar className="w-4 h-4 mr-2 text-primary-400" /> 录入于 {lead.createdAt}</span>
                 </div>
@@ -707,6 +778,46 @@ export default function LeadDetailPage() {
           <div>
             <p className="text-sm font-bold text-primary-900">人员已更换</p>
             <p className="text-xs text-primary-500 mt-0.5">已通过右上角 🔔 发送系统通知给相关人员。</p>
+          </div>
+        </div>
+      )}
+
+      {/* 恭喜签单弹窗 */}
+      {signModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 text-center p-8">
+            <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-rose-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-rose-600 mb-2">品诺筑家恭喜开单</h3>
+            <p className="text-sm text-primary-600 mb-8">
+              【<span className="font-bold text-primary-900">{lead.name}</span>】项目已成功签单！
+            </p>
+            <div className="space-y-4 text-left mb-8">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">签单时间</label>
+                <input 
+                  type="date" 
+                  value={signModal.date} 
+                  onChange={e => setSignModal({...signModal, date: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus:border-primary-400 focus:bg-white transition-all outline-none text-sm text-primary-900" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">签单人</label>
+                <input 
+                  type="text" 
+                  value={signModal.signer} 
+                  onChange={e => setSignModal({...signModal, signer: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus:border-primary-400 focus:bg-white transition-all outline-none text-sm text-primary-900" 
+                  placeholder="请输入签单人姓名"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setSignModal({...signModal, isOpen: false})} className="flex-1 px-4 py-3 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-bold">取消</button>
+              <button onClick={handleConfirmSign} className="flex-1 px-4 py-3 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-bold shadow-lg shadow-rose-600/20">确认签单</button>
+            </div>
           </div>
         </div>
       )}

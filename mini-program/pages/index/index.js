@@ -1,17 +1,21 @@
+import { maskName } from '../../utils/format.js';
+
 // 移除 mock 数据引入
 // const todosData = require('../../mock/todos.js');
 
 Page({
   data: {
     todos: [],
+    groupedTodos: [], // 用于存储分组后的数据
+    groupType: 'none', // 'none' | 'dueDate' | 'priority' | 'assignee'
     allTodos: [],
     activeTab: 'pending',
     pendingCount: 0,
     completedCount: 0,
     today: '',
     searchQuery: '',
-    timeFilterOptions: ['全部时间', '最近一周', '最近一月', '最近一年'],
-    timeFilterIndex: 1, // 默认最近一周
+    timeFilterOptions: ['全部时间', '今天', '最近一周', '最近一月', '最近一年'],
+    timeFilterIndex: 2, // 默认最近一周
     timeFilterLabel: '最近一周',
 
     showFilterModal: false,
@@ -41,6 +45,7 @@ Page({
 
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 0 });
+      this.getTabBar().fetchGlobalUnread();
     }
 
     // 每次显示时从云端拉取真实数据
@@ -96,7 +101,18 @@ Page({
       wx.hideNavigationBarLoading();
       wx.stopPullDownRefresh();
       
-      const list = res.data.sort((a, b) => {
+      const userInfo = wx.getStorageSync('userInfo');
+      const myName = userInfo ? userInfo.name : '';
+      const isAdmin = userInfo && userInfo.role === 'admin';
+      
+      const list = res.data.map(t => {
+        const isRelated = isAdmin || t.creatorName === myName || (t.assignees && t.assignees.some(a => a.name === myName));
+        
+        if (!isRelated && t.relatedTo && t.relatedTo.type === 'lead') {
+          t.relatedTo.name = maskName(t.relatedTo.name);
+        }
+        return t;
+      }).sort((a, b) => {
         const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dbTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dbTime - da; // 倒序
@@ -158,33 +174,42 @@ Page({
       filtered = filtered.filter(t => {
         const titleMatch = t.title ? String(t.title).toLowerCase().includes(q) : false;
         const descMatch = t.description ? String(t.description).toLowerCase().includes(q) : false;
-        return titleMatch || descMatch;
+        const relatedMatch = t.relatedTo && t.relatedTo.name ? String(t.relatedTo.name).toLowerCase().includes(q) : false;
+        const stringMatch = JSON.stringify(t).toLowerCase().includes(q);
+        return titleMatch || descMatch || relatedMatch || stringMatch;
       });
     }
 
     // 时间范围过滤 (以 dueDate 为主，如果没有则以 createdAt 为主)
     if (this.data.timeFilterIndex > 0) {
       const now = new Date();
+      now.setHours(0,0,0,0);
+      const nowTime = now.getTime();
+      
       const filterMs = {
-        1: 7 * 24 * 3600 * 1000,   // 最近一周
-        2: 30 * 24 * 3600 * 1000,  // 最近一月
-        3: 365 * 24 * 3600 * 1000  // 最近一年
+        2: 7 * 24 * 3600 * 1000,   // 最近一周
+        3: 30 * 24 * 3600 * 1000,  // 最近一月
+        4: 365 * 24 * 3600 * 1000  // 最近一年
       };
-      const limitMs = filterMs[this.data.timeFilterIndex];
-
+      
       filtered = filtered.filter(t => {
         const targetDate = t.dueDate || t.createdAt;
         if (!targetDate) return true;
-        const diff = now.getTime() - new Date(targetDate.replace(/-/g, '/')).getTime();
-        return Math.abs(diff) <= limitMs;
+        
+        const targetObj = new Date(targetDate.replace(/-/g, '/'));
+        targetObj.setHours(0,0,0,0);
+        const targetTime = targetObj.getTime();
+        
+        if (this.data.timeFilterIndex === 1) {
+          // 今天
+          return targetTime === nowTime;
+        } else {
+          const limitMs = filterMs[this.data.timeFilterIndex];
+          const diff = nowTime - targetTime;
+          return Math.abs(diff) <= limitMs;
+        }
       });
     }
-
-    // 此时的 filtered 是经过时间筛选和搜索的总数据，用来更新顶部看板
-    this.updateDashboard(filtered);
-
-    // 继续执行只影响列表的 tab 过滤 (pending / completed)
-    filtered = filtered.filter(t => t.status === this.data.activeTab);
 
     // 映射优先级和多执行人名称
     filtered = filtered.map(t => {
@@ -194,7 +219,6 @@ Page({
       if (t.assignees && t.assignees.length > 0) {
         assignedNames = t.assignees.map(a => a.name).join(' | ');
       } else if (t.assignedTo) {
-        // Fallback for any unmigrated mock data
         assignedNames = t.assignedTo.name;
       }
 
@@ -204,7 +228,7 @@ Page({
         assignedNames
       };
     });
-    
+
     // 人员高级筛选过滤
     if (this.data.selectedEmployeeIds && this.data.selectedEmployeeIds.length > 0) {
       const selectedNames = this.data.filterEmployees
@@ -213,7 +237,6 @@ Page({
       
       filtered = filtered.filter(t => {
         if (!t.assignees || t.assignees.length === 0) return false;
-        // 只要待办的执行人中包含任意一个选中的人员即可
         return t.assignees.some(a => selectedNames.includes(a.name));
       });
     }
@@ -234,9 +257,14 @@ Page({
       }
     }
 
+    // 此时的 filtered 是经过时间筛选、高级筛选的总数据，用来更新顶部看板
+    this.updateDashboard(filtered);
+
+    // 继续执行只影响列表的 tab 过滤 (pending / completed)
+    filtered = filtered.filter(t => t.status === this.data.activeTab);
+
     // 计算到期状态
     const today = new Date();
-    // 清零时分秒，仅比较日期
     today.setHours(0, 0, 0, 0);
     const todayTime = today.getTime();
 
@@ -259,7 +287,70 @@ Page({
     });
 
     this.setData({ todos: filtered });
+    this.applyGrouping(filtered);
   },
+
+  applyGrouping(filteredTodos) {
+    if (this.data.groupType === 'none') {
+      this.setData({ groupedTodos: [] });
+      return;
+    }
+
+    const groups = {};
+    filteredTodos.forEach(t => {
+      let key = '其他';
+      if (this.data.groupType === 'dueDate') {
+        if (!t.dueDate) key = '无截止日期';
+        else {
+          const dueStatus = t.dueStatus;
+          if (dueStatus === 'overdue') key = '逾期';
+          else if (dueStatus === 'today') key = '今天';
+          else key = t.dueDate;
+        }
+      } else if (this.data.groupType === 'priority') {
+        key = t.priorityText || '普通任务';
+      } else if (this.data.groupType === 'assignee') {
+        key = t.assignedNames || '待指派';
+      }
+
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(t);
+    });
+
+    let groupedArray = Object.keys(groups).map(k => ({ title: k, items: groups[k] }));
+
+    // 排序逻辑
+    if (this.data.groupType === 'dueDate') {
+      const orderMap = { '逾期': 1, '今天': 2, '无截止日期': 999 };
+      groupedArray.sort((a, b) => {
+        const orderA = orderMap[a.title] || 3;
+        const orderB = orderMap[b.title] || 3;
+        if (orderA !== orderB) return orderA - orderB;
+        // 日期字符串排序
+        return new Date(a.title).getTime() - new Date(b.title).getTime();
+      });
+    } else if (this.data.groupType === 'priority') {
+      const orderMap = { '紧急任务': 1, '重要任务': 2, '普通任务': 3 };
+      groupedArray.sort((a, b) => (orderMap[a.title] || 4) - (orderMap[b.title] || 4));
+    } else if (this.data.groupType === 'assignee') {
+      groupedArray.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    this.setData({ groupedTodos: groupedArray });
+  },
+
+  openGroupActionSheet() {
+    wx.showActionSheet({
+      itemList: ['默认排序', '按截止日期分组', '按优先级分组', '按执行人分组'],
+      success: (res) => {
+        const map = ['none', 'dueDate', 'priority', 'assignee'];
+        this.setData({ groupType: map[res.tapIndex] }, () => {
+          this.applyGrouping(this.data.todos);
+        });
+      }
+    });
+  },
+
   switchTab(e) {
     const tab = e.currentTarget.dataset.tab;
     if (this.data.activeTab === tab) return;
@@ -422,7 +513,15 @@ Page({
     const db = wx.cloud.database();
     db.collection('leads').get().then(res => {
       const leads = res.data;
-      const leadNames = leads.map(l => l.name);
+      const userInfo = wx.getStorageSync('userInfo');
+      const myName = userInfo ? userInfo.name : '';
+      const isAdmin = userInfo && userInfo.role === 'admin';
+
+      const leadNames = leads.map(l => {
+        const isRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
+        return isRelated ? l.name : maskName(l.name);
+      });
+
       this.setData({ 
         availableLeads: leads,
         availableLeadNames: ['不关联', ...leadNames]

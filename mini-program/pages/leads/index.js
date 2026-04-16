@@ -1,5 +1,4 @@
-// 移除 mock 数据引入
-// const leadsData = require('../../mock/leads.js');
+import { maskName, maskPhone, maskAddress } from '../../utils/format.js';
 
 Page({
   data: {
@@ -28,7 +27,16 @@ Page({
       { name: 'D', selected: false }
     ],
     selectedRatings: [],
-
+    filterStatuses: [
+      { name: '待跟进', selected: false },
+      { name: '沟通中', selected: false },
+      { name: '已量房', selected: false },
+      { name: '方案阶段', selected: false },
+      { name: '已交定金', selected: false },
+      { name: '已签单', selected: false },
+      { name: '已流失', selected: false }
+    ],
+    selectedStatuses: [],
     filterSources: [
       { name: '自然进店', selected: false },
       { name: '老介新', selected: false },
@@ -57,6 +65,7 @@ Page({
 
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
       this.getTabBar().setData({ selected: 1 });
+      this.getTabBar().fetchGlobalUnread();
     }
     
     // 检测是否需要播放签单动效
@@ -99,6 +108,7 @@ Page({
         phone: '',
         address: '',
         area: '',
+        budget: '',
         requirementType: '毛坯',
         rating: 'C',
         source: '自然进店',
@@ -133,44 +143,69 @@ Page({
     });
   },
 
-  saveNewLead() {
-    const { name, phone, address, area, requirementType, rating, source, notes } = this.data.newLead;
+  async saveNewLead() {
+    const { name, phone, address, area, budget, requirementType, rating, source, notes } = this.data.newLead;
     if (!(name || '').trim() || !(phone || '').trim()) {
       return wx.showToast({ title: '请填写姓名和手机号', icon: 'none' });
     }
 
     wx.showLoading({ title: '保存中' });
     
-    // 调用统一的后端云函数或 HTTP API 生成带编号的客户数据
-    wx.request({
-      url: 'https://pnzj-web-246509-5-1421470557.sh.run.tcloudbase.com/api/leads', // 替换为真实的云托管接口地址
-      method: 'POST',
-      data: {
-        name: (name || '').trim(),
-        phone: (phone || '').trim(),
-        address: (address || '').trim(),
-        area: (area || '').trim(),
-        requirementType,
-        rating,
-        source,
-        notes: (notes || '').trim(),
-        status: '待跟进'
-      },
-      success: (res) => {
-        wx.hideLoading();
-        if (res.statusCode === 200) {
-          wx.showToast({ title: '添加成功', icon: 'success' });
-          this.closeAddModal();
-          this.fetchData();
-        } else {
-          wx.showToast({ title: '添加失败', icon: 'none' });
+    try {
+      const db = wx.cloud.database();
+      const year = new Date().getFullYear();
+      let sequence = 1;
+      
+      try {
+        const lastRes = await db.collection('leads')
+          .where({ customerNo: db.RegExp({ regexp: '^P' + year, options: 'i' }) })
+          .orderBy('customerNo', 'desc')
+          .limit(1)
+          .get();
+          
+        if (lastRes.data && lastRes.data.length > 0 && lastRes.data[0].customerNo) {
+          const match = lastRes.data[0].customerNo.match(/P\d{4}(\d{3,})/);
+          if (match && match[1]) {
+            sequence = parseInt(match[1], 10) + 1;
+          }
         }
-      },
-      fail: () => {
-        wx.hideLoading();
-        wx.showToast({ title: '网络错误', icon: 'none' });
+      } catch (err) {
+        console.error("生成客户编号失败，回退到默认", err);
       }
-    });
+      
+      const customerNo = `P${year}${sequence.toString().padStart(3, '0')}`;
+      const userInfo = wx.getStorageSync('userInfo');
+      const creatorName = userInfo ? (userInfo.name || '未知') : '未知';
+      
+      await db.collection('leads').add({
+        data: {
+          name: (name || '').trim(),
+          phone: (phone || '').trim(),
+          address: (address || '').trim(),
+          area: (area || '').trim(),
+          budget: (budget || '').trim(),
+          requirementType,
+          rating,
+          source,
+          notes: (notes || '').trim(),
+          status: '待跟进',
+          customerNo,
+          creatorName,
+          createdAt: db.serverDate(),
+          updatedAt: db.serverDate()
+        }
+      });
+      
+      wx.hideLoading();
+      wx.showToast({ title: '添加成功', icon: 'success' });
+      this.closeAddModal();
+      this.fetchData();
+      
+    } catch (err) {
+      console.error('添加线索失败', err);
+      wx.hideLoading();
+      wx.showToast({ title: '添加失败，请重试', icon: 'none' });
+    }
   },
 
   fetchData() {
@@ -205,8 +240,25 @@ Page({
       wx.hideNavigationBarLoading();
       wx.stopPullDownRefresh();
       
-      // 按照创建时间倒序
-      const list = res.data.sort((a, b) => {
+      const userInfo = wx.getStorageSync('userInfo');
+      const myName = userInfo ? userInfo.name : '';
+      const isAdmin = userInfo && userInfo.role === 'admin';
+
+      // 按照创建时间倒序，并进行数据脱敏
+      const list = res.data.map(l => {
+        const isRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
+        
+        if (!isRelated) {
+          l._isMasked = true;
+          l.name = maskName(l.name);
+          l.phone = maskPhone(l.phone);
+          l.address = maskAddress(l.address);
+          if (l.community) l.community = maskAddress(l.community);
+        } else {
+          l._isMasked = false;
+        }
+        return l;
+      }).sort((a, b) => {
         const da = a.createdAt ? new Date(a.createdAt).getTime() : 0;
         const dbTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         return dbTime - da;
@@ -268,7 +320,8 @@ Page({
         const nameMatch = l.name ? String(l.name).toLowerCase().includes(q) : false;
         const phoneMatch = l.phone ? String(l.phone).includes(q) : false;
         const addressMatch = l.address ? String(l.address).toLowerCase().includes(q) : false;
-        return nameMatch || phoneMatch || addressMatch;
+        const customerNoMatch = l.customerNo ? String(l.customerNo).toLowerCase().includes(q) : false;
+        return nameMatch || phoneMatch || addressMatch || customerNoMatch;
       });
     }
 
@@ -300,6 +353,11 @@ Page({
     // 评级过滤
     if (this.data.selectedRatings && this.data.selectedRatings.length > 0) {
       filtered = filtered.filter(l => this.data.selectedRatings.includes(l.rating));
+    }
+
+    // 状态过滤
+    if (this.data.selectedStatuses && this.data.selectedStatuses.length > 0) {
+      filtered = filtered.filter(l => this.data.selectedStatuses.includes(l.status));
     }
 
     // 来源过滤
@@ -361,6 +419,8 @@ Page({
         selectedEmployeeIds: f.selectedEmployeeIds || [],
         filterRatings: f.filterRatings || this.data.filterRatings,
         selectedRatings: f.selectedRatings || [],
+        filterStatuses: f.filterStatuses || this.data.filterStatuses,
+        selectedStatuses: f.selectedStatuses || [],
         filterSources: f.filterSources || this.data.filterSources,
         selectedSources: f.selectedSources || []
       });
@@ -379,6 +439,8 @@ Page({
       selectedEmployeeIds: this.data.selectedEmployeeIds,
       filterRatings: this.data.filterRatings,
       selectedRatings: this.data.selectedRatings,
+      filterStatuses: this.data.filterStatuses,
+      selectedStatuses: this.data.selectedStatuses,
       filterSources: this.data.filterSources,
       selectedSources: this.data.selectedSources
     };
@@ -405,16 +467,62 @@ Page({
     // 阻止冒泡到卡片的详情跳转
   },
 
+  showNoPermissionToast() {
+    wx.showToast({ title: '无权限修改', icon: 'none' });
+  },
+
   onStatusChange(e) {
     const newStatusIndex = e.detail.value;
-    const statuses = ['待分配', '跟进中', '已量房', '已出图', '已报预估', '已签单', '已流失'];
+    const statuses = ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'];
     const newStatus = statuses[newStatusIndex];
     const leadId = e.currentTarget.dataset.id;
     
+    if (newStatus === '已签单') {
+      const userInfo = wx.getStorageSync('userInfo');
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      const signDate = `${yyyy}-${mm}-${dd}`;
+      
+      const allEmployees = this.data.filterEmployees || [];
+      const signersList = allEmployees.map(e => e.name);
+      
+      // Default to current user if exists in the list
+      let signerIndex = 0;
+      const currentUserName = userInfo ? (userInfo.name || '未知') : '未知';
+      const foundIndex = signersList.indexOf(currentUserName);
+      if (foundIndex !== -1) {
+        signerIndex = foundIndex;
+      }
+
+      const leadObj = this.data.allLeads.find(l => l._id === leadId);
+      const leadName = leadObj ? leadObj.name : '未知';
+
+      this.setData({
+        showSignModal: true,
+        currentSignLeadId: leadId,
+        currentSignLeadName: leadName,
+        signDate: signDate,
+        signersList: signersList,
+        signerIndex: signerIndex,
+        signer: signersList.length > 0 ? signersList[signerIndex] : currentUserName
+      });
+      if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+        this.getTabBar().setData({ hidden: true });
+      }
+      wx.hideTabBar();
+      return;
+    }
+    
     // 更新数据
+    this.updateLeadStatusInList(leadId, newStatus);
+  },
+
+  updateLeadStatusInList(leadId, newStatus, extraData = {}) {
     const all = this.data.allLeads.map(l => {
       if (l._id === leadId) {
-        return { ...l, status: newStatus };
+        return { ...l, status: newStatus, ...extraData };
       }
       return l;
     });
@@ -425,10 +533,51 @@ Page({
       
       const db = wx.cloud.database();
       db.collection('leads').doc(leadId).update({
-        data: { status: newStatus }
+        data: { status: newStatus, ...extraData }
       }).then(() => {
         wx.showToast({ title: '状态已更新', icon: 'success' });
       });
+    });
+  },
+
+  onSignDateChange(e) {
+    this.setData({ signDate: e.detail.value });
+  },
+
+  onSignerChange(e) {
+    const idx = e.detail.value;
+    const name = this.data.signersList[idx];
+    this.setData({ 
+      signerIndex: idx,
+      signer: name 
+    });
+  },
+
+  closeSignModal() {
+    this.setData({ showSignModal: false, currentSignLeadId: null });
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ hidden: false });
+    }
+    wx.showTabBar();
+  },
+
+  confirmSign() {
+    const { signDate, signer, currentSignLeadId } = this.data;
+    if (!signDate || !signer) {
+      return wx.showToast({ title: '请填写签单时间和签单人', icon: 'none' });
+    }
+    
+    this.setData({ showSignModal: false });
+    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
+      this.getTabBar().setData({ hidden: false });
+    }
+    wx.showTabBar();
+    this.updateLeadStatusInList(currentSignLeadId, '已签单', { signDate, signer });
+    
+    wx.showToast({
+      title: '恭喜签单！',
+      icon: 'success',
+      duration: 2000
     });
   },
 
@@ -469,11 +618,22 @@ Page({
 
   toggleRating(e) {
     const name = e.currentTarget.dataset.name;
-    const rats = this.data.filterRatings.map(r => {
+    const filterRatings = this.data.filterRatings.map(r => {
       if (r.name === name) r.selected = !r.selected;
       return r;
     });
-    this.setData({ filterRatings: rats });
+    const selectedRatings = filterRatings.filter(r => r.selected).map(r => r.name);
+    this.setData({ filterRatings, selectedRatings });
+  },
+
+  toggleStatus(e) {
+    const name = e.currentTarget.dataset.name;
+    const filterStatuses = this.data.filterStatuses.map(s => {
+      if (s.name === name) s.selected = !s.selected;
+      return s;
+    });
+    const selectedStatuses = filterStatuses.filter(s => s.selected).map(s => s.name);
+    this.setData({ filterStatuses, selectedStatuses });
   },
 
   toggleSource(e) {

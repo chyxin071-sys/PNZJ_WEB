@@ -23,6 +23,25 @@
     --zinc-600: #5C5854;
     --zinc-700: #423F3C;
     --zinc-900: #1A1918;
+
+    /* 高级酒红与深绿色调覆盖 Tailwind 默认的 rose 和 emerald */
+    --color-rose-50: #fbf3f4;
+    --color-rose-100: #f6e6e8;
+    --color-rose-500: #a83b44;
+    --color-rose-600: #992933;
+    --color-rose-700: #7a1d25;
+
+    --color-emerald-50: #f2f7f5;
+    --color-emerald-100: #e0eee9;
+    --color-emerald-500: #126b4f;
+    --color-emerald-600: #0B513A;
+    --color-emerald-700: #073a28;
+
+    --color-amber-50: #faf5ee;
+    --color-amber-100: #f4e8d5;
+    --color-amber-500: #d09c52;
+    --color-amber-600: #C0893B;
+    --color-amber-700: #9e6d2b;
   }
 }
 

@@ -1,0 +1,49 @@
+.customer-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.top-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 8rpx;
+}
+
+.bottom-row {
+  display: flex;
+  align-items: center;
+}
+
+.name {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #1e293b; /* primary-900 */
+}
+
+.phone {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #475569; /* primary-600 */
+  letter-spacing: normal;
+}
+
+.tag {
+  padding: 4rpx 12rpx;
+  background-color: #f5f7fa; /* 极浅灰白 */
+  border: none;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  font-family: monospace;
+  font-weight: 500;
+  color: #999999; /* 深灰色 */
+  display: flex;
+  align-items: center;
+}
+
+.tag-prefix {
+  font-size: 18rpx;
+  margin-right: 4rpx;
+  opacity: 0.8;
+}

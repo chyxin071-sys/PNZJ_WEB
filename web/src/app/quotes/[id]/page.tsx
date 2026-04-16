@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ChevronLeft, Plus, Package, Edit2, Trash2, Save, Search, X, FileText, FileDown, FileSpreadsheet, ChevronDown } from "lucide-react";
 import MainLayout from "../../../components/MainLayout";
+import CustomerInfo from "../../../components/CustomerInfo";
 
 // 简单的材料库 Mock 数据，模拟从 materials 页面导入
 const mockMaterials = [
@@ -191,13 +192,12 @@ export default function QuoteDetailPage() {
             <div className="flex flex-col md:flex-row justify-between gap-8">
               {/* 左侧：客户与房屋核心信息 (两两一行排列) */}
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-y-8 gap-x-12">
-                <div>
-                  <p className="text-xs text-primary-400 mb-1">客户姓名</p>
-                  <p className="text-base font-bold text-primary-900">{customer.name}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-primary-400 mb-1">联系电话</p>
-                  <p className="text-base font-bold text-primary-900 font-mono">{customer.phone}</p>
+                <div className="col-span-1 md:col-span-2 mb-2">
+                  <CustomerInfo 
+                    name={customer.name}
+                    phone={customer.phone}
+                    customerNo={customer.customerNo}
+                  />
                 </div>
                 <div>
                   <p className="text-xs text-primary-400 mb-1">房屋信息</p>
@@ -504,7 +504,7 @@ export default function QuoteDetailPage() {
             <div className="flex-1 overflow-y-auto p-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {mockMaterials
-                  .filter(m => (activeCategory === "全部" || m.type === activeCategory) && (m.name.includes(materialSearch) || m.id.includes(materialSearch)))
+                  .filter(m => (activeCategory === "全部" || m.type === activeCategory) && ((m.name || '').includes(materialSearch) || (m.id || '').includes(materialSearch)))
                   .map(material => (
                   <div key={material.id} className="flex flex-col justify-between p-4 border border-primary-100 rounded-xl hover:bg-primary-50 transition-colors group bg-white">
                     <div>
@@ -515,7 +515,7 @@ export default function QuoteDetailPage() {
                       <p className="text-sm font-bold text-primary-900 leading-snug">{material.name}</p>
                     </div>
                     <div className="flex items-end justify-between mt-4">
-                      <p className="text-sm font-bold text-primary-900 font-mono">¥{material.price.toLocaleString()} <span className="text-xs text-primary-500 font-sans font-normal">/ {material.unit}</span></p>
+                      <p className="text-sm font-bold text-primary-900 font-mono">¥{(material.price || 0).toLocaleString()} <span className="text-xs text-primary-500 font-sans font-normal">/ {material.unit}</span></p>
                       {items.some(i => i.id === material.id) ? (
                         <button 
                           disabled
@@ -534,7 +534,7 @@ export default function QuoteDetailPage() {
                     </div>
                   </div>
                 ))}
-                {mockMaterials.filter(m => (activeCategory === "全部" || m.type === activeCategory) && (m.name.includes(materialSearch) || m.id.includes(materialSearch))).length === 0 && (
+                {mockMaterials.filter(m => (activeCategory === "全部" || m.type === activeCategory) && ((m.name || '').includes(materialSearch) || (m.id || '').includes(materialSearch))).length === 0 && (
                   <div className="col-span-1 sm:col-span-2 py-12 text-center text-primary-500 text-sm">
                     没有找到匹配的材料
                   </div>

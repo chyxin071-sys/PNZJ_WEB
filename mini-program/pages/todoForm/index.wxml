@@ -40,8 +40,8 @@
           <text>关联{{formData.relatedType === 'lead' ? '客户' : '工地'}}</text>
         </view>
         <picker bindchange="onRelatedChange" value="{{relatedIndex}}" range="{{relatedOptions}}" range-key="name" disabled="{{mode === 'view'}}">
-          <view class="picker-box" bindtap="{{mode === 'view' && formData.relatedId ? 'goToRelated' : ''}}">
-            <text class="{{!formData.relatedId ? 'ph' : ''}}">{{relatedIndex !== -1 ? relatedOptions[relatedIndex].name : '请选择'}}</text>
+          <view class="picker-box" style="{{mode === 'view' && formData.relatedId ? 'background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 8rpx; display: flex; justify-content: space-between; align-items: center; padding: 16rpx 24rpx;' : ''}}" bindtap="{{mode === 'view' && formData.relatedId ? 'goToRelated' : ''}}">
+            <text class="{{!formData.relatedId ? 'ph' : ''}}" style="{{mode === 'view' && formData.relatedId ? 'color: #475569; font-weight: bold;' : ''}}">{{relatedIndex !== -1 ? relatedOptions[relatedIndex].name : (formData._displayRelatedName || '请选择')}}</text>
             <view class="arrow-down" wx:if="{{mode !== 'view'}}"></view>
           </view>
         </picker>
@@ -78,11 +78,11 @@
   </scroll-view>
 
   <!-- 底部固定按钮区 -->
-  <view class="bottom-bar" wx:if="{{mode === 'view'}}">
+  <view class="bottom-bar" wx:if="{{mode === 'view' && (isAdmin || isRelated)}}">
     <view class="btn-delete hover-scale" bindtap="deleteTodo">删除</view>
     <view class="btn-save hover-scale" bindtap="enterEditMode">编辑</view>
   </view>
-  <view class="bottom-bar" wx:else>
+  <view class="bottom-bar" wx:elif="{{mode !== 'view'}}">
     <view class="btn-cancel hover-scale" bindtap="{{mode === 'edit' ? 'cancelEdit' : 'goBack'}}">取消</view>
     <view class="btn-save hover-scale" bindtap="saveTodo">保存</view>
   </view>

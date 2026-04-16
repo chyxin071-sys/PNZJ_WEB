@@ -74,7 +74,7 @@
 
 .bg-admin { background: #f3e8ff; color: #9333ea; }
 .bg-sales { background: #eff6ff; color: #3b82f6; }
-.bg-designer { background: #dcfce7; color: #10b981; }
+.bg-designer { background: var(--emerald-100); color: var(--emerald-600); }
 .bg-manager { background: #ffedd5; color: #f97316; }
 .bg-default { background: #f1f5f9; color: #64748b; }
 
@@ -93,8 +93,8 @@
 }
 
 .movable-area {
-  width: calc(100% + 280rpx); /* 卡片宽度 + 两个按钮的宽度 */
-  height: 200rpx; /* 根据卡片大致高度，如果有问题可以动态调整 */
+  width: calc(100% + 280rpx); /* 卡片宽度 + 两个按钮的宽�?*/
+  height: 200rpx; /* 根据卡片大致高度，如果有问题可以动态调�?*/
   position: relative;
   left: -280rpx; /* 初始偏移量，把按钮藏在右边屏幕外 */
 }
@@ -119,19 +119,19 @@
 }
 
 .btn-star {
-  background: #f59e0b;
+  background: var(--amber-600);
 }
 
 .btn-delete {
-  background: #ef4444;
+  background: var(--rose-600);
 }
 
 .movable-view {
-  width: calc(100% - 280rpx); /* 实际卡片的宽度 */
+  width: calc(100% - 280rpx); /* 实际卡片的宽�?*/
   height: 100%;
   z-index: 2;
   box-sizing: border-box;
-  margin-left: 280rpx; /* 将初始卡片位置推回到视野内 */
+  margin-left: 280rpx; /* 将初始卡片位置推回到视野�?*/
 }
 
 .notification-item {
@@ -176,8 +176,17 @@
 }
 
 .icon-circle.todo { background: #3b82f6; }
-.icon-circle.lead { background: #10b981; }
-.icon-circle.system { background: #f59e0b; }
+.icon-circle.lead { background: var(--emerald-600); }
+.icon-circle.system { background: var(--amber-600); }
+
+.avatar-circle { width: 80rpx; height: 80rpx; border-radius: 40rpx; background: #f8fafc; color: #64748b; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: 800; border: 4rpx solid #f1f5f9; box-sizing: border-box; box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.05); }
+
+/* 匹配个人中心的角色颜色 */
+.avatar-bg-admin { background: #faf5ff; color: #7e22ce; border-color: #f3e8ff; }
+.avatar-bg-sales { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
+.avatar-bg-designer { background: var(--emerald-50); color: var(--emerald-600); border-color: var(--emerald-100); }
+.avatar-bg-manager { background: #fffbeb; color: var(--amber-600); border-color: var(--amber-50); }
+.avatar-bg-default { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
 
 .item-content {
   flex: 1;
@@ -209,7 +218,7 @@
 }
 
 .icon-star-filled {
-  color: #f59e0b;
+  color: var(--amber-600);
   font-size: 36rpx;
   line-height: 1;
 }
@@ -258,3 +267,5 @@
   font-weight: bold;
   color: #cbd5e1;
 }
+
+
