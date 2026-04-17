@@ -72,37 +72,9 @@
 }
 
 /* 修改姓名弹窗 */
-.modal-mask {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
-}
-.modal-content {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80%;
-  background: #fff;
-  border-radius: 24rpx;
-  z-index: 1000;
-  overflow: hidden;
-  box-shadow: 0 10rpx 40rpx rgba(0, 0, 0, 0.1);
-}
-.modal-header {
-  padding: 32rpx 40rpx;
-  border-bottom: 1rpx solid #f1f5f9;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 32rpx;
-  font-weight: bold;
-  color: var(--primary-900);
-}
+.modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; }
+.modal-content { position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 40rpx 40rpx 0 0; z-index: 101; padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 40rpx; font-size: 34rpx; font-weight: bold; border-bottom: 1rpx solid #f1f5f9; }
 .btn-close {
   font-size: 28rpx;
   color: #94a3b8;
@@ -123,13 +95,14 @@
   color: var(--primary-900);
 }
 .btn-save {
-  background: var(--primary-600);
+  background: var(--primary-900);
   color: #fff;
   text-align: center;
   padding: 24rpx 0;
   border-radius: 16rpx;
   font-size: 32rpx;
   font-weight: bold;
+  margin-top: 48rpx;
 }
 
 /* 数据概览 */
@@ -256,6 +229,32 @@
   border: 4rpx solid var(--emerald-600);
   transform: rotate(45deg);
 }
+
+.icon-lock {
+  background: var(--amber-50);
+}
+.icon-lock::before {
+  content: "";
+  width: 14rpx;
+  height: 10rpx;
+  border: 4rpx solid var(--amber-600);
+  border-radius: 4rpx;
+  position: relative;
+  margin-top: 6rpx;
+}
+.icon-lock::after {
+  content: "";
+  position: absolute;
+  top: 8rpx;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8rpx;
+  height: 8rpx;
+  border: 4rpx solid var(--amber-600);
+  border-bottom: none;
+  border-radius: 6rpx 6rpx 0 0;
+}
+
 .icon-team {
   background: var(--rose-50);
 }

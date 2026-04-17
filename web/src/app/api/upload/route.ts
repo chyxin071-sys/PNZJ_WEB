@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-const APPID = 'wxc9f24e9a9f57bc7a';
-const APPSECRET = '41bc50ad8d277918037ea0107d0a07b0';
-const ENV = 'cloud1-8grodf5s3006f004';
+const APPID = process.env.WECHAT_APPID!;
+const APPSECRET = process.env.WECHAT_APPSECRET!;
+const ENV = process.env.NEXT_PUBLIC_TCB_ENV_ID!;
 
 export async function POST(request: Request) {
   try {

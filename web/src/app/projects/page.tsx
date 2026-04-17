@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Search, Filter, AlertCircle, CheckCircle2, Clock, Camera, HardHat, AlertTriangle, PlayCircle, X, ChevronDown, Check, Activity, FolderOpen, Hammer } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import CustomerInfo from "../../components/CustomerInfo";
 
-export default function ProjectsPage() {
+function ProjectsContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const leadIdFilter = searchParams.get('leadId') || '';
   const [projectsData, setProjectsData] = useState<any[]>([]);
   const [activeStatus, setActiveStatus] = useState("全部");
   const [searchQuery, setSearchQuery] = useState("");
@@ -33,7 +35,8 @@ export default function ProjectsPage() {
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch('/api/projects');
+      const url = leadIdFilter ? `/api/projects?leadId=${leadIdFilter}` : '/api/projects';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         const formatted = data.map((item: any) => {
@@ -137,8 +140,13 @@ export default function ProjectsPage() {
               <p className="text-primary-600 mt-2">8个标准施工节点管控，异常工地自动置顶预警</p>
             </div>
             <div>
-              <button 
-                onClick={() => router.push('/projects/new')}
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (leadIdFilter) params.set('leadId', leadIdFilter);
+                  const qs = params.toString();
+                  router.push(`/projects/new${qs ? '?' + qs : ''}`);
+                }}
                 className="flex items-center px-4 py-2.5 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors shadow-sm font-medium"
               >
                 <Hammer className="w-5 h-5 mr-2" />
@@ -534,5 +542,13 @@ export default function ProjectsPage() {
         </div>
       </div>
     </MainLayout>
+  );
+}
+
+export default function ProjectsPage() {
+  return (
+    <Suspense fallback={<MainLayout><div className="p-8 text-center text-primary-500">加载中...</div></MainLayout>}>
+      <ProjectsContent />
+    </Suspense>
   );
 }

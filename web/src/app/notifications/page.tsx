@@ -1,104 +1,166 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, CheckCircle2, FilePlus, CreditCard, AlertCircle, Trash2, ArrowLeft } from "lucide-react";
+import { Bell, CheckCircle2, Trash2, ArrowLeft, Star, HardHat, Users, FileText, AlertCircle, Loader2 } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
+
+function formatTime(createTime: any): string {
+  if (!createTime) return '';
+  let date: Date;
+  if (typeof createTime === 'object' && createTime.$date) {
+    date = new Date(createTime.$date);
+  } else {
+    date = new Date(createTime);
+  }
+  if (isNaN(date.getTime())) return '';
+
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  const diffHour = Math.floor(diffMs / 3600000);
+
+  const isToday = date.toDateString() === now.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const isYesterday = date.toDateString() === yesterday.toDateString();
+
+  if (diffMin < 1) return '刚刚';
+  if (diffMin < 60) return `${diffMin} 分钟前`;
+  if (diffHour < 24 && isToday) return `${diffHour} 小时前`;
+  if (isYesterday) return `昨天 ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+  return `${date.getMonth()+1}-${date.getDate()} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+}
+
+function getIcon(type: string) {
+  switch (type) {
+    case 'project': return <HardHat className="w-5 h-5 text-amber-600" />;
+    case 'lead': return <Users className="w-5 h-5 text-blue-600" />;
+    case 'quote': return <FileText className="w-5 h-5 text-emerald-600" />;
+    case 'todo': return <CheckCircle2 className="w-5 h-5 text-purple-600" />;
+    default: return <AlertCircle className="w-5 h-5 text-primary-600" />;
+  }
+}
+
+function getIconBg(type: string) {
+  switch (type) {
+    case 'project': return 'bg-amber-50 border-amber-100';
+    case 'lead': return 'bg-blue-50 border-blue-100';
+    case 'quote': return 'bg-emerald-50 border-emerald-100';
+    case 'todo': return 'bg-purple-50 border-purple-100';
+    default: return 'bg-primary-50 border-primary-100';
+  }
+}
 
 export default function NotificationsPage() {
   const router = useRouter();
-  
-  // 模拟通知数据
-  const [notifications, setNotifications] = useState([
-    {
-      id: "notif-1",
-      type: "quote",
-      title: "新报价单生成",
-      message: "销售部李销售为客户“罗先生 (P20240003)”生成了新的报价单，金额 ¥104,871。",
-      time: "10 分钟前",
-      isRead: false,
-      link: "/quotes/P20240003"
-    },
-    {
-      id: "notif-2",
-      type: "payment",
-      title: "二期款已确认",
-      message: "客户“高女士 (P20240001)”的二期款 ¥30,000 已确认到账。",
-      time: "2 小时前",
-      isRead: false,
-      link: "/contracts/P20240001"
-    },
-    {
-      id: "notif-3",
-      type: "alert",
-      title: "施工节点预警",
-      message: "项目“马女士 (P20240013)”水电阶段存在延期风险，请及时跟进。",
-      time: "昨天 14:30",
-      isRead: true,
-      link: "/projects"
-    },
-    {
-      id: "notif-4",
-      type: "quote",
-      title: "报价单已保存",
-      message: "客户“张先生 (P20240015)”的报价单已由蒋老板修改并保存。",
-      time: "昨天 16:45",
-      isRead: true,
-      link: "/quotes/P20240015"
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'unread' | 'all' | 'starred'>('unread');
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    const userData = localStorage.getItem("pnzj_user") || localStorage.getItem("userInfo");
+    if (userData) {
+      try { setCurrentUser(JSON.parse(userData)); } catch (e) {}
     }
-  ]);
+  }, []);
 
-  const [activeTab, setActiveTab] = useState("all"); // all, unread
+  const fetchNotifications = useCallback(async () => {
+    if (!currentUser) return;
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        userName: currentUser.name,
+        role: currentUser.role
+      });
+      const res = await fetch(`/api/notifications?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.error('获取通知失败', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser]);
 
-  const handleMarkAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, isRead: true })));
-  };
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
-  const handleMarkAsRead = (id: string, e: React.MouseEvent) => {
+  const handleMarkAsRead = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications(notifications.map(n => n.id === id ? { ...n, isRead: true } : n));
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: true })
+      });
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+    } catch (e) {}
   };
 
-  const handleDelete = (id: string, e: React.MouseEvent) => {
+  const handleMarkAllAsRead = async () => {
+    const unread = notifications.filter(n => !n.isRead);
+    await Promise.all(unread.map(n =>
+      fetch(`/api/notifications/${n._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: true })
+      })
+    ));
+    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+  };
+
+  const handleToggleStar = async (id: string, current: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotifications(notifications.filter(n => n.id !== id));
+    try {
+      await fetch(`/api/notifications/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isStarred: !current })
+      });
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isStarred: !current } : n));
+    } catch (e) {}
   };
 
-  const handleNotificationClick = (notif: any) => {
+  const handleDelete = async (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await fetch(`/api/notifications/${id}`, { method: 'DELETE' });
+      setNotifications(prev => prev.filter(n => n._id !== id));
+    } catch (e) {}
+  };
+
+  const handleClick = async (notif: any) => {
     if (!notif.isRead) {
-      setNotifications(notifications.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+      await fetch(`/api/notifications/${notif._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isRead: true })
+      });
+      setNotifications(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n));
     }
-    router.push(notif.link);
+    if (notif.link) {
+      router.push(notif.link);
+    }
   };
 
-  const filteredNotifications = notifications.filter(n => {
-    if (activeTab === "unread") return !n.isRead;
+  const filtered = notifications.filter(n => {
+    if (activeTab === 'unread') return !n.isRead;
+    if (activeTab === 'starred') return n.isStarred;
     return true;
   });
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "quote": return <FilePlus className="w-5 h-5 text-blue-600" />;
-      case "payment": return <CreditCard className="w-5 h-5 text-emerald-600" />;
-      case "alert": return <AlertCircle className="w-5 h-5 text-rose-600" />;
-      default: return <Bell className="w-5 h-5 text-primary-600" />;
-    }
-  };
-
-  const getIconBg = (type: string) => {
-    switch (type) {
-      case "quote": return "bg-blue-50 border-blue-100";
-      case "payment": return "bg-emerald-50 border-emerald-100";
-      case "alert": return "bg-rose-50 border-rose-100";
-      default: return "bg-primary-50 border-primary-100";
-    }
-  };
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <MainLayout>
       <div className="p-8 max-w-[1000px] mx-auto space-y-6">
         <div className="flex items-center space-x-4 mb-2">
-          <button 
+          <button
             onClick={() => router.back()}
             className="p-2 hover:bg-primary-50 rounded-lg text-primary-600 transition-colors"
           >
@@ -113,78 +175,86 @@ export default function NotificationsPage() {
         <div className="bg-white rounded-xl border border-primary-100 shadow-sm overflow-hidden flex flex-col h-[calc(100vh-200px)]">
           <div className="p-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/30">
             <div className="flex space-x-2">
-              <button 
-                onClick={() => setActiveTab("all")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === "all" ? "bg-white shadow-sm border border-primary-200 text-primary-900" : "text-primary-600 hover:bg-white/50"}`}
-              >
-                全部消息
-              </button>
-              <button 
-                onClick={() => setActiveTab("unread")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center ${activeTab === "unread" ? "bg-white shadow-sm border border-primary-200 text-primary-900" : "text-primary-600 hover:bg-white/50"}`}
-              >
-                未读消息
-                {notifications.filter(n => !n.isRead).length > 0 && (
-                  <span className="ml-2 bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                    {notifications.filter(n => !n.isRead).length}
-                  </span>
-                )}
-              </button>
+              {(['unread', 'all', 'starred'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${activeTab === tab ? 'bg-white shadow-sm border border-primary-200 text-primary-900' : 'text-primary-600 hover:bg-white/50'}`}
+                >
+                  {tab === 'unread' && '未读消息'}
+                  {tab === 'all' && '全部消息'}
+                  {tab === 'starred' && <><Star className="w-3.5 h-3.5" />收藏</>}
+                  {tab === 'unread' && unreadCount > 0 && (
+                    <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+                  )}
+                </button>
+              ))}
             </div>
-            
-            <button 
+
+            <button
               onClick={handleMarkAllAsRead}
-              disabled={notifications.filter(n => !n.isRead).length === 0}
-              className="text-sm font-medium text-primary-600 hover:text-primary-900 flex items-center px-3 py-2 rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={unreadCount === 0}
+              className="text-sm font-medium text-primary-600 hover:text-primary-900 flex items-center px-3 py-2 rounded-lg hover:bg-primary-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <CheckCircle2 className="w-4 h-4 mr-1.5" /> 全部标为已读
             </button>
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {filteredNotifications.length > 0 ? (
+            {loading ? (
+              <div className="h-full flex items-center justify-center text-primary-400">
+                <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                <span className="text-sm">加载中...</span>
+              </div>
+            ) : filtered.length > 0 ? (
               <div className="divide-y divide-primary-50">
-                {filteredNotifications.map(notif => (
-                  <div 
-                    key={notif.id}
-                    onClick={() => handleNotificationClick(notif)}
-                    className={`p-5 flex gap-4 cursor-pointer transition-all hover:bg-primary-50 group relative
-                      ${!notif.isRead ? 'bg-primary-50/30' : ''}
-                    `}
+                {filtered.map(notif => (
+                  <div
+                    key={notif._id}
+                    onClick={() => handleClick(notif)}
+                    className={`p-5 flex gap-4 cursor-pointer transition-all hover:bg-primary-50 group relative ${!notif.isRead ? 'bg-primary-50/30' : ''}`}
                   >
                     {!notif.isRead && (
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500 rounded-r-sm"></div>
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500 rounded-r-sm" />
                     )}
-                    
+
                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${getIconBg(notif.type)}`}>
                       {getIcon(notif.type)}
                     </div>
-                    
-                    <div className="flex-1">
+
+                    <div className="flex-1 min-w-0">
                       <div className="flex justify-between items-start mb-1">
-                        <h3 className={`text-base flex items-center ${!notif.isRead ? 'font-bold text-primary-900' : 'font-medium text-primary-800'}`}>
+                        <h3 className={`text-base flex items-center gap-1.5 ${!notif.isRead ? 'font-bold text-primary-900' : 'font-medium text-primary-800'}`}>
                           {notif.title}
-                          {!notif.isRead && <span className="inline-block w-2 h-2 bg-rose-500 rounded-full ml-2"></span>}
+                          {!notif.isRead && <span className="inline-block w-2 h-2 bg-rose-500 rounded-full shrink-0" />}
+                          {notif.isStarred && <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />}
                         </h3>
-                        <span className="text-xs font-mono text-primary-400 whitespace-nowrap ml-4">{notif.time}</span>
+                        <span className="text-xs font-mono text-primary-400 whitespace-nowrap ml-4 shrink-0">{formatTime(notif.createTime)}</span>
                       </div>
-                      <p className={`text-sm ${!notif.isRead ? 'text-primary-700' : 'text-primary-500'}`}>
-                        {notif.message}
+                      <p className={`text-sm leading-relaxed ${!notif.isRead ? 'text-primary-700' : 'text-primary-500'}`}>
+                        {notif.content}
                       </p>
                     </div>
 
-                    <div className="flex flex-col items-end justify-center space-y-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-10">
+                    <div className="flex flex-col items-end justify-center space-y-1.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                       {!notif.isRead && (
-                        <button 
-                          onClick={(e) => handleMarkAsRead(notif.id, e)}
+                        <button
+                          onClick={(e) => handleMarkAsRead(notif._id, e)}
                           title="标为已读"
                           className="p-1.5 text-primary-400 hover:text-primary-900 hover:bg-primary-100 rounded-md transition-colors"
                         >
                           <CheckCircle2 className="w-4 h-4" />
                         </button>
                       )}
-                      <button 
-                        onClick={(e) => handleDelete(notif.id, e)}
+                      <button
+                        onClick={(e) => handleToggleStar(notif._id, !!notif.isStarred, e)}
+                        title={notif.isStarred ? '取消收藏' : '收藏'}
+                        className={`p-1.5 rounded-md transition-colors ${notif.isStarred ? 'text-amber-400 hover:text-amber-500 hover:bg-amber-50' : 'text-primary-400 hover:text-amber-500 hover:bg-amber-50'}`}
+                      >
+                        <Star className={`w-4 h-4 ${notif.isStarred ? 'fill-amber-400' : ''}`} />
+                      </button>
+                      <button
+                        onClick={(e) => handleDelete(notif._id, e)}
                         title="删除消息"
                         className="p-1.5 text-primary-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
                       >
@@ -197,7 +267,7 @@ export default function NotificationsPage() {
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-primary-400">
                 <Bell className="w-16 h-16 mb-4 opacity-20" />
-                <p>没有找到相关消息通知</p>
+                <p className="text-sm">{activeTab === 'unread' ? '暂无未读消息' : activeTab === 'starred' ? '暂无收藏消息' : '暂无消息通知'}</p>
               </div>
             )}
           </div>

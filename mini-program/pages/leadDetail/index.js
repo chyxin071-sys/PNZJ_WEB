@@ -341,7 +341,8 @@ Page({
         content: content,
         method: '系统记录',
         createdBy: operatorName,
-        createdAt: nowStr,
+        createdAt: db.serverDate(),
+        displayTime: nowStr,
         timestamp: db.serverDate()
       }
     }).then(() => {
@@ -398,7 +399,24 @@ Page({
       
       this.addSystemFollowUp(`将客户状态更改为：已签单 (签单人: ${signer}, 日期: ${signDate})`);
 
-      // 弹出全屏庆祝动画或提示
+      // 签单通知
+      const db2 = wx.cloud.database();
+      const lead = this.data.lead;
+      const userInfo2 = wx.getStorageSync('userInfo');
+      const notifyTargets = new Set(['admin']);
+      if (lead.sales) notifyTargets.add(lead.sales);
+      if (lead.designer) notifyTargets.add(lead.designer);
+      notifyTargets.forEach(u => {
+        db2.collection('notifications').add({
+          data: {
+            type: 'lead', title: '🎉 新签单',
+            content: `客户【${lead.name}】已成功签单！签单人：${signer}`,
+            targetUser: u, isRead: false, createTime: db2.serverDate(),
+            link: `/pages/leadDetail/index?id=${this.data.leadId}`
+          }
+        });
+      });
+
       wx.showToast({
         title: '恭喜签单！',
         icon: 'success',

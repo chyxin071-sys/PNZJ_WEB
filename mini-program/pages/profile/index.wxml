@@ -31,6 +31,24 @@
     </view>
   </view>
 
+  <!-- 修改密码弹窗 -->
+  <view class="modal-mask" wx:if="{{showPasswordModal}}" bindtap="closePasswordModal"></view>
+  <view class="modal-content" wx:if="{{showPasswordModal}}">
+    <view class="modal-header">
+      <text>修改密码</text>
+      <view class="btn-close" bindtap="closePasswordModal">取消</view>
+    </view>
+    <view class="modal-body" style="padding-bottom: 40rpx;">
+      <view class="input-wrap" style="margin-bottom: 20rpx;">
+        <input class="input" type="password" placeholder="请输入原密码" value="{{oldPassword}}" bindinput="onPasswordInput" data-field="oldPassword" />
+      </view>
+      <view class="input-wrap">
+        <input class="input" type="password" placeholder="请输入新密码" value="{{newPassword}}" bindinput="onPasswordInput" data-field="newPassword" />
+      </view>
+      <view class="btn-save hover-scale" bindtap="savePassword" style="margin-top: 30rpx; margin-bottom: 0;">确认修改</view>
+    </view>
+  </view>
+
   <!-- 数据概览模块 -->
   <view class="stats-section">
     <view class="stat-item">
@@ -66,6 +84,16 @@
       </view>
       <view class="menu-right">
         <text class="menu-val">{{userInfo.account || '未设置'}}</text>
+      </view>
+    </view>
+
+    <view class="menu-item" hover-class="menu-hover" bindtap="openEditPassword">
+      <view class="menu-left">
+        <view class="icon-menu icon-lock"></view>
+        <text>修改密码</text>
+      </view>
+      <view class="menu-right">
+        <view class="arrow-right"></view>
       </view>
     </view>
 

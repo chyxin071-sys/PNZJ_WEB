@@ -1,26 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Check, Clock, Calendar, Users, Target, Search, Plus, X, Edit2, Trash2, ArrowUpAZ, ArrowDownAZ, ChevronDown, ChevronLeft, ChevronRight, Paperclip, Image as ImageIcon, Upload } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
 import { useRouter } from "next/navigation";
-
-// 临时假数据防止报错
-// 实际数据将从云端拉取
-const employeesData: any[] = [
-  { id: "e1", name: "张销售", role: "sales" },
-  { id: "e2", name: "李设计", role: "designer" },
-  { id: "e3", name: "王工长", role: "manager" },
-  { id: "admin", name: "超级管理员", role: "admin" }
-];
-const leadsData: any[] = [
-  { id: "l1", name: "赵女士", phone: "13800000001", address: "星河湾" },
-  { id: "l2", name: "钱先生", phone: "13800000002", address: "保利城" }
-];
-const projectsData: any[] = [
-  { id: "p1", customer: "孙女士", address: "金科城" },
-  { id: "p2", customer: "李先生", address: "万科时代" }
-];
 
 // -- 常量定义 --
 const ROLE_MAP: Record<string, string> = {
@@ -50,7 +33,6 @@ const PRIORITY_COLOR_MAP: Record<string, string> = {
 };
 
 // -- 自定义下拉组件 --
-import { useRef } from "react";
 const CustomSelect = ({ value, onChange, options, placeholder = "请选择", className = "", dropdownClassName = "" }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -99,6 +81,9 @@ export default function TodosPage() {
   const router = useRouter();
   const [todos, setTodos] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [leadsData, setLeadsData] = useState<any[]>([]);
+  const [projectsData, setProjectsData] = useState<any[]>([]);
 
   const fetchTodos = async () => {
     try {
@@ -155,12 +140,11 @@ export default function TodosPage() {
   });
 
   useEffect(() => {
-    const userData = localStorage.getItem("pnzj_user");
+    const userData = localStorage.getItem("pnzj_user") || localStorage.getItem("userInfo");
     if (userData) {
       try {
         const user = JSON.parse(userData);
         setCurrentUser(user);
-        // 初始化时，若为普通员工，默认过滤本人
         if (user.role !== 'admin') {
           setFilterView("与我相关");
         } else {
@@ -171,6 +155,23 @@ export default function TodosPage() {
       }
     }
     fetchTodos();
+
+    // 拉取真实员工、线索、工地数据
+    fetch('/api/employees').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setEmployees(data);
+    }).catch(console.error);
+
+    fetch('/api/leads').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) {
+        setLeadsData(data.map((l: any) => ({ id: l._id, name: l.name, address: l.address, status: l.status })));
+      }
+    }).catch(console.error);
+
+    fetch('/api/projects').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) {
+        setProjectsData(data.map((p: any) => ({ id: p._id, customer: p.customer, address: p.address, status: p.status })));
+      }
+    }).catch(console.error);
   }, []);
 
   const toggleTodoStatus = async (id: string) => {
@@ -267,9 +268,9 @@ export default function TodosPage() {
       description: "",
       dueDate: new Date().toISOString().split('T')[0],
       priority: "normal",
-      assignedToId: currentUser?.id || "",
+      assignedToId: currentUser?._id || currentUser?.id || "",
       relatedType: "lead",
-      relatedId: leadsData[0]?.id || "",
+      relatedId: "",
       attachments: []
     });
     setIsModalOpen(true);
@@ -302,8 +303,8 @@ export default function TodosPage() {
 
   const handleSave = async () => {
     if (!formData.title || !formData.dueDate) return alert("请填写标题和截止日期");
-    
-    const assignedEmp = employeesData.find(e => e.id === formData.assignedToId) || currentUser;
+
+    const assignedEmp = employees.find(e => (e._id || e.id) === formData.assignedToId) || currentUser;
     let relatedName = "";
     if (formData.relatedType === 'lead') {
       relatedName = leadsData.find(l => l.id === formData.relatedId)?.name || "未知线索";
@@ -320,9 +321,9 @@ export default function TodosPage() {
         priority: formData.priority,
         attachments: formData.attachments,
         assignedTo: {
-          id: assignedEmp.id,
-          name: assignedEmp.name,
-          role: assignedEmp.role
+          id: assignedEmp?._id || assignedEmp?.id || '',
+          name: assignedEmp?.name || '',
+          role: assignedEmp?.role || ''
         },
         relatedTo: {
           type: formData.relatedType,
@@ -359,9 +360,9 @@ export default function TodosPage() {
           role: currentUser?.role || 'admin'
         },
         assignedTo: {
-          id: assignedEmp.id,
-          name: assignedEmp.name,
-          role: assignedEmp.role
+          id: assignedEmp?._id || assignedEmp?.id || '',
+          name: assignedEmp?.name || '',
+          role: assignedEmp?.role || ''
         },
         relatedTo: {
           type: formData.relatedType,
@@ -486,19 +487,19 @@ export default function TodosPage() {
 
             {/* 人员筛选 (仅限团队全部视图) */}
             {filterView === '团队全部' && (
-              <CustomSelect 
+              <CustomSelect
                 value={personFilter}
                 onChange={(val: any) => setPersonFilter(val)}
                 options={[
                   { label: "所有员工", value: "all" },
-                  ...employeesData.map(emp => ({
+                  ...employees.map(emp => ({
                     label: emp.name,
-                    value: emp.id,
+                    value: emp._id || emp.id,
                     render: () => (
                       <div className="flex items-center justify-between w-full">
                         <span>{emp.name}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${ROLE_COLOR_MAP[emp.role]}`}>
-                          {ROLE_MAP[emp.role]}
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${ROLE_COLOR_MAP[emp.role] || ''}`}>
+                          {ROLE_MAP[emp.role] || emp.role}
                         </span>
                       </div>
                     )
@@ -805,17 +806,17 @@ export default function TodosPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-bold text-primary-900 mb-1.5">指派给谁 (执行人)</label>
-                  <CustomSelect 
+                  <CustomSelect
                     value={formData.assignedToId}
                     onChange={(val: any) => setFormData({...formData, assignedToId: val})}
-                    options={employeesData.map(emp => ({
+                    options={employees.map(emp => ({
                       label: emp.name,
-                      value: emp.id,
+                      value: emp._id || emp.id,
                       render: () => (
                         <div className="flex items-center justify-between w-full">
                           <span>{emp.name}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded border ${ROLE_COLOR_MAP[emp.role]}`}>
-                            {ROLE_MAP[emp.role]}
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded border ${ROLE_COLOR_MAP[emp.role] || ''}`}>
+                            {ROLE_MAP[emp.role] || emp.role}
                           </span>
                         </div>
                       )
@@ -826,14 +827,14 @@ export default function TodosPage() {
                 <div>
                   <label className="block text-sm font-bold text-primary-900 mb-1.5">关联类型</label>
                   <div className="flex p-1 bg-primary-50 rounded-xl border border-primary-200">
-                    <button 
-                      onClick={() => setFormData({...formData, relatedType: 'lead', relatedId: leadsData[0]?.id})}
+                    <button
+                      onClick={() => setFormData({...formData, relatedType: 'lead', relatedId: ''})}
                       className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-colors ${formData.relatedType === 'lead' ? 'bg-white shadow text-primary-900' : 'text-primary-500 hover:text-primary-900'}`}
                     >
                       未开工(线索)
                     </button>
-                    <button 
-                      onClick={() => setFormData({...formData, relatedType: 'project', relatedId: projectsData[0]?.id})}
+                    <button
+                      onClick={() => setFormData({...formData, relatedType: 'project', relatedId: ''})}
                       className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-colors ${formData.relatedType === 'project' ? 'bg-white shadow text-primary-900' : 'text-primary-500 hover:text-primary-900'}`}
                     >
                       已开工(工地)
@@ -846,14 +847,15 @@ export default function TodosPage() {
                 <label className="block text-sm font-bold text-primary-900 mb-1.5">
                   选择关联的{formData.relatedType === 'lead' ? '客户线索' : '施工工地'}
                 </label>
-                <CustomSelect 
+                <CustomSelect
                   value={formData.relatedId}
                   onChange={(val: any) => setFormData({...formData, relatedId: val})}
                   options={formData.relatedType === 'lead' ? (
-                    leadsData.map(lead => ({ label: `${lead.name} (${lead.address}) - ${lead.status || '沟通中'}`, value: lead.id }))
+                    leadsData.map(lead => ({ label: `${lead.name} (${lead.address || ''}) - ${lead.status || ''}`, value: lead.id }))
                   ) : (
-                    projectsData.map(proj => ({ label: `${proj.customer} - ${proj.address} - ${proj.status || '施工中'}`, value: proj.id }))
+                    projectsData.map(proj => ({ label: `${proj.customer} - ${proj.address || ''} - ${proj.status || ''}`, value: proj.id }))
                   )}
+                  placeholder={`请选择${formData.relatedType === 'lead' ? '客户' : '工地'}`}
                   className="w-full h-[42px]"
                 />
               </div>

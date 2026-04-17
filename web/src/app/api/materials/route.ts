@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
-import { tcbQuery, tcbAdd } from '@/lib/wechat-tcb';
+import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
 
 export async function GET(request: Request) {
   try {
-    // 获取最新 200 条材料库数据
-    const query = `db.collection("materials").orderBy("createdAt", "desc").limit(200).get()`;
-    const data = await tcbQuery(query);
-    return NextResponse.json(data);
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'));
+    const pageSize = Math.min(200, Math.max(1, parseInt(searchParams.get('pageSize') || '200')));
+    const skip = (page - 1) * pageSize;
+
+    const [data, total] = await Promise.all([
+      tcbQuery(`db.collection("materials").orderBy("createdAt", "desc").skip(${skip}).limit(${pageSize}).get()`),
+      tcbCount(`db.collection("materials").count()`)
+    ]);
+
+    if (!searchParams.get('page')) return NextResponse.json(data);
+    return NextResponse.json({ data, total, page, pageSize });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

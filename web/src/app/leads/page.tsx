@@ -43,17 +43,17 @@ function LeadsContent() {
   const [signModal, setSignModal] = useState({ isOpen: false, leadId: '', leadName: '', date: '', signer: '' });
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    const userData = localStorage.getItem("userInfo");
+    const userData = localStorage.getItem("userInfo") || localStorage.getItem("pnzj_user");
     if (userData) {
-      try {
-        setCurrentUser(JSON.parse(userData));
-      } catch (e) {
-        console.error(e);
-      }
+      try { setCurrentUser(JSON.parse(userData)); } catch (e) { console.error(e); }
     }
     fetchLeads();
+    fetch('/api/employees').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setUsers(data);
+    }).catch(console.error);
   }, []);
 
   const fetchLeads = async () => {
@@ -218,19 +218,19 @@ function LeadsContent() {
       alert('请填写签单时间和签单人');
       return;
     }
-    
-    setLeadsData(leadsData.map(lead => lead.id === signModal.leadId ? { 
-      ...lead, 
-      status: '已签单', 
-      signDate: signModal.date, 
-      signer: signModal.signer 
+
+    setLeadsData(leadsData.map(lead => lead.id === signModal.leadId ? {
+      ...lead,
+      status: '已签单',
+      signDate: signModal.date,
+      signer: signModal.signer
     } : lead));
 
     try {
       const res = await fetch(`/api/leads/${signModal.leadId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           status: '已签单',
           signDate: signModal.date,
           signer: signModal.signer
@@ -240,6 +240,18 @@ function LeadsContent() {
         setSignModal({ ...signModal, isOpen: false });
         setShowToast('签单保存成功');
         setTimeout(() => setShowToast(false), 2500);
+
+        // 写入系统跟进记录（对齐小程序）
+        fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: signModal.leadId,
+            content: `将客户状态更改为：已签单 (签单人: ${signModal.signer}, 日期: ${signModal.date})`,
+            method: '系统记录',
+            createdBy: currentUser?.name || '系统'
+          })
+        }).catch(console.error);
       }
     } catch (e) {
       console.error(e);
@@ -489,8 +501,8 @@ function LeadsContent() {
                     </div>
                     {openDropdown === 'filter-sales' && (
                       <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
-                        {["全部", "王销售", "李销售", "刘销售"].map(option => (
-                          <div 
+                        {["全部", ...users.filter(u => u.role === 'sales' || u.role === 'admin').map(u => u.name)].map(option => (
+                          <div
                             key={option}
                             onClick={() => { setFilters({...filters, sales: option}); setOpenDropdown(null); }}
                             className="px-2 py-1 mx-1"
@@ -515,8 +527,8 @@ function LeadsContent() {
                     </div>
                     {openDropdown === 'filter-designer' && (
                       <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
-                        {["全部", "未分配", "赵设计", "陈总监", "李设计"].map(option => (
-                          <div 
+                        {["全部", "未分配", ...users.filter(u => u.role === 'designer' || u.role === 'admin').map(u => u.name)].map(option => (
+                          <div
                             key={option}
                             onClick={() => { setFilters({...filters, designer: option}); setOpenDropdown(null); }}
                             className="px-2 py-1 mx-1"
@@ -792,8 +804,8 @@ function LeadsContent() {
                         <>
                           <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
                           <div className="absolute z-20 w-36 mt-8 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-12">
-                            {["未分配", "王销售", "刘销售", "张销售"].map(option => (
-                              <div 
+                            {["未分配", ...users.filter(u => u.role === 'sales' || u.role === 'admin').map(u => u.name)].map(option => (
+                              <div
                                 key={option}
                                 onClick={(e) => { e.stopPropagation(); updateLeadSales(lead.id, option); setOpenDropdown(null); }}
                                 className="px-2 py-1 mx-1"
@@ -833,8 +845,8 @@ function LeadsContent() {
                         <>
                           <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
                           <div className="absolute z-20 w-36 mt-8 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-12">
-                            {["未分配", "赵设计", "陈总监", "李设计"].map(option => (
-                              <div 
+                            {["未分配", ...users.filter(u => u.role === 'designer' || u.role === 'admin').map(u => u.name)].map(option => (
+                              <div
                                 key={option}
                                 onClick={(e) => { e.stopPropagation(); updateLeadDesigner(lead.id, option); setOpenDropdown(null); }}
                                 className="px-2 py-1 mx-1"
@@ -1020,6 +1032,62 @@ function LeadsContent() {
         </div>
       )}
       </div>
+
+      {/* 签单确认弹窗 */}
+      {signModal.isOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 text-center p-8">
+            <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-rose-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-rose-600 mb-2">品诺筑家签单确认</h3>
+            <p className="text-sm text-primary-600 mb-6">
+              【<span className="font-bold text-primary-900">{signModal.leadName}</span>】项目确认签单？
+            </p>
+            <div className="space-y-4 text-left mb-6">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1">签单时间</label>
+                <input
+                  type="date"
+                  value={signModal.date}
+                  onChange={e => setSignModal({...signModal, date: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus:border-primary-400 focus:bg-white transition-all outline-none text-sm text-primary-900"
+                />
+              </div>
+              <div className="relative">
+                <label className="block text-sm font-medium text-primary-700 mb-1">签单人</label>
+                <div
+                  onClick={() => setOpenDropdown(openDropdown === 'sign-signer' ? null : 'sign-signer')}
+                  className={`w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${openDropdown === 'sign-signer' ? 'bg-white border-primary-400' : ''}`}
+                >
+                  <span className={signModal.signer ? 'text-primary-900' : 'text-primary-400'}>
+                    {signModal.signer || '请选择签单人'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform ${openDropdown === 'sign-signer' ? 'rotate-180' : ''}`} />
+                </div>
+                {openDropdown === 'sign-signer' && (
+                  <div className="absolute z-30 w-full mt-1 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden py-1 max-h-48 overflow-y-auto">
+                    {users.map(u => (
+                      <div
+                        key={u._id}
+                        onClick={() => { setSignModal({...signModal, signer: u.name}); setOpenDropdown(null); }}
+                        className="px-4 py-2 text-sm text-primary-700 hover:bg-primary-50 cursor-pointer flex items-center justify-between"
+                      >
+                        <span>{u.name}</span>
+                        <span className="text-xs text-primary-400">{u.role === 'admin' ? '管理员' : u.role === 'sales' ? '销售' : u.role === 'designer' ? '设计' : '项目'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setSignModal({...signModal, isOpen: false})} className="flex-1 px-4 py-3 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-bold">再想想</button>
+              <button onClick={handleConfirmSign} className="flex-1 px-4 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-bold shadow-lg shadow-amber-500/20">确认签单</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showToast && (
         <div className="fixed top-24 right-8 z-[70] bg-white border border-primary-100 rounded-xl shadow-lg p-4 flex items-start gap-3 animate-in slide-in-from-top-5 fade-in duration-300">

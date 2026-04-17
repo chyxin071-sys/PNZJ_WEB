@@ -2,8 +2,9 @@
 
 import { useParams, useRouter } from "next/navigation";
 import MainLayout from "../../../components/MainLayout";
-import { ArrowLeft, CheckCircle2, Clock, AlertTriangle, PlayCircle, HardHat, FileText, ChevronDown, Camera, X, AlertCircle, Edit2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock, AlertTriangle, PlayCircle, HardHat, FileText, ChevronDown, Camera, X, AlertCircle, Edit2, Menu, Plus, User, FileSignature } from "lucide-react";
 import CustomerInfo from "../../../components/CustomerInfo";
+import CustomerDocuments from "../../../components/CustomerDocuments";
 import { useState, useEffect } from "react";
 import { getNextWorkingDay, calculateEndDate, formatDate } from "../../../lib/date";
 
@@ -65,10 +66,10 @@ export default function ProjectDetailPage() {
   const [expandedIdx, setExpandedIdx] = useState<number | null>(null);
   const [userRole, setUserRole] = useState('admin');
   const [userName, setUserName] = useState('未知');
+  const [quoteId, setQuoteId] = useState<string | null>(null);
 
   // 弹窗状态
   const [startModal, setStartModal] = useState(false);
-  const [isEditingNodes, setIsEditingNodes] = useState(false);
   const [baseStartDate, setBaseStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [subNodeModal, setSubNodeModal] = useState<{majorIdx:number,subIdx:number}|null>(null);
   const [delayModal, setDelayModal] = useState<{nodeIdx:number}|null>(null);
@@ -82,6 +83,11 @@ export default function ProjectDetailPage() {
   const [tempPhotos, setTempPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [remark, setRemark] = useState('');
+
+  // 编辑节点状态
+  const [isEditingNodes, setIsEditingNodes] = useState(false);
+  const [originalNodes, setOriginalNodes] = useState<any[]>([]);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -98,6 +104,14 @@ export default function ProjectDetailPage() {
       const res = await fetch(`/api/projects/${id}`);
       if (!res.ok) return;
       const data = await res.json();
+      
+      // 顺便去查一下报价单
+      if (data.leadId) {
+        fetch(`/api/quotes?leadId=${data.leadId}`).then(r => r.json()).then(qs => {
+          if (qs && qs.length > 0) setQuoteId(qs[0]._id);
+        }).catch(()=>{});
+      }
+
       let nodes: any[] = data.nodesData || [];
       if (nodes.length === 0) {
         nodes = TEMPLATE_NODES.map((t, i) => ({
@@ -173,12 +187,6 @@ export default function ProjectDetailPage() {
     }
   };
 
-  const handleRemoveSub = (mi: number, si: number) => {
-    const nodes = [...project.nodesData];
-    nodes[mi].subNodes.splice(si, 1);
-    setProject({ ...project, nodesData: nodes });
-  };
-
   const handleDurationSave = async () => {
     if (!durationModal) return;
     const { majorIdx, subIdx } = durationModal;
@@ -250,6 +258,94 @@ export default function ProjectDetailPage() {
     } else alert('提交失败');
   };
 
+  // --- 节点编辑模式方法 ---
+  const enterEditMode = () => {
+    setOriginalNodes(JSON.parse(JSON.stringify(project.nodesData)));
+    setIsEditingNodes(true);
+    setExpandedIdx(null); // 收起所有节点以便查看
+  };
+
+  const cancelEditNodes = () => {
+    setProject({ ...project, nodesData: originalNodes });
+    setIsEditingNodes(false);
+  };
+
+  const saveEditedNodes = async () => {
+    let nodes = [...project.nodesData];
+    // 重算排期
+    nodes = recalculateGantt(nodes, project.startDate || new Date().toISOString().split('T')[0]);
+    const patch = { nodesData: nodes, expectedEndDate: nodes[nodes.length-1]?.endDate || project.expectedEndDate };
+    if (await save(patch)) {
+      setProject({ ...project, ...patch });
+      setIsEditingNodes(false);
+      alert('保存成功，工期已自动重算');
+    } else {
+      alert('保存失败');
+    }
+  };
+
+  const handleDragStart = (e: any, idx: number) => {
+    setDraggedIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDropMajorNode = (e: any, targetIdx: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIdx) return;
+    const nodes = [...project.nodesData];
+    const [draggedItem] = nodes.splice(draggedIdx, 1);
+    nodes.splice(targetIdx, 0, draggedItem);
+    setProject({ ...project, nodesData: nodes });
+    setDraggedIdx(null);
+  };
+
+  const handleAddMajorNode = () => {
+    const nodes = [...project.nodesData];
+    nodes.push({
+      name: "新大阶段", duration: 1, status: "pending", startDate: "", endDate: "", records: [], delayRecords: [],
+      subNodes: [{ name: "新工序", duration: 1, status: "pending", startDate: "", endDate: "", records: [] }]
+    });
+    setProject({ ...project, nodesData: nodes });
+  };
+
+  const handleDeleteMajorNode = (idx: number) => {
+    if (!confirm('确定删除该大阶段及其所有子工序吗？')) return;
+    const nodes = [...project.nodesData];
+    nodes.splice(idx, 1);
+    setProject({ ...project, nodesData: nodes });
+  };
+
+  const handleUpdateMajorNodeName = (idx: number, name: string) => {
+    const nodes = [...project.nodesData];
+    nodes[idx].name = name;
+    setProject({ ...project, nodesData: nodes });
+  };
+
+  const handleAddSubNode = (idx: number) => {
+    const nodes = [...project.nodesData];
+    nodes[idx].subNodes.push({ name: "新工序", duration: 1, status: "pending", startDate: "", endDate: "", records: [] });
+    setProject({ ...project, nodesData: nodes });
+  };
+
+  const handleDeleteSubNode = (idx: number, sIdx: number) => {
+    const nodes = [...project.nodesData];
+    nodes[idx].subNodes.splice(sIdx, 1);
+    setProject({ ...project, nodesData: nodes });
+  };
+
+  const handleUpdateSubNodeName = (idx: number, sIdx: number, name: string) => {
+    const nodes = [...project.nodesData];
+    nodes[idx].subNodes[sIdx].name = name;
+    setProject({ ...project, nodesData: nodes });
+  };
+
+  const handleUpdateSubNodeDuration = (idx: number, sIdx: number, duration: number) => {
+    const nodes = [...project.nodesData];
+    nodes[idx].subNodes[sIdx].duration = Math.max(0, duration);
+    setProject({ ...project, nodesData: nodes });
+  };
+
+
   if (loading) return <MainLayout><div className="p-8 flex items-center justify-center h-64 text-primary-500">加载中...</div></MainLayout>;
   if (!project) return <MainLayout><div className="p-8 text-center py-20 text-primary-400">找不到项目数据</div></MainLayout>;
 
@@ -279,9 +375,6 @@ export default function ProjectDetailPage() {
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-3">
                 <h1 className="text-2xl font-bold text-primary-900">{project.address || '未知地址'}</h1>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${healthStyle(project.health)}`}>
-                  {project.health || '正常'}
-                </span>
               </div>
               <div className="mb-5">
                 <CustomerInfo name={project.customer} phone={project.phone} customerNo={project.customerNo || project.id} />
@@ -293,135 +386,229 @@ export default function ProjectDetailPage() {
                 <div><p className="text-xs text-primary-400 mb-1">已耗工期</p><p className="text-sm font-bold text-amber-600">{daysElapsed} <span className="text-xs font-normal">天</span></p></div>
               </div>
             </div>
-            <div className="flex flex-col gap-2 shrink-0">
+            <div className="flex flex-col gap-2 shrink-0 w-full md:w-auto mt-4 md:mt-0">
+              <div className="flex flex-wrap gap-2">
+                {/* 跳转快捷按钮 */}
+                <button onClick={() => project.leadId ? router.push(`/leads/${project.leadId}`) : alert('该项目无关联客户线索')} className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-700 rounded-full hover:bg-primary-100 text-sm font-bold border border-primary-200 transition-colors flex-1 md:flex-none">
+                  <User className="w-4 h-4 mr-2" /> 客户档案
+                </button>
+                <button onClick={() => quoteId ? router.push(`/quotes/${quoteId}`) : (project.leadId ? router.push(`/quotes/new?leadId=${project.leadId}`) : alert('该项目无关联客户线索'))} className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-700 rounded-full hover:bg-primary-100 text-sm font-bold border border-primary-200 transition-colors flex-1 md:flex-none">
+                  <FileSignature className="w-4 h-4 mr-2" /> 报价明细
+                </button>
+                {canEdit && (
+                  <button onClick={() => { setEditStartDate(project.startDate || ''); setEditManager(project.manager || ''); setEditProjectModal(true); }} className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-700 rounded-full hover:bg-primary-100 text-sm font-bold border border-primary-200 transition-colors flex-1 md:flex-none">
+                    <Edit2 className="w-4 h-4 mr-2" /> 编辑信息
+                  </button>
+                )}
+              </div>
+
               {project.status === '未开工' && (
-                <button onClick={() => setStartModal(true)} className="flex items-center justify-center px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm font-bold">
+                <button onClick={() => setStartModal(true)} className="flex items-center justify-center px-4 py-2 mt-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 text-sm font-bold shadow-sm w-full">
                   <PlayCircle className="w-4 h-4 mr-2" /> 准备开工
                 </button>
               )}
-              {canEdit && (
-                <button onClick={() => { setEditStartDate(project.startDate || ''); setEditManager(project.manager || ''); setEditProjectModal(true); }} className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 text-sm">
-                  <Edit2 className="w-4 h-4 mr-2" /> 编辑工地信息
-                </button>
-              )}
-              <button onClick={() => alert('项目资料功能开发中')} className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-700 rounded-lg hover:bg-primary-100 text-sm">
-                <FileText className="w-4 h-4 mr-2" /> 项目资料 / 图纸
-              </button>
             </div>
           </div>
         </div>
 
         {/* 施工节点 */}
-        <div className="bg-white rounded-xl border border-primary-100 shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-primary-100 flex justify-between items-center">
-            <h2 className="text-base font-bold text-primary-900 flex items-center gap-2">
-              <HardHat className="w-5 h-5 text-primary-400" /> 8大施工节点
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 左侧主要区域：施工动态 */}
+          <div className="lg:col-span-2 bg-white rounded-xl border border-primary-100 shadow-sm overflow-hidden flex flex-col">
+          <div className="px-6 py-4 border-b border-primary-100 flex justify-between items-start bg-primary-50/30">
+            <h2 className="text-base font-bold text-primary-900 flex items-center gap-2 mt-1">
+              <HardHat className="w-5 h-5 text-primary-400" /> 施工动态
             </h2>
-            <span className="text-xs text-primary-500">当前阶段：<span className="font-bold text-primary-900">{TEMPLATE_NODES[(project.currentNode||1)-1]?.name}</span></span>
+            <div className="flex flex-col gap-2 items-end">
+              <div className={`px-3 py-1 rounded-full text-xs font-bold border ${healthStyle(project.health)}`}>
+                {project.health || '正常'}
+              </div>
+              {canEdit && (
+                isEditingNodes ? (
+                  <div className="flex gap-2">
+                    <button onClick={cancelEditNodes} className="px-3 py-1.5 text-xs font-bold bg-white text-primary-600 rounded-full border border-primary-200 hover:bg-primary-50">取消</button>
+                    <button onClick={saveEditedNodes} className="px-3 py-1.5 text-xs font-bold bg-primary-900 text-white rounded-full hover:bg-primary-800 shadow-sm">保存修改</button>
+                  </div>
+                ) : (
+                  <button onClick={enterEditMode} className="px-3 py-1.5 text-xs font-bold bg-white text-primary-700 rounded-full border border-primary-200 hover:bg-primary-50 flex items-center gap-1 shadow-sm transition-colors">
+                    <Edit2 className="w-3 h-3" /> 编辑工序
+                  </button>
+                )
+              )}
+            </div>
           </div>
           <div className="p-6">
             <div className="relative">
               <div className="absolute left-6 top-8 bottom-8 w-px bg-primary-100"></div>
-              <div className="space-y-5">
-                {project.nodesData.map((node: any, idx: number) => {
-                  const done = node.status === 'completed';
-                  const active = node.status === 'current';
-                  const expanded = expandedIdx === idx;
-                  return (
-                    <div key={idx} className="relative z-10 flex gap-4">
-                      <div className="shrink-0 mt-1">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 border-white shadow-sm
-                          ${done ? 'bg-primary-900 text-white' : active ? 'bg-amber-500 text-white ring-4 ring-amber-100 border-none' : 'bg-primary-100 text-primary-400'}`}>
-                          {done ? <CheckCircle2 className="w-6 h-6" /> : active ? <PlayCircle className="w-6 h-6" /> : <span className="font-mono font-bold">{idx+1}</span>}
-                        </div>
+              
+              {isEditingNodes ? (
+                <div className="space-y-4 relative z-10">
+                  {project.nodesData.map((node: any, idx: number) => (
+                    <div 
+                      key={idx} 
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => handleDropMajorNode(e, idx)}
+                      className={`bg-white border rounded-xl p-5 flex gap-4 items-start shadow-sm transition-all ${draggedIdx === idx ? 'opacity-50 border-primary-500' : 'border-primary-200 hover:border-primary-300'}`}
+                    >
+                      <div className="mt-1 cursor-grab text-primary-300 hover:text-primary-600 active:cursor-grabbing">
+                        <Menu className="w-5 h-5"/>
                       </div>
-                      <div className={`flex-1 rounded-xl border overflow-hidden
-                        ${active ? 'border-amber-200 shadow-md' : done ? 'border-primary-200' : 'border-primary-100 bg-zinc-50/50'}`}>
-                        {/* 节点头 */}
-                        <div className="px-5 py-4 cursor-pointer flex justify-between items-center bg-white hover:bg-zinc-50/30 transition-colors"
-                          onClick={() => setExpandedIdx(expanded ? null : idx)}>
-                          <div>
-                            <h3 className={`text-base font-bold mb-0.5 ${active ? 'text-amber-600' : done ? 'text-primary-900' : 'text-primary-400'}`}>{node.name}</h3>
-                            <p className="text-xs text-primary-400 font-mono">
-                              {done && `已完成：${node.startDate} ~ ${node.actualEndDate || node.endDate}`}
-                              {active && `进行中 | 预计开工：${node.startDate} | 预计完工：${node.endDate}`}
-                              {!done && !active && `未开始 | 预计：${node.startDate} ~ ${node.endDate}`}
-                            </p>
-                          </div>
-                          <ChevronDown className={`w-5 h-5 text-primary-300 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center gap-3">
+                          <span className="w-6 h-6 rounded bg-primary-100 text-primary-600 flex items-center justify-center text-xs font-bold shrink-0">{idx + 1}</span>
+                          <input 
+                            value={node.name} 
+                            onChange={(e) => handleUpdateMajorNodeName(idx, e.target.value)} 
+                            className="font-bold text-base text-primary-900 border-b border-dashed border-primary-300 focus:border-primary-500 outline-none bg-transparent px-1 py-0.5 flex-1 min-w-0" 
+                            placeholder="大阶段名称"
+                          />
+                          <button onClick={() => handleDeleteMajorNode(idx)} className="text-rose-400 hover:text-rose-600 p-1.5 shrink-0" title="删除该阶段">
+                            <X className="w-4 h-4"/>
+                          </button>
                         </div>
-
-                        {/* 展开内容 */}
-                        {expanded && (
-                          <div className="px-5 pb-5 pt-3 border-t border-primary-50 bg-zinc-50/20">
-                            {/* 子工序列表 */}
-                            <p className="text-xs font-medium text-primary-400 mb-3">施工工序</p>
-                            <div className="space-y-2 mb-6">
-                              {(node.subNodes || []).map((sub: any, si: number) => {
-                                const subDone = sub.status === 'completed';
-                                let timeStr = '';
-                                if (subDone) timeStr = `实际完工：${sub.actualEndDate || '-'}`;
-                                else timeStr = `预计：${sub.startDate || '-'} ~ ${sub.endDate || '-'}`;
-                                return (
-                                  <div key={si} className="relative flex items-center gap-3 bg-white border border-primary-100 rounded-lg px-4 py-3 hover:border-primary-300 transition-colors cursor-pointer shadow-sm"
-                                    onClick={() => {
-                                      if (isEditingNodes) return;
-                                      if (node.status === 'pending') return alert('前置节点尚未完工，当前阶段未解锁');
-                                      setSubNodeModal({ majorIdx: idx, subIdx: si });
-                                    }}>
-                                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${subDone ? 'bg-primary-900' : 'bg-primary-200'}`}></div>
-                                    <div className="flex-1 min-w-0">
-                                      <span className={`text-sm font-medium ${subDone ? 'text-primary-900' : 'text-primary-700'}`}>{sub.name}</span>
-                                      <span className="text-[11px] text-primary-400 font-mono ml-3">{timeStr}</span>
-                                    </div>
-                                    {!subDone && active && canEdit && (
-                                      <button onClick={(e) => { e.stopPropagation(); setDurationModal({ majorIdx: idx, subIdx: si, cur: Number(sub.duration)||0 }); setNewDuration(Number(sub.duration)||0); }}
-                                        className="text-[11px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-100 flex items-center shrink-0">
-                                        {sub.duration}天 <Edit2 className="w-2.5 h-2.5 ml-0.5" />
-                                      </button>
-                                    )}
-                                    {subDone && <span className="text-[10px] bg-primary-50 text-primary-600 px-2 py-0.5 rounded font-bold shrink-0">已完成</span>}
-                                    {isEditingNodes && project.status === '未开工' && (
-                                      <button onClick={(e) => { e.stopPropagation(); handleRemoveSub(idx, si); }}
-                                        className="absolute -top-2 -right-2 w-5 h-5 bg-rose-500 text-white rounded-full flex items-center justify-center shadow z-10">
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-
-                            {/* 延误记录 */}
-                            <div className="mb-4">
-                              <div className="flex justify-between items-center mb-2">
-                                <p className="text-xs font-medium text-primary-400">延误 / 停工记录</p>
-                                {(active || node.status === 'pending') && project.status !== '未开工' && canEdit && (
-                                  <button onClick={() => setDelayModal({ nodeIdx: idx })}
-                                    className="text-xs text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100 flex items-center">
-                                    <AlertCircle className="w-3 h-3 mr-1" /> 记录延误
-                                  </button>
-                                )}
+                        <div className="pl-3 border-l-2 border-primary-100 space-y-2 ml-3">
+                          {(node.subNodes || []).map((sub: any, sIdx: number) => (
+                            <div key={sIdx} className="flex items-center gap-3 bg-zinc-50 border border-zinc-100 p-2.5 rounded-lg group">
+                              <div className="w-1.5 h-1.5 rounded-full bg-primary-300 shrink-0"></div>
+                              <input 
+                                value={sub.name} 
+                                onChange={(e) => handleUpdateSubNodeName(idx, sIdx, e.target.value)} 
+                                className="flex-1 text-sm bg-transparent border-b border-dashed border-primary-200 focus:border-primary-400 outline-none px-1 py-0.5 text-primary-800 min-w-0" 
+                                placeholder="工序名称"
+                              />
+                              <div className="flex items-center gap-1.5 bg-white border border-primary-200 rounded-md px-2 py-1 shadow-sm shrink-0">
+                                <input 
+                                  type="number" 
+                                  min="0"
+                                  value={sub.duration} 
+                                  onChange={(e) => handleUpdateSubNodeDuration(idx, sIdx, Number(e.target.value))} 
+                                  className="w-10 text-sm text-center outline-none font-medium text-primary-900" 
+                                />
+                                <span className="text-xs text-primary-500 font-medium">天</span>
                               </div>
-                              {node.delayRecords?.length > 0 ? (
-                                <div className="space-y-1.5">
-                                  {node.delayRecords.map((d: any, di: number) => (
-                                    <div key={di} className="bg-rose-50 px-3 py-2 rounded border border-rose-100 flex justify-between text-xs">
-                                      <span className="text-rose-700 font-medium">停工延误 {d.days} 天</span>
-                                      <span className="text-rose-400">{d.reason}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : <p className="text-xs text-primary-300">暂无延误记录</p>}
+                              <button onClick={() => handleDeleteSubNode(idx, sIdx)} className="text-primary-300 hover:text-rose-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" title="删除工序">
+                                <X className="w-4 h-4"/>
+                              </button>
                             </div>
-                          </div>
-                        )}
+                          ))}
+                          <button onClick={() => handleAddSubNode(idx)} className="text-xs text-primary-600 bg-primary-50 hover:bg-primary-100 border border-primary-100 px-3 py-2 rounded-lg flex items-center gap-1.5 mt-3 transition-colors font-medium">
+                            <Plus className="w-3.5 h-3.5"/> 添加小工序
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                  ))}
+                  <button onClick={handleAddMajorNode} className="w-full py-4 border-2 border-dashed border-primary-200 text-primary-600 rounded-xl hover:bg-primary-50 hover:border-primary-300 hover:text-primary-700 flex items-center justify-center gap-2 font-bold transition-all bg-white shadow-sm mt-6">
+                    <Plus className="w-5 h-5" /> 添加大阶段
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-5 relative z-10">
+                  {project.nodesData.map((node: any, idx: number) => {
+                    const done = node.status === 'completed';
+                    const active = node.status === 'current';
+                    const expanded = expandedIdx === idx;
+                    return (
+                      <div key={idx} className="relative flex gap-4">
+                        <div className="shrink-0 mt-1">
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 border-white shadow-sm
+                            ${done ? 'bg-primary-900 text-white' : active ? 'bg-amber-500 text-white ring-4 ring-amber-100 border-none' : 'bg-primary-100 text-primary-400'}`}>
+                            {done ? <CheckCircle2 className="w-6 h-6" /> : active ? <PlayCircle className="w-6 h-6" /> : <span className="font-mono font-bold">{idx+1}</span>}
+                          </div>
+                        </div>
+                        <div className={`flex-1 rounded-xl border overflow-hidden
+                          ${active ? 'border-amber-200 shadow-md' : done ? 'border-primary-200' : 'border-primary-100 bg-zinc-50/50'}`}>
+                          {/* 节点头 */}
+                          <div className="px-5 py-4 cursor-pointer flex justify-between items-center bg-white hover:bg-zinc-50/30 transition-colors"
+                            onClick={() => setExpandedIdx(expanded ? null : idx)}>
+                            <div>
+                              <h3 className={`text-base font-bold mb-0.5 ${active ? 'text-amber-600' : done ? 'text-primary-900' : 'text-primary-400'}`}>{node.name}</h3>
+                              <p className="text-xs text-primary-400 font-mono">
+                                {done && `已完成：${node.startDate} ~ ${node.actualEndDate || node.endDate}`}
+                                {active && `进行中 | 预计开工：${node.startDate} | 预计完工：${node.endDate}`}
+                                {!done && !active && `未开始 | 预计：${node.startDate} ~ ${node.endDate}`}
+                              </p>
+                            </div>
+                            <ChevronDown className={`w-5 h-5 text-primary-300 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+                          </div>
+
+                          {/* 展开内容 */}
+                          {expanded && (
+                            <div className="px-5 pb-5 pt-3 border-t border-primary-50 bg-zinc-50/20">
+                              {/* 子工序列表 */}
+                              <p className="text-xs font-medium text-primary-400 mb-3">施工工序</p>
+                              <div className="space-y-2 mb-6">
+                                {(node.subNodes || []).map((sub: any, si: number) => {
+                                  const subDone = sub.status === 'completed';
+                                  let timeStr = '';
+                                  if (subDone) timeStr = `实际完工：${sub.actualEndDate || '-'}`;
+                                  else timeStr = `预计：${sub.startDate || '-'} ~ ${sub.endDate || '-'}`;
+                                  return (
+                                    <div key={si} className="relative flex items-center gap-3 bg-white border border-primary-100 rounded-lg px-4 py-3 hover:border-primary-300 transition-colors cursor-pointer shadow-sm"
+                                      onClick={() => {
+                                        if (node.status === 'pending') return alert('前置节点尚未完工，当前阶段未解锁');
+                                        setSubNodeModal({ majorIdx: idx, subIdx: si });
+                                      }}>
+                                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${subDone ? 'bg-primary-900' : 'bg-primary-200'}`}></div>
+                                      <div className="flex-1 min-w-0">
+                                        <span className={`text-sm font-medium ${subDone ? 'text-primary-900' : 'text-primary-700'}`}>{sub.name}</span>
+                                        <span className="text-[11px] text-primary-400 font-mono ml-3">{timeStr}</span>
+                                      </div>
+                                      {!subDone && active && canEdit && (
+                                        <button onClick={(e) => { e.stopPropagation(); setDurationModal({ majorIdx: idx, subIdx: si, cur: Number(sub.duration)||0 }); setNewDuration(Number(sub.duration)||0); }}
+                                          className="text-[11px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-100 flex items-center shrink-0">
+                                          {sub.duration}天 <Edit2 className="w-2.5 h-2.5 ml-0.5" />
+                                        </button>
+                                      )}
+                                      {subDone && <span className="text-[10px] bg-primary-50 text-primary-600 px-2 py-0.5 rounded font-bold shrink-0">已完成</span>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              {/* 延误记录 */}
+                              <div className="mb-4">
+                                <div className="flex justify-between items-center mb-2">
+                                  <p className="text-xs font-medium text-primary-400">延误 / 停工记录</p>
+                                  {(active || node.status === 'pending') && project.status !== '未开工' && canEdit && (
+                                    <button onClick={() => setDelayModal({ nodeIdx: idx })}
+                                      className="text-xs text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100 flex items-center">
+                                      <AlertCircle className="w-3 h-3 mr-1" /> 记录延误
+                                    </button>
+                                  )}
+                                </div>
+                                {node.delayRecords?.length > 0 ? (
+                                  <div className="space-y-1.5">
+                                    {node.delayRecords.map((d: any, di: number) => (
+                                      <div key={di} className="bg-rose-50 px-3 py-2 rounded border border-rose-100 flex justify-between text-xs">
+                                        <span className="text-rose-700 font-medium">停工延误 {d.days} 天</span>
+                                        <span className="text-rose-400">{d.reason}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : <p className="text-xs text-primary-300">暂无延误记录</p>}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+          </div>
+          </div>
+
+          {/* 右侧边栏：项目资料 */}
+          <div className="lg:col-span-1">
+            <CustomerDocuments
+              leadId={project.leadId || ''}
+              canUpload={userRole === 'admin' || userRole === 'manager'}
+              uploaderName={userName}
+            />
           </div>
         </div>
 
@@ -431,7 +618,7 @@ export default function ProjectDetailPage() {
             <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
               <div className="px-6 py-4 border-b border-primary-100 flex justify-between items-center">
                 <h2 className="text-base font-bold text-primary-900">准备开工</h2>
-                <button onClick={() => { setStartModal(false); setIsEditingNodes(false); }}><X className="w-5 h-5 text-primary-400" /></button>
+                <button onClick={() => { setStartModal(false); }}><X className="w-5 h-5 text-primary-400" /></button>
               </div>
               <div className="p-6 space-y-5">
                 <div>
@@ -440,15 +627,7 @@ export default function ProjectDetailPage() {
                     className="w-full p-3 border border-primary-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
                   <p className="text-xs text-primary-400 mt-1.5">系统将自动按 T+N 算法推算所有工序的预计开/完工日期，自动跳过周末及法定节假日。</p>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-primary-900 mb-2">裁剪不需要的工序</label>
-                  <button onClick={() => setIsEditingNodes(!isEditingNodes)}
-                    className={`w-full py-2.5 rounded-xl border text-sm font-medium transition-colors ${isEditingNodes ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-primary-200 text-primary-600 hover:bg-primary-50'}`}>
-                    {isEditingNodes ? '裁剪模式已开启，在背景卡片中点击 X 删除工序' : '开启裁剪模式'}
-                  </button>
-                  <p className="text-xs text-amber-600 mt-1.5">正式开工后不可再修改工序结构。</p>
-                </div>
-                <button onClick={handleStartProject} className="w-full py-3 bg-primary-900 text-white rounded-xl font-bold hover:bg-primary-800 transition-colors">
+                <button onClick={handleStartProject} className="w-full py-3 bg-primary-900 text-white rounded-xl font-bold hover:bg-primary-800 transition-colors mt-4 shadow-md">
                   确认，正式开工
                 </button>
               </div>

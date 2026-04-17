@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-const APPID = 'wxc9f24e9a9f57bc7a';
-const APPSECRET = '41bc50ad8d277918037ea0107d0a07b0';
-const ENV = 'cloud1-8grodf5s3006f004';
+const APPID = process.env.WECHAT_APPID!;
+const APPSECRET = process.env.WECHAT_APPSECRET!;
+const ENV = process.env.NEXT_PUBLIC_TCB_ENV_ID!;
 
 let cachedToken = '';
 let tokenExpiresAt = 0;
@@ -72,4 +72,17 @@ export async function tcbDelete(queryStr: string) {
   const data = await res.json();
   if (data.errcode !== 0) throw new Error(data.errmsg || 'Delete failed');
   return data;
+}
+
+export async function tcbCount(queryStr: string): Promise<number> {
+  const url = `https://api.weixin.qq.com/tcb/databasecount?access_token=${await getAccessToken()}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ env: ENV, query: queryStr })
+  });
+  const data = await res.json();
+  if (data.errcode !== 0) return 0;
+  return data.count || 0;
 }

@@ -76,7 +76,8 @@ Page({
           method: this.data.activeMethod,
           content: (this.data.content || '').trim(),
           createdBy: userInfo.name,
-          createdAt: nowStr
+          createdAt: db.serverDate(),
+          displayTime: nowStr
         }
       }).then(() => {
         // --- 触发通知逻辑：新增跟进记录 ---

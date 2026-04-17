@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx tsc:*)",
+      "Bash(\"E:/XIN Lab/PNZJ/CM1.0/web/.env.local\":*)",
+      "Bash(grep:*)"
     ]
   }
 }

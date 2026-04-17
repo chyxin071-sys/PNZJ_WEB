@@ -1,10 +1,22 @@
 import { NextResponse } from 'next/server';
-import { tcbQuery, tcbAdd } from '@/lib/wechat-tcb';
+import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const query = `db.collection("projects").orderBy("createdAt", "desc").limit(100).get()`;
-    const data = await tcbQuery(query);
+    const { searchParams } = new URL(request.url);
+    const leadId = searchParams.get('leadId');
+    const page = parseInt(searchParams.get('page') || '0');
+    const pageSize = Math.min(500, Math.max(1, parseInt(searchParams.get('pageSize') || '500')));
+    const skip = page > 0 ? (page - 1) * pageSize : 0;
+    const limit = page > 0 ? pageSize : 500;
+
+    const baseWhere = leadId ? `.where({ leadId: "${leadId}" })` : '';
+    const [data, total] = await Promise.all([
+      tcbQuery(`db.collection("projects")${baseWhere}.orderBy("createdAt", "desc").skip(${skip}).limit(${limit}).get()`),
+      page > 0 ? tcbCount(`db.collection("projects")${baseWhere}.count()`) : Promise.resolve(0)
+    ]);
+
+    if (page > 0) return NextResponse.json({ data, total, page, pageSize });
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

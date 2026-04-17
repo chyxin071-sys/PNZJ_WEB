@@ -10,6 +10,9 @@ Page({
     myProjectsCount: 0,
     showEditModal: false,
     editName: "",
+    showPasswordModal: false,
+    oldPassword: "",
+    newPassword: "",
     unreadCount: 0,
   },
 
@@ -90,6 +93,23 @@ Page({
     this.setData({
       editName: e.detail.value,
     });
+  },
+
+  onPasswordInput(e) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({ [field]: e.detail.value });
+  },
+
+  openEditPassword() {
+    this.setData({
+      showPasswordModal: true,
+      oldPassword: "",
+      newPassword: ""
+    });
+  },
+
+  closePasswordModal() {
+    this.setData({ showPasswordModal: false });
   },
 
   saveName() {
@@ -221,6 +241,46 @@ Page({
         console.error("更新姓名失败", err);
         wx.showToast({ title: "修改失败", icon: "none" });
       });
+  },
+
+  savePassword() {
+    const { oldPassword, newPassword, userInfo } = this.data;
+    if (!oldPassword.trim() || !newPassword.trim()) {
+      return wx.showToast({ title: '请填写完整', icon: 'none' });
+    }
+
+    wx.showLoading({ title: '验证中...' });
+    const db = wx.cloud.database();
+    
+    // 1. 验证原密码
+    db.collection('users').doc(userInfo._id || userInfo.id).get().then(res => {
+      const user = res.data;
+      if (user.passwordPlain !== oldPassword && user.passwordHash !== oldPassword) {
+        wx.hideLoading();
+        return wx.showToast({ title: '原密码错误', icon: 'none' });
+      }
+
+      // 2. 更新新密码
+      db.collection('users').doc(userInfo._id || userInfo.id).update({
+        data: {
+          passwordPlain: newPassword
+        }
+      }).then(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '密码修改成功，请重新登录', icon: 'none' });
+        this.closePasswordModal();
+        setTimeout(() => {
+          wx.removeStorageSync('userInfo');
+          wx.reLaunch({ url: '/pages/login/index' });
+        }, 1500);
+      }).catch(err => {
+        wx.hideLoading();
+        wx.showToast({ title: '修改失败', icon: 'none' });
+      });
+    }).catch(err => {
+      wx.hideLoading();
+      wx.showToast({ title: '网络异常', icon: 'none' });
+    });
   },
 
   goToMaterials() {

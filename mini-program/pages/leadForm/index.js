@@ -2,6 +2,8 @@ Page({
   data: {
     id: null,
     isEdit: false,
+    oldSales: '',
+    oldDesigner: '',
     formData: {
       name: '',
       phone: '',
@@ -60,6 +62,8 @@ Page({
         const designerIdx = this.data.designerList.findIndex(d => d.name === lead.designer);
         
         this.setData({
+          oldSales: lead.sales || '',
+          oldDesigner: lead.designer || '',
           formData: {
             name: lead.name || '',
             phone: lead.phone || '',
@@ -208,32 +212,36 @@ Page({
         const notifyUsers = new Set();
         if (d.sales && d.sales !== operatorName) notifyUsers.add(d.sales);
         if (d.designer && d.designer !== operatorName) notifyUsers.add(d.designer);
-        
-        notifyUsers.forEach(userName => {
+
+        // 精准通知：分配了新销售
+        if (d.sales && d.sales !== this.data.oldSales) {
           db.collection('notifications').add({
             data: {
-              type: 'lead',
-              title: '客户线索已更新',
-              content: `${operatorName} 更新了客户【${d.name}】的资料。`,
-              targetUser: userName,
-              senderName: operatorName,
-              isRead: false,
-              createTime: db.serverDate(),
+              type: 'lead', title: '你有一条新线索',
+              content: `客户【${d.name}】已分配给你跟进。`,
+              targetUser: d.sales, isRead: false, createTime: db.serverDate(),
               link: `/pages/leadDetail/index?id=${this.data.id}`
             }
           });
-        });
+        }
+        // 精准通知：分配了新设计师
+        if (d.designer && d.designer !== this.data.oldDesigner) {
+          db.collection('notifications').add({
+            data: {
+              type: 'lead', title: '你有一条新设计任务',
+              content: `客户【${d.name}】已分配给你跟进方案。`,
+              targetUser: d.designer, isRead: false, createTime: db.serverDate(),
+              link: `/pages/leadDetail/index?id=${this.data.id}`
+            }
+          });
+        }
 
         if (userInfo.role !== 'admin') {
           db.collection('notifications').add({
             data: {
-              type: 'lead',
-              title: '客户线索已更新',
+              type: 'lead', title: '客户线索已更新',
               content: `${operatorName} 更新了客户【${d.name}】的资料。`,
-              targetUser: 'admin',
-              senderName: operatorName,
-              isRead: false,
-              createTime: db.serverDate(),
+              targetUser: 'admin', isRead: false, createTime: db.serverDate(),
               link: `/pages/leadDetail/index?id=${this.data.id}`
             }
           });

@@ -26,13 +26,13 @@ export async function POST(request: Request) {
     const user = result.data[0];
 
     // 2. 校验旧密码
-    if (user.password !== oldPassword) {
+    if (user.passwordPlain !== oldPassword && user.passwordHash !== oldPassword) {
       return NextResponse.json({ error: '原密码错误' }, { status: 401 });
     }
 
     // 3. 更新新密码
     await db.collection('users').doc(userId).update({
-      password: newPassword
+      passwordPlain: newPassword
     });
 
     return NextResponse.json({ message: '密码修改成功' }, { status: 200 });

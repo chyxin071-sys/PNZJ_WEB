@@ -367,11 +367,16 @@ export default function QuotesPage() {
                     className="hover:bg-primary-50/50 transition-colors group cursor-pointer"
                   >
                     <td className="py-4 px-6 whitespace-nowrap">
-                      <CustomerInfo 
-                        name={quote.customer}
-                        phone={quote.phone}
-                        customerNo={quote.customerNo || quote.id}
-                      />
+                      <div onClick={(e) => { if (quote.leadId) { e.stopPropagation(); router.push(`/leads/${quote.leadId}`); } }}>
+                        <CustomerInfo
+                          name={quote.customer}
+                          phone={quote.phone}
+                          customerNo={quote.customerNo || quote.id}
+                        />
+                        {quote.leadId && (
+                          <span className="text-xs text-primary-400 hover:text-primary-700 mt-0.5 block">点击查看线索 →</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">

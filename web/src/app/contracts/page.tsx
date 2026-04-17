@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText, ChevronRight, UploadCloud, AlertCircle, SlidersHorizontal, Filter, X, ChevronDown } from "lucide-react";
+import { Search, FileText, ChevronRight, FileDown, FileSpreadsheet, AlertCircle, SlidersHorizontal, Filter, X, ChevronDown } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
 
 export default function ContractsPage() {
@@ -11,7 +11,22 @@ export default function ContractsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [leadsData, setLeadsData] = useState<any[]>([]);
 
-  // 高级筛选器状态
+  useEffect(() => {
+    fetch('/api/leads')
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setLeadsData(data.map((item: any) => ({
+            ...item,
+            id: item._id,
+            createdAt: item.createdAt?.$date
+              ? new Date(item.createdAt.$date).toISOString().split('T')[0]
+              : (item.createdAt || '')
+          })));
+        }
+      })
+      .catch(console.error);
+  }, []);
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
   const [filterMinArea, setFilterMinArea] = useState("");
   const [filterMaxArea, setFilterMaxArea] = useState("");
@@ -22,43 +37,30 @@ export default function ContractsPage() {
   const [filterPersonnel, setFilterPersonnel] = useState("全部");
   const [isPersonnelDropdownOpen, setIsPersonnelDropdownOpen] = useState(false);
 
-  // 移除 body scroll lock，允许筛选框滚动
 
-  const statuses = ["全部", "待上传", "执行中", "已结项"];
-
-  // 从客户线索中提取“已签单”状态的客户作为合同管理的底层数据，并按签单时间（这里用lastFollowUp模拟或createdAt）倒序排列
+  const statuses = [“全部”, “待签”, “执行中”, “已结项”];
   const contractLeads = leadsData
-    .filter(lead => lead.status === "已签单")
-    .sort((a, b) => new Date(b.lastFollowUp).getTime() - new Date(a.lastFollowUp).getTime());
+    .filter(lead => lead.status === “已签单”)
+    .sort((a, b) => new Date(b.signDate || b.lastFollowUp || 0).getTime() - new Date(a.signDate || a.lastFollowUp || 0).getTime());
 
-  // 模拟分配状态，前几个待上传，后面执行中
-  // 为了能演示“新建合同”效果，我们在组件内部维护一个已创建合同的列表（实际中由后端提供）
-  const [createdContracts, setCreatedContracts] = useState<string[]>([]);
-
-  const getStatusString = (id: string) => {
-    // 如果是新创建的，返回待上传
-    if (createdContracts.includes(id)) return "待上传";
-    
-    const numId = parseInt(id.replace(/[^0-9]/g, ''));
-    if (numId % 3 === 0) return "待上传";
-    if (numId % 7 === 0) return "已结项";
-    return "执行中";
+  const getStatusString = (lead: any) => {
+    return lead.contractStatus || '执行中';
   };
 
-  const getStatusBadge = (id: string) => {
-    const status = getStatusString(id);
-    if (status === "待上传") {
-      return <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-rose-50 text-rose-600 border border-rose-100"><AlertCircle className="w-3 h-3 mr-1" />待上传</span>;
+  const getStatusBadge = (lead: any) => {
+    const status = getStatusString(lead);
+    if (status === “待签”) {
+      return <span className=”inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-600 border border-amber-100”><AlertCircle className=”w-3 h-3 mr-1” />待签</span>;
     }
-    if (status === "已结项") {
-      return <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-50 text-zinc-600 border border-zinc-200">已结项</span>;
+    if (status === “已结项”) {
+      return <span className=”inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-50 text-zinc-600 border border-zinc-200”>已结项</span>;
     }
     return <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">执行中</span>;
   };
 
   const filteredContracts = contractLeads.filter(lead => {
     const matchesSearch = lead.name.includes(searchQuery) || lead.phone.includes(searchQuery);
-    const matchesStatus = activeStatus === "全部" || getStatusString(lead.id) === activeStatus;
+    const matchesStatus = activeStatus === "全部" || getStatusString(lead) === activeStatus;
     
     // 高级筛选: 房屋面积范围
     let matchesArea = true;
@@ -315,7 +317,7 @@ export default function ContractsPage() {
               </thead>
               <tbody className="divide-y divide-primary-100 text-sm">
                 {filteredContracts.map((lead) => {
-                  const statusStr = getStatusString(lead.id);
+                  const statusStr = getStatusString(lead);
                   return (
                     <tr 
                       key={lead.id} 
@@ -348,25 +350,27 @@ export default function ContractsPage() {
                         <p className="text-sm font-mono text-primary-900">{lead.lastFollowUp}</p>
                       </td>
                       <td className="py-4 px-6 whitespace-nowrap">
-                        {getStatusBadge(lead.id)}
+                        {getStatusBadge(lead)}
                       </td>
                       <td className="py-4 px-6 text-right whitespace-nowrap">
-                        {statusStr === "待上传" ? (
-                          <div className="inline-flex items-center text-rose-500 text-xs font-medium">
-                            <UploadCloud className="w-4 h-4 mr-1" />
-                            暂未上传合同
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-end gap-1">
-                            <div className="flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-200"></span>
-                              <span className="w-1.5 h-1.5 rounded-full bg-zinc-200"></span>
+                        {(() => {
+                          const pmts: any[] = lead.payments || [];
+                          const total = pmts.length;
+                          const collected = pmts.filter((p: any) => p.status === '已收').length;
+                          if (total === 0) return (
+                            <div className="inline-flex items-center text-primary-400 text-xs font-medium">暂无收款计划</div>
+                          );
+                          return (
+                            <div className="flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-1">
+                                {pmts.map((p: any) => (
+                                  <span key={p.id} className={`w-1.5 h-1.5 rounded-full ${p.status === '已收' ? 'bg-emerald-500' : 'bg-zinc-200'}`}></span>
+                                ))}
+                              </div>
+                              <span className="text-xs text-primary-500">已收 {collected}/{total} 期</span>
                             </div>
-                            <span className="text-xs text-primary-500">已收 2/4 期</span>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </td>
                     </tr>
                   );

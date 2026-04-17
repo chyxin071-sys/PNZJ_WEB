@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { tcbUpdate, tcbDelete } from '@/lib/wechat-tcb';
+import { tcbQuery, tcbUpdate, tcbDelete } from '@/lib/wechat-tcb';
 
 // 启用/停用员工，或修改基本信息
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, Phone, User, Calendar, MessageSquare, FileText, FolderOpen, ArrowRight, Upload, Plus, Edit2, Check, ChevronDown, Trash2, X } from "lucide-react";
+import { ChevronLeft, MapPin, User, Calendar, MessageSquare, FileText, FolderOpen, ArrowRight, Plus, Edit2, Check, ChevronDown, Trash2, X, Pencil, CheckCircle2, Clock } from "lucide-react";
 import MainLayout from "../../../components/MainLayout";
 import CustomerDocuments from "../../../../src/components/CustomerDocuments";
 import CustomerInfo from "../../../components/CustomerInfo";
+import { getNextWorkingDay, calculateEndDate, formatDate } from "../../../lib/date";
 
 export default function LeadDetailPage() {
   const params = useParams();
@@ -25,16 +26,26 @@ export default function LeadDetailPage() {
   
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
   
   // 确认更换人员的弹窗状态
   const [personnelConfirm, setPersonnelConfirm] = useState<{ role: string, oldName: string, newName: string } | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [signModal, setSignModal] = useState({ isOpen: false, date: '', signer: '' });
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [users, setUsers] = useState<any[]>([]);
+
+  // 设计进度状态
+  const [activeLeftTab, setActiveLeftTab] = useState<'follow' | 'design'>('follow');
+  const [showStartDesignModal, setShowStartDesignModal] = useState(false);
+  const [showEditDesignModal, setShowEditDesignModal] = useState(false);
+  const [designStartDate, setDesignStartDate] = useState('');
+  const [editDesignNodes, setEditDesignNodes] = useState<any[]>([]);
 
   useEffect(() => {
-    const userData = localStorage.getItem("pnzj_user");
+    const userData = localStorage.getItem("pnzj_user") || localStorage.getItem("userInfo") || localStorage.getItem("user");
     if (userData) {
       try {
         setCurrentUser(JSON.parse(userData));
@@ -42,11 +53,26 @@ export default function LeadDetailPage() {
         console.error(e);
       }
     }
+    
+    // 获取所有的 users 列表以供分配和签单人选择
+    fetch('/api/employees')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setUsers(data);
+      })
+      .catch(console.error);
   }, []);
 
   const isAssignedToMe = (leadData: any) => {
     if (!currentUser) return false;
-    return leadData.sales === currentUser.name || leadData.designer === currentUser.name;
+    return leadData.sales === currentUser.name || leadData.designer === currentUser.name || leadData.creatorName === currentUser.name || leadData.signer === currentUser.name;
+  };
+
+  const maskName = (name: string, leadData: any) => {
+    if (!currentUser || currentUser.role === 'admin') return name;
+    if (isAssignedToMe(leadData)) return name;
+    if (!name) return name;
+    return name.substring(0, 1) + '**';
   };
 
   const maskPhone = (phone: string, leadData: any) => {
@@ -91,38 +117,40 @@ export default function LeadDetailPage() {
         setLead(formatted);
         setEditForm(formatted);
         
-        // 生成模拟时间轴，实际可以增加 notes 子集合
-        const mockTimeline = [];
-        if (formatted.notes && formatted.notes !== "新录入客户") {
-          mockTimeline.push({
-            id: '2',
-            type: 'user',
-            user: formatted.sales || '系统',
-            time: `${formatted.lastFollowUp} 14:30`,
-            content: formatted.notes
+        // 从云端拉取真实跟进记录
+        fetch(`/api/followUps?leadId=${leadId}`)
+          .then(res => res.json())
+          .then(followUpsData => {
+             const timelineData = Array.isArray(followUpsData) ? followUpsData.map((f: any) => {
+                // createdAt 可能是字符串 "2025-01-01 10:00" 或 { $date: timestamp }
+                let timeStr = '';
+                if (f.createdAt && typeof f.createdAt === 'object' && f.createdAt.$date) {
+                  const d = new Date(f.createdAt.$date);
+                  timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+                } else if (f.createdAt && typeof f.createdAt === 'string') {
+                  timeStr = f.createdAt.substring(0, 16);
+                }
+                return {
+                  id: f._id,
+                  type: f.method === '系统记录' ? 'system' : 'user',
+                  user: f.createdBy || f.user || '未知',
+                  time: timeStr,
+                  content: f.content || ''
+                };
+             }) : [];
+
+             // 如果云端没有数据，添加一条默认记录
+             if (timelineData.length === 0) {
+               timelineData.push({
+                 id: '1',
+                 type: 'system',
+                 user: '系统',
+                 time: `${formatted.createdAt} 10:15`,
+                 content: `【系统日志】线索已录入系统，初步意向评级：${formatted.rating}。`
+               });
+             }
+             setTimeline(timelineData);
           });
-        }
-
-        if (["已量房", "方案阶段", "已交定金", "已签单"].includes(formatted.status)) {
-           mockTimeline.push({
-            id: '3',
-            type: 'system',
-            user: '系统',
-            time: `${formatted.lastFollowUp} 10:00`,
-            content: `【系统日志】状态流转至 ${formatted.status}。`
-           });
-        }
-        
-        mockTimeline.push({
-            id: '1',
-            type: 'system',
-            user: '系统',
-            time: `${formatted.createdAt} 10:15`,
-            content: `【系统日志】线索已录入系统，初步意向评级：${formatted.rating}。`
-        });
-
-        mockTimeline.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-        setTimeline(mockTimeline);
       }
     } catch (e) {
       console.error('Failed to fetch lead details', e);
@@ -145,10 +173,23 @@ export default function LeadDetailPage() {
     }
   };
 
+  const fetchProjectStatus = async (id: string) => {
+    try {
+      const res = await fetch(`/api/projects?leadId=${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setProjectId(data && data.length > 0 ? data[0]._id : null);
+      }
+    } catch (e) {
+      console.error('Failed to fetch project status', e);
+    }
+  };
+
   useEffect(() => {
     if (leadId) {
       fetchLeadDetail();
       fetchQuoteStatus(leadId);
+      fetchProjectStatus(leadId);
     }
   }, [leadId]);
 
@@ -160,32 +201,49 @@ export default function LeadDetailPage() {
     );
   }
 
-  const handleAddNote = (e: React.FormEvent) => {
+  const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNote.trim()) return;
-    
-    const now = new Date();
-    const newTimelineItem = {
-      id: Date.now().toString(),
-      type: 'user',
-      user: currentUser?.name || '未知用户', // 当前登录用户
-      time: `${now.toISOString().split('T')[0]} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`,
-      content: newNote
-    };
-    
-    setTimeline([newTimelineItem, ...timeline]);
-    setNewNote("");
+
+    try {
+      const res = await fetch('/api/followUps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId,
+          content: newNote,
+          method: '手动记录',
+          createdBy: currentUser?.name || '未知用户'
+        })
+      });
+      if (res.ok) {
+        setNewNote("");
+        fetchLeadDetail();
+      }
+    } catch (e) {
+      console.error('保存跟进记录失败', e);
+    }
   };
 
-  const handleEditNote = (id: string) => {
+  const handleEditNote = async (id: string) => {
     if (!editNoteContent.trim()) return;
-    setTimeline(timeline.map(item => item.id === id ? { ...item, content: editNoteContent } : item));
-    setEditingNoteId(null);
+    try {
+      await fetch(`/api/followUps/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editNoteContent })
+      });
+      setEditingNoteId(null);
+      fetchLeadDetail();
+    } catch (e) {}
   };
 
-  const handleDeleteNote = (id: string) => {
-    setTimeline(timeline.filter(item => item.id !== id));
-    setDeleteConfirmId(null);
+  const handleDeleteNote = async (id: string) => {
+    try {
+      await fetch(`/api/followUps/${id}`, { method: 'DELETE' });
+      setDeleteConfirmId(null);
+      fetchLeadDetail();
+    } catch (e) {}
   };
 
   const handleRatingChange = async (option: string) => {
@@ -197,7 +255,19 @@ export default function LeadDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rating: option })
       });
-      if (res.ok) setLead({ ...lead, rating: option });
+      if (res.ok) {
+        setLead({ ...lead, rating: option });
+        fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId,
+            content: `将客户意向评级更改为：${option}级`,
+            method: '系统记录',
+            createdBy: currentUser?.name || '系统'
+          })
+        }).then(() => fetchLeadDetail());
+      }
     } catch (e) {}
   };
 
@@ -225,7 +295,20 @@ export default function LeadDetailPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: option })
       });
-      if (res.ok) setLead({ ...lead, status: option });
+      if (res.ok) {
+        setLead({ ...lead, status: option });
+        // 写入系统跟进记录
+        fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId,
+            content: `将客户状态更改为：${option}`,
+            method: '系统记录',
+            createdBy: currentUser?.name || '系统'
+          })
+        }).then(() => fetchLeadDetail());
+      }
     } catch (e) {}
   };
 
@@ -248,8 +331,21 @@ export default function LeadDetailPage() {
         setLead({ ...lead, status: '已签单', signDate: signModal.date, signer: signModal.signer });
         setSignModal({ ...signModal, isOpen: false });
         
-        // 成功提示
-        setTimeout(() => alert('签单保存成功'), 100);
+        // 记录跟进记录
+        await fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId,
+            content: `将客户状态更改为：已签单 (签单人: ${signModal.signer}, 日期: ${signModal.date})`,
+            method: '系统记录',
+            createdBy: currentUser?.name || '系统'
+          })
+        });
+
+        // 显示庆祝弹窗
+        setShowSuccessModal(true);
+        fetchLeadDetail();
       }
     } catch (e) {}
   };
@@ -271,22 +367,178 @@ export default function LeadDetailPage() {
     }
   };
 
-  const handleConfirmPersonnelChange = () => {
+  const handleConfirmPersonnelChange = async () => {
     if (!personnelConfirm) return;
-    
-    // 更新数据
-    if (personnelConfirm.role === '销售') setLead({...lead, sales: personnelConfirm.newName});
-    if (personnelConfirm.role === '设计') setLead({...lead, designer: personnelConfirm.newName});
-    if (personnelConfirm.role === '项目经理') setLead({...lead, manager: personnelConfirm.newName});
-    
-    // 模拟发送通知并关闭弹窗
+
+    const fieldMap: Record<string, string> = { '销售': 'sales', '设计': 'designer', '项目经理': 'manager' };
+    const field = fieldMap[personnelConfirm.role];
+
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: personnelConfirm.newName })
+      });
+
+      if (personnelConfirm.role === '销售') setLead({...lead, sales: personnelConfirm.newName});
+      if (personnelConfirm.role === '设计') setLead({...lead, designer: personnelConfirm.newName});
+      if (personnelConfirm.role === '项目经理') setLead({...lead, manager: personnelConfirm.newName});
+
+      // 写入系统跟进记录
+      await fetch('/api/followUps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId,
+          content: `将${personnelConfirm.role}从【${personnelConfirm.oldName}】更换为【${personnelConfirm.newName}】`,
+          method: '系统记录',
+          createdBy: currentUser?.name || '系统'
+        })
+      });
+      fetchLeadDetail();
+    } catch (e) {
+      console.error('更换人员失败', e);
+    }
+
     setPersonnelConfirm(null);
     setShowToast(true);
     setTimeout(() => setShowToast(false), 3000);
-    
-    // 向系统铃铛发送通知（模拟全局状态更新）
-    // 实际项目中这里会调用 API 或全局状态管理器
-    console.log(`[系统通知] ${personnelConfirm.role}人员已更换为 ${personnelConfirm.newName}`);
+  };
+
+  // ===== 设计进度工具函数 =====
+  const recalcDesignGantt = (nodes: any[], startDate: string) => {
+    let cursor = startDate;
+    return nodes.map(n => {
+      if (n.status === 'completed') {
+        if (n.actualEndDate) cursor = formatDate(getNextWorkingDay(new Date(n.actualEndDate.replace(/-/g, '/'))));
+        return n;
+      }
+      const start = n.manualStartDate || cursor;
+      const end = calculateEndDate(start, Number(n.duration) || 1);
+      cursor = formatDate(getNextWorkingDay(new Date(end.replace(/-/g, '/'))));
+      return { ...n, startDate: start, endDate: end };
+    });
+  };
+
+  const openStartDesignModal = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const defaultNodes = [
+      { id: Date.now() + 1, name: '平面布局', duration: 2, status: 'current' },
+      { id: Date.now() + 2, name: '效果图渲染', duration: 5, status: 'pending' },
+      { id: Date.now() + 3, name: '施工图深化', duration: 3, status: 'pending' },
+      { id: Date.now() + 4, name: '定制图纸绘制', duration: 5, status: 'pending' },
+    ];
+    setDesignStartDate(today);
+    setEditDesignNodes(recalcDesignGantt(defaultNodes, today));
+    setShowStartDesignModal(true);
+  };
+
+  const openEditDesignModal = () => {
+    if (!lead?.designNodes) return;
+    const nodes = JSON.parse(JSON.stringify(lead.designNodes));
+    const start = lead.designStartDate || new Date().toISOString().split('T')[0];
+    setEditDesignNodes(recalcDesignGantt(nodes, start));
+    setShowEditDesignModal(true);
+  };
+
+  const handleDesignNodeNameChange = (idx: number, val: string) => {
+    const nodes = [...editDesignNodes];
+    nodes[idx] = { ...nodes[idx], name: val };
+    setEditDesignNodes(nodes);
+  };
+
+  const handleDesignNodeDurChange = (idx: number, val: string) => {
+    const nodes = [...editDesignNodes];
+    nodes[idx] = { ...nodes[idx], duration: parseInt(val) || 1 };
+    const start = lead?.designStartDate || designStartDate || new Date().toISOString().split('T')[0];
+    setEditDesignNodes(recalcDesignGantt(nodes, start));
+  };
+
+  const handleDesignStartDateChange = (val: string) => {
+    setDesignStartDate(val);
+    setEditDesignNodes(recalcDesignGantt(editDesignNodes, val));
+  };
+
+  const addDesignNode = () => {
+    const nodes = [...editDesignNodes, { id: Date.now(), name: '新设计节点', duration: 1, status: 'pending' }];
+    const start = lead?.designStartDate || designStartDate || new Date().toISOString().split('T')[0];
+    setEditDesignNodes(recalcDesignGantt(nodes, start));
+  };
+
+  const removeDesignNode = (idx: number) => {
+    const nodes = editDesignNodes.filter((_, i) => i !== idx);
+    const start = lead?.designStartDate || designStartDate || new Date().toISOString().split('T')[0];
+    setEditDesignNodes(recalcDesignGantt(nodes, start));
+  };
+
+  const confirmStartDesign = async () => {
+    if (!designStartDate || editDesignNodes.length === 0) return;
+    const nodes = recalcDesignGantt(editDesignNodes.map((n, i) => ({ ...n, status: i === 0 ? 'current' : 'pending' })), designStartDate);
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designNodes: nodes, designStartDate })
+      });
+      setLead({ ...lead, designNodes: nodes, designStartDate });
+      setShowStartDesignModal(false);
+      await fetch('/api/followUps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, content: `开启了设计出图工作流，预计从 ${designStartDate} 开始`, method: '系统记录', createdBy: currentUser?.name || '系统' })
+      });
+      fetchLeadDetail();
+    } catch (e) { console.error(e); }
+  };
+
+  const confirmEditDesign = async () => {
+    if (editDesignNodes.length === 0) return;
+    const start = lead?.designStartDate || new Date().toISOString().split('T')[0];
+    const nodes = recalcDesignGantt(editDesignNodes, start);
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designNodes: nodes })
+      });
+      setLead({ ...lead, designNodes: nodes });
+      setShowEditDesignModal(false);
+      await fetch('/api/followUps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, content: '修改并重算了设计出图排期', method: '系统记录', createdBy: currentUser?.name || '系统' })
+      });
+      fetchLeadDetail();
+    } catch (e) { console.error(e); }
+  };
+
+  const completeDesignNode = async (idx: number) => {
+    if (!lead?.designNodes) return;
+    const nodes: any[] = JSON.parse(JSON.stringify(lead.designNodes));
+    const today = new Date().toISOString().split('T')[0];
+    const nodeName = nodes[idx].name;
+    nodes[idx].status = 'completed';
+    nodes[idx].actualEndDate = today;
+    if (idx + 1 < nodes.length) {
+      nodes[idx + 1].status = 'current';
+      nodes[idx + 1].startDate = today;
+    }
+    const start = lead.designStartDate || today;
+    const recalced = recalcDesignGantt(nodes, start);
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designNodes: recalced })
+      });
+      setLead({ ...lead, designNodes: recalced });
+      await fetch('/api/followUps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, content: `已完成设计出图节点：【${nodeName}】`, method: '系统记录', createdBy: currentUser?.name || '系统' })
+      });
+      fetchLeadDetail();
+    } catch (e) { console.error(e); }
   };
 
   const getStatusColor = (status: string) => {
@@ -486,16 +738,102 @@ export default function LeadDetailPage() {
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6 items-stretch">
-          {/* 左侧：跟进记录与售后 */}
+          {/* 左侧：跟进记录 / 设计进度 */}
           <div className="flex-1 flex flex-col h-[800px]">
             <div className="bg-white rounded-xl border border-primary-100 shadow-sm flex flex-col h-full">
-              <div className="p-5 border-b border-primary-100 flex items-center justify-between shrink-0">
-                <h2 className="text-lg font-bold text-primary-900 flex items-center">
-                  <span className="w-1.5 h-4 bg-primary-900 mr-2 rounded-sm inline-block"></span>
-                  跟进与沟通记录
-                </h2>
+              {/* Tab 头 */}
+              <div className="p-4 border-b border-primary-100 flex items-center justify-between shrink-0">
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setActiveLeftTab('follow')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeLeftTab === 'follow' ? 'bg-primary-900 text-white' : 'text-primary-600 hover:bg-primary-50'}`}
+                  >
+                    跟进记录
+                  </button>
+                  <button
+                    onClick={() => setActiveLeftTab('design')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeLeftTab === 'design' ? 'bg-primary-900 text-white' : 'text-primary-600 hover:bg-primary-50'}`}
+                  >
+                    设计进度
+                  </button>
+                </div>
+                {activeLeftTab === 'design' && lead.designNodes?.length > 0 && (
+                  <button
+                    onClick={openEditDesignModal}
+                    className="text-xs text-primary-500 hover:text-primary-900 flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> 编辑排期
+                  </button>
+                )}
               </div>
               
+              {/* 设计进度 Tab */}
+              {activeLeftTab === 'design' && (
+                <div className="flex-1 overflow-y-auto p-6">
+                  {!lead.designNodes || lead.designNodes.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-primary-400">
+                      <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center mb-4">
+                        <Pencil className="w-7 h-7 opacity-40" />
+                      </div>
+                      <p className="text-sm mb-1">暂未开启设计出图进度管理</p>
+                      {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
+                        <button
+                          onClick={openStartDesignModal}
+                          className="mt-4 px-6 py-2.5 bg-primary-900 text-white rounded-xl text-sm font-medium hover:bg-primary-800 transition-colors"
+                        >
+                          开启设计工作流
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-0 relative">
+                      {/* 竖线 */}
+                      <div className="absolute left-[15px] top-4 bottom-4 w-px bg-primary-100" />
+                      {lead.designNodes.map((node: any, idx: number) => (
+                        <div key={node.id || idx} className="flex gap-4 pb-6 relative z-10">
+                          {/* 状态圆点 */}
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ring-4 ring-white shadow-sm border text-xs font-bold ${
+                            node.status === 'completed' ? 'bg-emerald-500 border-emerald-400 text-white' :
+                            node.status === 'current' ? 'bg-primary-900 border-primary-800 text-white' :
+                            'bg-white border-primary-200 text-primary-400'
+                          }`}>
+                            {node.status === 'completed' ? <Check className="w-4 h-4" /> :
+                             node.status === 'current' ? <Clock className="w-3.5 h-3.5" /> : null}
+                          </div>
+                          {/* 内容 */}
+                          <div className="flex-1 pt-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-sm font-bold ${node.status === 'completed' ? 'text-primary-400 line-through' : 'text-primary-900'}`}>
+                                {node.name}
+                                <span className="ml-2 text-xs font-normal text-primary-400">{node.duration}天</span>
+                              </span>
+                              {node.status === 'current' && (currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
+                                <button
+                                  onClick={() => completeDesignNode(idx)}
+                                  className="text-xs px-3 py-1 bg-emerald-500 text-white rounded-full font-medium hover:bg-emerald-600 transition-colors"
+                                >
+                                  完成
+                                </button>
+                              )}
+                              {node.status === 'completed' && (
+                                <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">已完成</span>
+                              )}
+                            </div>
+                            <p className="text-xs text-primary-400">
+                              {node.status === 'completed' ? `实际完成: ${node.actualEndDate}` :
+                               node.status === 'current' ? `预计完成: ${node.endDate}` :
+                               `预计开始: ${node.startDate}`}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 跟进记录 Tab */}
+              {activeLeftTab === 'follow' && (
               <div className="flex-1 overflow-y-auto p-6 relative">
                 {/* 垂直线 */}
                 <div className="absolute left-[39px] top-8 bottom-8 w-px bg-primary-100"></div>
@@ -562,15 +900,17 @@ export default function LeadDetailPage() {
                   ))}
                 </div>
               </div>
+              )}
 
-              {/* 输入框 */}
+              {/* 输入框（仅跟进记录 Tab 显示） */}
+              {activeLeftTab === 'follow' && (
               <div className="p-4 border-t border-primary-100 bg-primary-50/30 shrink-0">
                 <form onSubmit={handleAddNote} className="flex gap-3">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
-                    placeholder="输入最新的跟进情况、客户需求或售后记录..." 
+                    placeholder="输入最新的跟进情况、客户需求或售后记录..."
                     className="flex-1 px-4 py-2.5 border border-primary-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 text-sm"
                   />
                   <button type="submit" className="px-6 py-2.5 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors font-medium text-sm flex items-center shrink-0 shadow-sm">
@@ -579,6 +919,7 @@ export default function LeadDetailPage() {
                   </button>
                 </form>
               </div>
+              )}
             </div>
           </div>
 
@@ -602,21 +943,21 @@ export default function LeadDetailPage() {
                     {openDropdown === 'edit-sales' && (
                       <>
                         <div className="fixed inset-0 z-10 cursor-default" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
-                        <div className="absolute right-0 top-full z-20 w-32 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default" onClick={e => e.stopPropagation()}>
-                          {["王销售", "李销售", "刘销售"].map(option => (
-                            <div 
-                              key={option}
-                              onClick={() => { 
-                                if (lead.sales !== option) {
-                                  setPersonnelConfirm({ role: '销售', oldName: lead.sales, newName: option });
+                        <div className="absolute right-0 top-full z-20 w-36 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
+                          {users.filter(u => u.role === 'sales' || u.role === 'admin').map(u => (
+                            <div
+                              key={u._id}
+                              onClick={() => {
+                                if (lead.sales !== u.name) {
+                                  setPersonnelConfirm({ role: '销售', oldName: lead.sales, newName: u.name });
                                 }
-                                setOpenDropdown(null); 
+                                setOpenDropdown(null);
                               }}
                               className="px-2 py-1 mx-1"
                             >
-                              <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.sales === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
-                                <span className="text-sm">{option}</span>
-                                {lead.sales === option && <Check className="w-4 h-4 text-primary-900" />}
+                              <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.sales === u.name ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
+                                <span className="text-sm">{u.name}</span>
+                                {lead.sales === u.name && <Check className="w-4 h-4 text-primary-900" />}
                               </div>
                             </div>
                           ))}
@@ -643,21 +984,21 @@ export default function LeadDetailPage() {
                     {openDropdown === 'edit-designer' && (
                       <>
                         <div className="fixed inset-0 z-10 cursor-default" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
-                        <div className="absolute right-0 top-full z-20 w-32 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default" onClick={e => e.stopPropagation()}>
-                          {["未分配", "赵设计", "陈总监", "李设计"].map(option => (
-                            <div 
-                              key={option}
-                              onClick={() => { 
-                                if (lead.designer !== option) {
-                                  setPersonnelConfirm({ role: '设计', oldName: lead.designer, newName: option });
+                        <div className="absolute right-0 top-full z-20 w-36 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
+                          {[{ _id: 'unassigned', name: '未分配' }, ...users.filter(u => u.role === 'designer' || u.role === 'admin')].map(u => (
+                            <div
+                              key={u._id}
+                              onClick={() => {
+                                if (lead.designer !== u.name) {
+                                  setPersonnelConfirm({ role: '设计', oldName: lead.designer, newName: u.name });
                                 }
-                                setOpenDropdown(null); 
+                                setOpenDropdown(null);
                               }}
                               className="px-2 py-1 mx-1"
                             >
-                              <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.designer === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
-                                <span className="text-sm">{option}</span>
-                                {lead.designer === option && <Check className="w-4 h-4 text-primary-900" />}
+                              <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.designer === u.name ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
+                                <span className="text-sm">{u.name}</span>
+                                {lead.designer === u.name && <Check className="w-4 h-4 text-primary-900" />}
                               </div>
                             </div>
                           ))}
@@ -681,21 +1022,21 @@ export default function LeadDetailPage() {
                       {openDropdown === 'edit-manager' && (
                         <>
                           <div className="fixed inset-0 z-10 cursor-default" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
-                          <div className="absolute right-0 top-full z-20 w-32 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default" onClick={e => e.stopPropagation()}>
-                            {["刘经理", "张经理", "李经理"].map(option => (
-                              <div 
-                                key={option}
-                                onClick={() => { 
-                                  if (lead.manager !== option) {
-                                    setPersonnelConfirm({ role: '项目经理', oldName: lead.manager || '待指派', newName: option });
+                          <div className="absolute right-0 top-full z-20 w-36 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
+                            {users.filter(u => u.role === 'manager' || u.role === 'admin').map(u => (
+                              <div
+                                key={u._id}
+                                onClick={() => {
+                                  if (lead.manager !== u.name) {
+                                    setPersonnelConfirm({ role: '项目经理', oldName: lead.manager || '待指派', newName: u.name });
                                   }
-                                  setOpenDropdown(null); 
+                                  setOpenDropdown(null);
                                 }}
                                 className="px-2 py-1 mx-1"
                               >
-                                <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.manager === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
-                                  <span className="text-sm">{option}</span>
-                                  {lead.manager === option && <Check className="w-4 h-4 text-primary-900" />}
+                                <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${lead.manager === u.name ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
+                                  <span className="text-sm">{u.name}</span>
+                                  {lead.manager === u.name && <Check className="w-4 h-4 text-primary-900" />}
                                 </div>
                               </div>
                             ))}
@@ -724,13 +1065,16 @@ export default function LeadDetailPage() {
                 </button>
                 
                 {(lead.status === "已签单" || lead.status === "施工中") && (
-                  <button 
-                    onClick={() => router.push(`/projects`)}
+                  <button
+                    onClick={() => projectId
+                      ? router.push(`/projects/${projectId}`)
+                      : router.push(`/projects?leadId=${lead.id}&customer=${encodeURIComponent(lead.name)}&phone=${encodeURIComponent(lead.phone || '')}&address=${encodeURIComponent(lead.address || '')}&area=${lead.area || ''}&sales=${encodeURIComponent(lead.sales || '')}&designer=${encodeURIComponent(lead.designer || '')}`)
+                    }
                     className="w-full flex items-center justify-between p-3 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors group"
                   >
                     <div className="flex items-center">
                       <FolderOpen className="w-5 h-5 text-emerald-600 mr-3" />
-                      <span className="font-medium text-emerald-900 text-sm">进入施工管理大屏</span>
+                      <span className="font-medium text-emerald-900 text-sm">{projectId ? '查看工地详情' : '新建关联工地'}</span>
                     </div>
                     <ArrowRight className="w-4 h-4 text-emerald-600" />
                   </button>
@@ -740,12 +1084,105 @@ export default function LeadDetailPage() {
 
             {/* 文件与图纸 */}
             <div className="flex-1 min-h-[400px]">
-              <CustomerDocuments customerName={lead.name} />
+              <CustomerDocuments
+                leadId={leadId}
+                canUpload={!!(currentUser?.role === 'admin' || isAssignedToMe(lead))}
+                uploaderName={currentUser?.name}
+              />
             </div>
 
           </div>
         </div>
       </div>
+      {/* 开启设计工作流弹窗 */}
+      {showStartDesignModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div className="p-5 border-b border-primary-100 flex items-center justify-between shrink-0">
+              <h3 className="text-lg font-bold text-primary-900">开启设计工作流</h3>
+              <button onClick={() => setShowStartDesignModal(false)} className="p-1.5 text-primary-400 hover:text-primary-900 rounded-lg hover:bg-primary-50"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-primary-700 mb-1.5">设计启动日期</label>
+                <input type="date" value={designStartDate} onChange={e => handleDesignStartDateChange(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg text-sm text-primary-900 focus:outline-none focus:border-primary-400" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-primary-700">自定义工序与周期</label>
+                </div>
+                <div className="space-y-3">
+                  {editDesignNodes.map((node, idx) => (
+                    <div key={node.id || idx} className="flex items-center gap-2">
+                      <input type="text" value={node.name} onChange={e => handleDesignNodeNameChange(idx, e.target.value)}
+                        className="flex-1 px-3 py-2 border border-primary-200 rounded-lg text-sm focus:outline-none focus:border-primary-400" placeholder="节点名称" />
+                      <div className="flex items-center gap-1 shrink-0">
+                        <input type="number" value={node.duration} onChange={e => handleDesignNodeDurChange(idx, e.target.value)}
+                          className="w-14 px-2 py-2 border border-primary-200 rounded-lg text-sm text-center focus:outline-none focus:border-primary-400" min={1} />
+                        <span className="text-xs text-primary-400">天</span>
+                      </div>
+                      <button onClick={() => removeDesignNode(idx)} className="p-1.5 text-primary-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors shrink-0">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={addDesignNode} className="mt-3 w-full py-2 border border-dashed border-primary-200 text-primary-500 rounded-lg text-sm hover:border-primary-400 hover:text-primary-700 transition-colors">
+                  + 添加新节点
+                </button>
+              </div>
+            </div>
+            <div className="p-5 border-t border-primary-100 flex gap-3 shrink-0">
+              <button onClick={() => setShowStartDesignModal(false)} className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-xl font-medium hover:bg-primary-50 transition-colors">取消</button>
+              <button onClick={confirmStartDesign} className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-xl font-medium hover:bg-primary-800 transition-colors">确认开启</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 编辑设计排期弹窗 */}
+      {showEditDesignModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div className="p-5 border-b border-primary-100 flex items-center justify-between shrink-0">
+              <h3 className="text-lg font-bold text-primary-900">编辑出图排期</h3>
+              <button onClick={() => setShowEditDesignModal(false)} className="p-1.5 text-primary-400 hover:text-primary-900 rounded-lg hover:bg-primary-50"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              <div className="space-y-3">
+                {editDesignNodes.map((node, idx) => (
+                  <div key={node.id || idx} className="flex items-center gap-2">
+                    <input type="text" value={node.name} onChange={e => handleDesignNodeNameChange(idx, e.target.value)}
+                      disabled={node.status === 'completed'}
+                      className="flex-1 px-3 py-2 border border-primary-200 rounded-lg text-sm focus:outline-none focus:border-primary-400 disabled:bg-primary-50 disabled:text-primary-400" />
+                    <div className="flex items-center gap-1 shrink-0">
+                      <input type="number" value={node.duration} onChange={e => handleDesignNodeDurChange(idx, e.target.value)}
+                        disabled={node.status === 'completed'}
+                        className="w-14 px-2 py-2 border border-primary-200 rounded-lg text-sm text-center focus:outline-none focus:border-primary-400 disabled:bg-primary-50 disabled:text-primary-400" min={1} />
+                      <span className="text-xs text-primary-400">天</span>
+                    </div>
+                    {node.status !== 'completed' && (
+                      <button onClick={() => removeDesignNode(idx)} className="p-1.5 text-primary-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors shrink-0">
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    {node.status === 'completed' && <div className="w-8 shrink-0" />}
+                  </div>
+                ))}
+              </div>
+              <button onClick={addDesignNode} className="mt-3 w-full py-2 border border-dashed border-primary-200 text-primary-500 rounded-lg text-sm hover:border-primary-400 hover:text-primary-700 transition-colors">
+                + 添加新节点
+              </button>
+            </div>
+            <div className="p-5 border-t border-primary-100 flex gap-3 shrink-0">
+              <button onClick={() => setShowEditDesignModal(false)} className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-xl font-medium hover:bg-primary-50 transition-colors">取消</button>
+              <button onClick={confirmEditDesign} className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-xl font-medium hover:bg-primary-800 transition-colors">保存重算</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 更换人员确认弹窗 */}
       {personnelConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
@@ -789,9 +1226,9 @@ export default function LeadDetailPage() {
             <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-rose-600" />
             </div>
-            <h3 className="text-2xl font-bold text-rose-600 mb-2">品诺筑家恭喜开单</h3>
+            <h3 className="text-2xl font-bold text-rose-600 mb-2">品诺筑家签单确认</h3>
             <p className="text-sm text-primary-600 mb-8">
-              【<span className="font-bold text-primary-900">{lead.name}</span>】项目已成功签单！
+              【<span className="font-bold text-primary-900">{lead.name}</span>】项目确认签单？
             </p>
             <div className="space-y-4 text-left mb-8">
               <div>
@@ -803,20 +1240,66 @@ export default function LeadDetailPage() {
                   className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus:border-primary-400 focus:bg-white transition-all outline-none text-sm text-primary-900" 
                 />
               </div>
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-primary-700 mb-1">签单人</label>
-                <input 
-                  type="text" 
-                  value={signModal.signer} 
-                  onChange={e => setSignModal({...signModal, signer: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus:border-primary-400 focus:bg-white transition-all outline-none text-sm text-primary-900" 
-                  placeholder="请输入签单人姓名"
-                />
+                <div 
+                  onClick={() => setOpenDropdown(openDropdown === 'signer' ? null : 'signer')}
+                  className={`w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${openDropdown === 'signer' ? 'bg-white border-primary-400' : ''}`}
+                >
+                  <span className={signModal.signer ? 'text-primary-900' : 'text-primary-400'}>
+                    {signModal.signer || '请选择签单人'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform ${openDropdown === 'signer' ? 'rotate-180' : ''}`} />
+                </div>
+                {openDropdown === 'signer' && (
+                  <div className="absolute z-30 w-full mt-1 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden py-1 max-h-48 overflow-y-auto">
+                    {users.map(u => (
+                      <div 
+                        key={u._id}
+                        onClick={() => {
+                          setSignModal({...signModal, signer: u.name});
+                          setOpenDropdown(null);
+                        }}
+                        className="px-4 py-2 text-sm text-primary-700 hover:bg-primary-50 cursor-pointer"
+                      >
+                        {u.name} ({u.role === 'admin' ? '管理员' : u.role === 'sales' ? '销售' : u.role === 'designer' ? '设计' : '项目'})
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setSignModal({...signModal, isOpen: false})} className="flex-1 px-4 py-3 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-bold">取消</button>
-              <button onClick={handleConfirmSign} className="flex-1 px-4 py-3 bg-rose-600 text-white rounded-lg hover:bg-rose-700 transition-colors font-bold shadow-lg shadow-rose-600/20">确认签单</button>
+              <button onClick={() => setSignModal({...signModal, isOpen: false})} className="flex-1 px-4 py-3 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-bold">再想想</button>
+              <button onClick={handleConfirmSign} className="flex-1 px-4 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-bold shadow-lg shadow-amber-500/20">确认签单</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 签单成功庆祝弹窗 */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in duration-300 flex flex-col">
+            <div className="bg-gradient-to-br from-amber-500 to-rose-600 p-8 text-center relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+              <div className="inline-block bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-sm font-bold tracking-widest mb-4 border border-white/30 shadow-sm">
+                开单喜报
+              </div>
+              <h3 className="text-3xl font-black text-white drop-shadow-md mb-2">品诺筑家 恭喜签约</h3>
+              <p className="text-white/90 text-sm">携手共筑美好家园</p>
+            </div>
+            <div className="p-8 text-center">
+              <p className="text-primary-600 mb-2 text-sm">成功签约客户</p>
+              <p className="text-2xl font-bold text-primary-900 mb-8 pb-4 border-b border-primary-100">
+                {lead.name} <span className="text-base text-primary-400 font-normal">女士/先生</span>
+              </p>
+              <button 
+                onClick={() => setShowSuccessModal(false)} 
+                className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-rose-500 text-white rounded-xl hover:from-amber-600 hover:to-rose-600 transition-colors font-bold shadow-lg shadow-rose-500/30"
+              >
+                好的，继续工作
+              </button>
             </div>
           </div>
         </div>

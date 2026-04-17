@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LayoutDashboard, Users, FileText, Hammer, Bell, Search, Menu, Building2, PackageOpen, FileSignature, AlertCircle, FilePlus, CreditCard, LogOut, Settings, User, KeyRound, Loader2, CheckSquare } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Hammer, Bell, Menu, Building2, PackageOpen, FileSignature, AlertCircle, LogOut, Settings, User, KeyRound, Loader2, CheckSquare, BarChart2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -16,7 +16,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ old: "", new: "", confirm: "" });
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
-  
+  const [recentNotifs, setRecentNotifs] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const notifRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
 
@@ -31,7 +33,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
     } else {
       try {
-        setCurrentUser(JSON.parse(userData));
+        const user = JSON.parse(userData);
+        setCurrentUser(user);
         setIsCheckingAuth(false);
       } catch (e) {
         localStorage.removeItem("pnzj_user");
@@ -43,6 +46,30 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       }
     }
   }, [pathname]);
+
+  // 拉取通知（登录后 + 每次打开铃铛）
+  const fetchNotifs = async (user: any) => {
+    if (!user) return;
+    try {
+      const params = new URLSearchParams({ userName: user.name, role: user.role });
+      const res = await fetch(`/api/notifications?${params}`);
+      if (res.ok) {
+        const data = await res.json();
+        const list = Array.isArray(data) ? data : [];
+        setRecentNotifs(list.slice(0, 5));
+        setUnreadCount(list.filter((n: any) => !n.isRead).length);
+      }
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      fetchNotifs(currentUser);
+      // 每 60 秒轮询一次未读数
+      const timer = setInterval(() => fetchNotifs(currentUser), 60000);
+      return () => clearInterval(timer);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -125,6 +152,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     { name: "施工管理", href: "/projects", icon: Hammer, roles: ['admin', 'sales', 'designer', 'manager'] },
     { name: "报价管理", href: "/quotes", icon: FileSignature, roles: ['admin', 'sales', 'designer', 'manager'] },
     { name: "材料大厅", href: "/materials", icon: PackageOpen, roles: ['admin', 'sales', 'designer', 'manager'] },
+    { name: "数据分析", href: "/analytics", icon: BarChart2, roles: ['admin'] },
     { name: "组织架构", href: "/employees", icon: Building2, roles: ['admin'] },
   ];
 
@@ -228,79 +256,108 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 
           <div className="flex items-center space-x-4 md:space-x-6 text-primary-600">
             <div className="relative" ref={notifRef}>
-              <button 
-                onClick={() => setIsNotifOpen(!isNotifOpen)}
-                className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors rounded-lg ${isNotifOpen ? 'bg-primary-50 text-primary-900' : 'hover:text-primary-900 hover:bg-primary-50/50'}`}
+              <button
+                onClick={() => { setIsNotifOpen(!isNotifOpen); if (!isNotifOpen) fetchNotifs(currentUser); }}
+                className={`p-2 min-h-[44px] min-w-[44px] flex items-center justify-center transition-colors rounded-lg relative ${isNotifOpen ? 'bg-primary-50 text-primary-900' : 'hover:text-primary-900 hover:bg-primary-50/50'}`}
               >
                 <Bell className="w-5 h-5" strokeWidth={1.5} />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 min-w-[16px] h-4 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </button>
 
               {isNotifOpen && (
                 <div className="absolute right-0 sm:right-0 top-full mt-2 w-[calc(100vw-2rem)] sm:w-80 -mr-12 sm:mr-0 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="p-4 border-b border-primary-100 flex justify-between items-center bg-primary-50/30">
-                    <h3 className="font-bold text-primary-900">通知消息</h3>
-                    <button className="text-xs font-medium text-primary-600 hover:text-primary-900">全部已读</button>
+                    <h3 className="font-bold text-primary-900 flex items-center gap-2">
+                      通知消息
+                      {unreadCount > 0 && <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
+                    </h3>
+                    <button
+                      onClick={async () => {
+                        const unread = recentNotifs.filter(n => !n.isRead);
+                        await Promise.all(unread.map(n =>
+                          fetch(`/api/notifications/${n._id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ isRead: true })
+                          })
+                        ));
+                        setRecentNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
+                        setUnreadCount(0);
+                      }}
+                      className="text-xs font-medium text-primary-600 hover:text-primary-900"
+                    >
+                      全部已读
+                    </button>
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    <div 
-                      onClick={() => {
-                        setIsNotifOpen(false);
-                        window.location.href = '/quotes/P20240003';
-                      }}
-                      className="p-4 hover:bg-primary-50/50 transition-colors border-b border-primary-50/50 cursor-pointer relative group"
-                    >
-                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500 rounded-r-sm opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                      <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                          <FilePlus className="w-4 h-4" />
+                    {recentNotifs.length === 0 ? (
+                      <div className="p-8 text-center text-primary-400 text-sm">暂无通知</div>
+                    ) : recentNotifs.map(notif => {
+                      const typeIconMap: Record<string, React.ReactNode> = {
+                        project: <AlertCircle className="w-4 h-4" />,
+                        lead: <Users className="w-4 h-4" />,
+                        quote: <FileText className="w-4 h-4" />,
+                        todo: <CheckSquare className="w-4 h-4" />
+                      };
+                      const typeBgMap: Record<string, string> = {
+                        project: 'bg-amber-50 text-amber-600',
+                        lead: 'bg-blue-50 text-blue-600',
+                        quote: 'bg-emerald-50 text-emerald-600',
+                        todo: 'bg-purple-50 text-purple-600'
+                      };
+                      const formatNotifTime = (t: any) => {
+                        if (!t) return '';
+                        const d = typeof t === 'object' && t.$date ? new Date(t.$date) : new Date(t);
+                        if (isNaN(d.getTime())) return '';
+                        const now = new Date();
+                        const diff = Math.floor((now.getTime() - d.getTime()) / 60000);
+                        if (diff < 1) return '刚刚';
+                        if (diff < 60) return `${diff}分钟前`;
+                        if (diff < 1440) return `${Math.floor(diff/60)}小时前`;
+                        return `${d.getMonth()+1}-${d.getDate()}`;
+                      };
+                      return (
+                        <div
+                          key={notif._id}
+                          onClick={() => {
+                            setIsNotifOpen(false);
+                            if (!notif.isRead) {
+                              fetch(`/api/notifications/${notif._id}`, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ isRead: true })
+                              });
+                              setRecentNotifs(prev => prev.map(n => n._id === notif._id ? { ...n, isRead: true } : n));
+                              setUnreadCount(c => Math.max(0, c - 1));
+                            }
+                            if (notif.link) router.push(notif.link);
+                          }}
+                          className={`p-4 hover:bg-primary-50/50 transition-colors border-b border-primary-50/50 cursor-pointer relative ${!notif.isRead ? 'bg-primary-50/20' : ''}`}
+                        >
+                          {!notif.isRead && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-rose-500" />}
+                          <div className="flex gap-3">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${typeBgMap[notif.type] || 'bg-primary-50 text-primary-600'}`}>
+                              {typeIconMap[notif.type] || <Bell className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm mb-0.5 flex items-center gap-1 ${!notif.isRead ? 'font-bold text-primary-900' : 'font-medium text-primary-800'}`}>
+                                {notif.title}
+                                {!notif.isRead && <span className="inline-block w-1.5 h-1.5 bg-rose-500 rounded-full shrink-0" />}
+                              </p>
+                              <p className="text-xs text-primary-600 leading-snug line-clamp-2">{notif.content}</p>
+                              <p className="text-xs text-primary-400 mt-1.5 font-mono">{formatNotifTime(notif.createTime)}</p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-primary-900 mb-1">新报价单生成 <span className="inline-block w-1.5 h-1.5 bg-rose-500 rounded-full ml-1"></span></p>
-                          <p className="text-xs text-primary-600 leading-snug">销售部李销售为客户“罗先生 (P20240003)”生成了新的报价单，金额 ¥104,871。</p>
-                          <p className="text-xs text-primary-400 mt-2 font-mono">10 分钟前</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div 
-                      onClick={() => {
-                        setIsNotifOpen(false);
-                        window.location.href = '/contracts/P20240001';
-                      }}
-                      className="p-4 hover:bg-primary-50/50 transition-colors border-b border-primary-50/50 cursor-pointer relative group"
-                    >
-                      <div className="flex gap-3">
-                        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                          <CreditCard className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-primary-900 mb-1">二期款已确认 <span className="inline-block w-1.5 h-1.5 bg-rose-500 rounded-full ml-1"></span></p>
-                          <p className="text-xs text-primary-600 leading-snug">客户“高女士 (P20240001)”的二期款 ¥30,000 已确认到账。</p>
-                          <p className="text-xs text-primary-400 mt-2 font-mono">2 小时前</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div 
-                      onClick={() => {
-                        setIsNotifOpen(false);
-                        window.location.href = '/projects';
-                      }}
-                      className="p-4 hover:bg-primary-50/50 transition-colors cursor-pointer relative group"
-                    >
-                      <div className="flex gap-3 opacity-60">
-                        <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-                          <AlertCircle className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-primary-900 mb-1">施工节点预警</p>
-                          <p className="text-xs text-primary-600 leading-snug">项目“马女士 (P20240013)”水电阶段存在延期风险，请及时跟进。</p>
-                          <p className="text-xs text-primary-400 mt-2 font-mono">昨天 14:30</p>
-                        </div>
-                      </div>
-                    </div>
+                      );
+                    })}
                   </div>
                   <div className="p-3 bg-primary-50/50 border-t border-primary-100 text-center">
-                    <Link 
+                    <Link
                       href="/notifications"
                       onClick={() => setIsNotifOpen(false)}
                       className="text-sm font-medium text-primary-600 hover:text-primary-900 block w-full py-1"

@@ -1,7 +1,8 @@
 {
+  "/employees/page": "app/employees/page.js",
   "/page": "app/page.js",
-  "/projects/page": "app/projects/page.js",
-  "/projects/[id]/page": "app/projects/[id]/page.js",
-  "/quotes/new/page": "app/quotes/new/page.js",
-  "/quotes/page": "app/quotes/page.js"
+  "/api/notifications/route": "app/api/notifications/route.js",
+  "/analytics/page": "app/analytics/page.js",
+  "/todos/page": "app/todos/page.js",
+  "/notifications/page": "app/notifications/page.js"
 }
