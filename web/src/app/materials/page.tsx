@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, Package, CheckCircle2, XCircle, Grid, Zap, Layers, Home, Monitor, UserCheck, LayoutTemplate, ChevronDown } from "lucide-react";
+import { Search, Plus, Package, CheckCircle2, XCircle, Grid, Zap, Layers, Home, Monitor, UserCheck, LayoutTemplate, ChevronDown, MoreHorizontal } from "lucide-react";
 
 const categories = ["全部", "主材", "辅材", "软装", "家电", "人工", "定制", "套餐"];
 
