@@ -114,7 +114,8 @@ export default function Dashboard() {
       const monthStr = lead.createdAt.split('-')[1];
       const monthNum = parseInt(monthStr, 10);
       const monthKey = `${monthNum}月`;
-      const budgetNum = parseInt(lead.budget.replace(/[^0-9]/g, '')) || 0;
+      const budgetStr = lead.budget || '';
+      const budgetNum = parseInt(String(budgetStr).replace(/[^0-9]/g, '')) || 0;
       if (revenueActuals[monthKey] !== undefined) {
         revenueActuals[monthKey] += budgetNum;
       }
