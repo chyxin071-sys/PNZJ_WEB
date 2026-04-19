@@ -49,7 +49,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       sendNotifications(['admin'], '线索已分配', `线索【${leadName}】已分配给设计师：${body.designer}`, link);
     }
     if (body.status === '已签单' && old.status !== '已签单') {
-      sendNotifications(['admin', old.sales, old.designer], '🎉 新签单', `客户【${leadName}】已成功签单！`, link);
+      const employees = await tcbQuery(`db.collection("employees").get()`);
+      const allNames = employees ? employees.map((e: any) => e.name) : ['admin'];
+      sendNotifications(allNames, '🎉 恭喜开单', `好消息！客户【${leadName}】已成功签单，大家再接再厉！`, link);
     }
 
     return NextResponse.json(res);

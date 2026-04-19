@@ -250,6 +250,19 @@ Page({
         wx.hideLoading();
         
         if (this.data.isSigningNow) {
+          // 签单全员通知
+          db.collection('employees').get().then(resEmp => {
+            resEmp.data.forEach(u => {
+              db.collection('notifications').add({
+                data: {
+                  type: 'lead', title: '🎉 恭喜开单',
+                  content: `好消息！客户【${d.name}】已成功签单，大家再接再厉！`,
+                  targetUser: u.name, isRead: false, createTime: db.serverDate(),
+                  link: `/pages/leadDetail/index?id=${this.data.id}`
+                }
+              });
+            });
+          });
           // 如果是签单，显示开单喜报弹窗（不使用 setTimeout，等待用户手动点击返回）
           this.setData({ 
             showSuccessModal: true,

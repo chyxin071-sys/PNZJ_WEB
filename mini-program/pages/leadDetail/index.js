@@ -399,21 +399,20 @@ Page({
       
       this.addSystemFollowUp(`将客户状态更改为：已签单 (签单人: ${signer}, 日期: ${signDate})`);
 
-      // 签单通知
+      // 签单通知 (全员)
       const db2 = wx.cloud.database();
       const lead = this.data.lead;
-      const userInfo2 = wx.getStorageSync('userInfo');
-      const notifyTargets = new Set(['admin']);
-      if (lead.sales) notifyTargets.add(lead.sales);
-      if (lead.designer) notifyTargets.add(lead.designer);
-      notifyTargets.forEach(u => {
-        db2.collection('notifications').add({
-          data: {
-            type: 'lead', title: '🎉 新签单',
-            content: `客户【${lead.name}】已成功签单！签单人：${signer}`,
-            targetUser: u, isRead: false, createTime: db2.serverDate(),
-            link: `/pages/leadDetail/index?id=${this.data.leadId}`
-          }
+      db2.collection('employees').get().then(res => {
+        const users = res.data;
+        users.forEach(u => {
+          db2.collection('notifications').add({
+            data: {
+              type: 'lead', title: '🎉 恭喜开单',
+              content: `好消息！客户【${lead.name}】已成功签单，大家再接再厉！`,
+              targetUser: u.name, isRead: false, createTime: db2.serverDate(),
+              link: `/pages/leadDetail/index?id=${this.data.leadId}`
+            }
+          });
         });
       });
 

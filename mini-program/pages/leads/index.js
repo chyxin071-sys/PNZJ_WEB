@@ -600,6 +600,22 @@ Page({
     wx.showTabBar();
     this.updateLeadStatusInList(currentSignLeadId, '已签单', { signDate, signer });
     
+    // 全员通知
+    const db = wx.cloud.database();
+    db.collection('employees').get().then(res => {
+      const users = res.data;
+      users.forEach(u => {
+        db.collection('notifications').add({
+          data: {
+            type: 'lead', title: '🎉 恭喜开单',
+            content: `好消息！客户【${this.data.currentSignLeadName}】已成功签单，大家再接再厉！`,
+            targetUser: u.name, isRead: false, createTime: db.serverDate(),
+            link: `/pages/leadDetail/index?id=${currentSignLeadId}`
+          }
+        });
+      });
+    });
+
     wx.showToast({
       title: '恭喜签单！',
       icon: 'success',
