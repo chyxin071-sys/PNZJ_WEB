@@ -258,7 +258,7 @@ export default function AnalyticsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={sourceData} cx="50%" cy="45%" outerRadius={75} dataKey="value" nameKey="name"
-                    label={({ name, percent }) => percent > 0.05 ? `${name} ${((percent || 0) * 100).toFixed(0)}%` : ''}
+                    label={({ name, percent }) => (percent || 0) > 0.05 ? `${name} ${((percent || 0) * 100).toFixed(0)}%` : ''}
                     labelLine={{ stroke: '#9ca3af', strokeWidth: 1 }}>
                     {sourceData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>
@@ -277,7 +277,7 @@ export default function AnalyticsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={budgetData} cx="50%" cy="45%" outerRadius={75} dataKey="value" nameKey="name"
-                    label={({ name, percent }) => percent > 0.05 ? `${name}` : ''}
+                    label={({ name, percent }) => (percent || 0) > 0.05 ? `${name}` : ''}
                     labelLine={{ stroke: '#9ca3af', strokeWidth: 1 }}>
                     {budgetData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                   </Pie>

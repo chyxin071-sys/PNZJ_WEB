@@ -35,11 +35,11 @@ export async function sendNotification(
  * 批量发送通知给多个用户（自动去重，跳过空值）
  */
 export async function sendNotifications(
-  targets: (string | undefined | null)[],
+  targets: (string | null | undefined)[],
   title: string,
   content: string,
   link?: string
 ) {
-  const unique = [...new Set(targets.filter(Boolean))] as string[];
+  const unique = Array.from(new Set(targets.filter(Boolean))) as string[];
   await Promise.all(unique.map(t => sendNotification(t, title, content, link)));
 }
