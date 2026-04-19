@@ -213,7 +213,7 @@ export default function AnalyticsPage() {
                   <YAxis dataKey="name" type="category" fontSize={11} tickLine={false} axisLine={false} width={50} />
                   <Tooltip
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    formatter={(value: any, name: string, props: any) => {
+                    formatter={(value: any, name: any, props: any) => {
                       if (name === '签单') return [`${value} 单 (转化率 ${props.payload.转化率}%)`, name];
                       return [value, name];
                     }}
