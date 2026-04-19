@@ -1,12 +1,15 @@
 {
   "/page": "app/page.js",
-  "/api/notifications/route": "app/api/notifications/route.js",
-  "/quotes/new/page": "app/quotes/new/page.js",
-  "/api/leads/route": "app/api/leads/route.js",
-  "/leads/[id]/page": "app/leads/[id]/page.js",
-  "/api/materials/route": "app/api/materials/route.js",
-  "/api/leads/[id]/route": "app/api/leads/[id]/route.js",
-  "/notifications/page": "app/notifications/page.js",
+  "/leads/page": "app/leads/page.js",
+  "/contracts/page": "app/contracts/page.js",
   "/api/employees/route": "app/api/employees/route.js",
-  "/leads/page": "app/leads/page.js"
+  "/api/leads/route": "app/api/leads/route.js",
+  "/api/leads/[id]/route": "app/api/leads/[id]/route.js",
+  "/api/notifications/route": "app/api/notifications/route.js",
+  "/api/quotes/route": "app/api/quotes/route.js",
+  "/api/followUps/route": "app/api/followUps/route.js",
+  "/api/projects/route": "app/api/projects/route.js",
+  "/leads/[id]/page": "app/leads/[id]/page.js",
+  "/quotes/new/page": "app/quotes/new/page.js",
+  "/api/leads/[id]/files/route": "app/api/leads/[id]/files/route.js"
 }

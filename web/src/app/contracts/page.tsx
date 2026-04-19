@@ -38,9 +38,9 @@ export default function ContractsPage() {
   const [isPersonnelDropdownOpen, setIsPersonnelDropdownOpen] = useState(false);
 
 
-  const statuses = [“全部”, “待签”, “执行中”, “已结项”];
+  const statuses = ["全部", "待签", "执行中", "已结项"];
   const contractLeads = leadsData
-    .filter(lead => lead.status === “已签单”)
+    .filter(lead => lead.status === "已签单")
     .sort((a, b) => new Date(b.signDate || b.lastFollowUp || 0).getTime() - new Date(a.signDate || a.lastFollowUp || 0).getTime());
 
   const getStatusString = (lead: any) => {
@@ -49,11 +49,11 @@ export default function ContractsPage() {
 
   const getStatusBadge = (lead: any) => {
     const status = getStatusString(lead);
-    if (status === “待签”) {
-      return <span className=”inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-600 border border-amber-100”><AlertCircle className=”w-3 h-3 mr-1” />待签</span>;
+    if (status === "待签") {
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-amber-50 text-amber-600 border border-amber-100"><AlertCircle className="w-3 h-3 mr-1" />待签</span>;
     }
-    if (status === “已结项”) {
-      return <span className=”inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-50 text-zinc-600 border border-zinc-200”>已结项</span>;
+    if (status === "已结项") {
+      return <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-zinc-50 text-zinc-600 border border-zinc-200">已结项</span>;
     }
     return <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-100">执行中</span>;
   };

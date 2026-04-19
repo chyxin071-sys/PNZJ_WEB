@@ -83,6 +83,7 @@ function NewQuoteContent() {
         const lead = await res.json();
         setCustomer({
           id: lead._id,
+          customerNo: lead.customerNo || lead._id,
           name: lead.name,
           phone: lead.phone,
           address: lead.address || "暂无地址",
