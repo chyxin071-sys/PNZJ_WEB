@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import axios from 'axios';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'default_jwt_secret_for_pnzj_12345';
 const APPID = process.env.WECHAT_APPID || '';
@@ -15,28 +16,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '账号或密码不能为空' }, { status: 400 });
     }
 
-    // 1. 获取 access_token (强制公网调用，保证 100% 成功率)
+    // 1. 获取 access_token (使用 axios 支持微信云托管的 http_proxy 环境变量)
     let url = ``;
     let bodyData: any = { env: ENV, query: `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()` };
 
     // 获取 token
-    const tokenRes = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
-    const tokenData = await tokenRes.json();
+    const tokenRes = await axios.get(`http://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
+    const tokenData = tokenRes.data;
     const accessToken = tokenData.access_token;
     
     if (!accessToken) {
       return NextResponse.json({ error: `Token获取失败: ${JSON.stringify(tokenData)}` }, { status: 500 });
     }
-    url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
+    url = `http://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
 
     // 发起查询
-    const dbRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bodyData)
-    });
-    
-    const dbData = await dbRes.json();
+    const dbRes = await axios.post(url, bodyData);
+    const dbData = dbRes.data;
     
     // 如果 dbData.data 不存在或者为空，说明查询失败或找不到数据
     if (!dbData || dbData.errcode !== 0) {

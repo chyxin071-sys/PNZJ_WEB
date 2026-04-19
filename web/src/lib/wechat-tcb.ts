@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import axios from 'axios';
 
 const APPID = process.env.WECHAT_APPID || '';
 const APPSECRET = process.env.WECHAT_APPSECRET || '';
@@ -11,26 +12,23 @@ export async function getAccessToken() {
   if (cachedToken && Date.now() < tokenExpiresAt) {
     return cachedToken;
   }
-  const res = await fetch(`http://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
-  const data = await res.json();
+  // 使用 axios 而不是 native fetch，因为微信云托管的内网代理(HTTP_PROXY)在 Node18+ 下不支持原生 fetch
+  const res = await axios.get(`http://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
+  const data = res.data;
   if (data.access_token) {
     cachedToken = data.access_token;
     // Token is valid for 7200 seconds, refresh a bit earlier
     tokenExpiresAt = Date.now() + (data.expires_in - 600) * 1000;
     return cachedToken;
   }
-  throw new Error('Failed to get access token');
+  throw new Error(`Failed to get access token: ${JSON.stringify(data)}`);
 }
 
 export async function tcbQuery(queryStr: string) {
   const url = `http://api.weixin.qq.com/tcb/databasequery?access_token=${await getAccessToken()}`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ env: ENV, query: queryStr })
-  });
-  const data = await res.json();
+  const res = await axios.post(url, { env: ENV, query: queryStr });
+  const data = res.data;
   if (data.errcode !== 0) throw new Error(data.errmsg || 'Query failed');
   return (data.data || []).map((item: string) => JSON.parse(item));
 }
@@ -38,12 +36,8 @@ export async function tcbQuery(queryStr: string) {
 export async function tcbAdd(queryStr: string) {
   const url = `http://api.weixin.qq.com/tcb/databaseadd?access_token=${await getAccessToken()}`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ env: ENV, query: queryStr })
-  });
-  const data = await res.json();
+  const res = await axios.post(url, { env: ENV, query: queryStr });
+  const data = res.data;
   if (data.errcode !== 0) throw new Error(data.errmsg || 'Add failed');
   return data;
 }
@@ -51,12 +45,8 @@ export async function tcbAdd(queryStr: string) {
 export async function tcbUpdate(queryStr: string) {
   const url = `http://api.weixin.qq.com/tcb/databaseupdate?access_token=${await getAccessToken()}`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ env: ENV, query: queryStr })
-  });
-  const data = await res.json();
+  const res = await axios.post(url, { env: ENV, query: queryStr });
+  const data = res.data;
   if (data.errcode !== 0) throw new Error(data.errmsg || 'Update failed');
   return data;
 }
@@ -64,12 +54,8 @@ export async function tcbUpdate(queryStr: string) {
 export async function tcbDelete(queryStr: string) {
   const url = `http://api.weixin.qq.com/tcb/databasedelete?access_token=${await getAccessToken()}`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ env: ENV, query: queryStr })
-  });
-  const data = await res.json();
+  const res = await axios.post(url, { env: ENV, query: queryStr });
+  const data = res.data;
   if (data.errcode !== 0) throw new Error(data.errmsg || 'Delete failed');
   return data;
 }
@@ -77,12 +63,8 @@ export async function tcbDelete(queryStr: string) {
 export async function tcbCount(queryStr: string): Promise<number> {
   const url = `http://api.weixin.qq.com/tcb/databasecount?access_token=${await getAccessToken()}`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ env: ENV, query: queryStr })
-  });
-  const data = await res.json();
+  const res = await axios.post(url, { env: ENV, query: queryStr });
+  const data = res.data;
   if (data.errcode !== 0) return 0;
   return data.count || 0;
 }
