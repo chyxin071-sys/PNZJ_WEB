@@ -1,8 +1,10 @@
 {
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/notifications/route": "app/api/notifications/route.js",
-  "/materials/page": "app/materials/page.js",
   "/inventory/page": "app/inventory/page.js",
-  "/analytics/page": "app/analytics/page.js",
+  "/contracts/[id]/page": "app/contracts/[id]/page.js",
+  "/materials/page": "app/materials/page.js",
   "/contracts/page": "app/contracts/page.js",
-  "/contracts/[id]/page": "app/contracts/[id]/page.js"
+  "/api/leads/route": "app/api/leads/route.js",
+  "/analytics/page": "app/analytics/page.js"
 }

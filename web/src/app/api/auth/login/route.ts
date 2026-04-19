@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-const JWT_SECRET = process.env.JWT_SECRET!;
-const APPID = process.env.WECHAT_APPID!;
-const APPSECRET = process.env.WECHAT_APPSECRET!;
-const ENV = process.env.NEXT_PUBLIC_TCB_ENV_ID!;
+const JWT_SECRET = process.env.JWT_SECRET || 'default_jwt_secret_for_pnzj_12345';
+const APPID = process.env.WECHAT_APPID || '';
+const APPSECRET = process.env.WECHAT_APPSECRET || '';
+const ENV = process.env.NEXT_PUBLIC_TCB_ENV_ID || '';
 
 export async function POST(request: Request) {
   try {
@@ -20,14 +20,14 @@ export async function POST(request: Request) {
     let bodyData: any = { env: ENV, query: `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()` };
 
     // 获取 token
-    const tokenRes = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
+    const tokenRes = await fetch(`http://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
     
     if (!accessToken) {
       return NextResponse.json({ error: '无法连接云数据库(Token获取失败)' }, { status: 500 });
     }
-    url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
+    url = `http://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
 
     // 发起查询
     const dbRes = await fetch(url, {

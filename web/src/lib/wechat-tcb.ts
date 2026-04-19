@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
-const APPID = process.env.WECHAT_APPID!;
-const APPSECRET = process.env.WECHAT_APPSECRET!;
-const ENV = process.env.NEXT_PUBLIC_TCB_ENV_ID!;
+const APPID = process.env.WECHAT_APPID || '';
+const APPSECRET = process.env.WECHAT_APPSECRET || '';
+const ENV = process.env.NEXT_PUBLIC_TCB_ENV_ID || '';
 
 let cachedToken = '';
 let tokenExpiresAt = 0;
@@ -11,7 +11,7 @@ export async function getAccessToken() {
   if (cachedToken && Date.now() < tokenExpiresAt) {
     return cachedToken;
   }
-  const res = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
+  const res = await fetch(`http://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
   const data = await res.json();
   if (data.access_token) {
     cachedToken = data.access_token;
@@ -23,7 +23,7 @@ export async function getAccessToken() {
 }
 
 export async function tcbQuery(queryStr: string) {
-  const url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${await getAccessToken()}`;
+  const url = `http://api.weixin.qq.com/tcb/databasequery?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -36,7 +36,7 @@ export async function tcbQuery(queryStr: string) {
 }
 
 export async function tcbAdd(queryStr: string) {
-  const url = `https://api.weixin.qq.com/tcb/databaseadd?access_token=${await getAccessToken()}`;
+  const url = `http://api.weixin.qq.com/tcb/databaseadd?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -49,7 +49,7 @@ export async function tcbAdd(queryStr: string) {
 }
 
 export async function tcbUpdate(queryStr: string) {
-  const url = `https://api.weixin.qq.com/tcb/databaseupdate?access_token=${await getAccessToken()}`;
+  const url = `http://api.weixin.qq.com/tcb/databaseupdate?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -62,7 +62,7 @@ export async function tcbUpdate(queryStr: string) {
 }
 
 export async function tcbDelete(queryStr: string) {
-  const url = `https://api.weixin.qq.com/tcb/databasedelete?access_token=${await getAccessToken()}`;
+  const url = `http://api.weixin.qq.com/tcb/databasedelete?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',
@@ -75,7 +75,7 @@ export async function tcbDelete(queryStr: string) {
 }
 
 export async function tcbCount(queryStr: string): Promise<number> {
-  const url = `https://api.weixin.qq.com/tcb/databasecount?access_token=${await getAccessToken()}`;
+  const url = `http://api.weixin.qq.com/tcb/databasecount?access_token=${await getAccessToken()}`;
 
   const res = await fetch(url, {
     method: 'POST',
