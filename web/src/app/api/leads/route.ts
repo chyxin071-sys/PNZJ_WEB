@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         sequence = parseInt(match[1], 10) + 1;
       }
     }
-    const customerNo = \`P\${year}\${sequence.toString().padStart(3, '0')}\`;
+    const customerNo = `P${year}${sequence.toString().padStart(3, '0')}`;
 
     // 为新增数据附加创建时间和更新时间
     const docData = JSON.stringify({
