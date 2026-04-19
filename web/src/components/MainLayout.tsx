@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LayoutDashboard, Users, FileText, Hammer, Bell, Menu, Building2, PackageOpen, FileSignature, AlertCircle, LogOut, Settings, User, KeyRound, Loader2, CheckSquare, BarChart2 } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Hammer, Bell, Menu, Building2, PackageOpen, FileSignature, AlertCircle, LogOut, Settings, User, KeyRound, Loader2, CheckSquare, BarChart2, Warehouse, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -129,7 +129,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const getRoleName = (role: string) => {
     switch (role) {
       case 'admin': return '系统管理员';
-      case 'sales': return '销售/客服';
+      case 'sales': return '销售';
       case 'designer': return '设计师';
       case 'manager': return '项目经理';
       default: return '未知身份';
@@ -145,19 +145,49 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     );
   }
 
-  const navItems = [
-    { name: "全局看板", href: "/", icon: LayoutDashboard, roles: ['admin', 'sales', 'designer', 'manager'] },
-    { name: "团队待办", href: "/todos", icon: CheckSquare, roles: ['admin', 'sales', 'designer', 'manager'] },
-    { name: "客户管理", href: "/leads", icon: Users, roles: ['admin', 'sales', 'designer', 'manager'] },
-    { name: "施工管理", href: "/projects", icon: Hammer, roles: ['admin', 'sales', 'designer', 'manager'] },
-    { name: "报价管理", href: "/quotes", icon: FileSignature, roles: ['admin', 'sales', 'designer', 'manager'] },
-    { name: "材料大厅", href: "/materials", icon: PackageOpen, roles: ['admin', 'sales', 'designer', 'manager'] },
-    { name: "数据分析", href: "/analytics", icon: BarChart2, roles: ['admin'] },
-    { name: "组织架构", href: "/employees", icon: Building2, roles: ['admin'] },
+  const navGroups = [
+    {
+      group: "概览",
+      items: [
+        { name: "全局看板", href: "/", icon: LayoutDashboard, roles: ['admin', 'sales', 'designer', 'manager'] },
+        { name: "团队待办", href: "/todos", icon: CheckSquare, roles: ['admin', 'sales', 'designer', 'manager'] },
+        { name: "数据分析", href: "/analytics", icon: BarChart2, roles: ['admin'] },
+      ]
+    },
+    {
+      group: "客户与销售",
+      items: [
+        { name: "客户管理", href: "/leads", icon: Users, roles: ['admin', 'sales', 'designer', 'manager'] },
+        { name: "报价管理", href: "/quotes", icon: FileSignature, roles: ['admin', 'sales', 'designer', 'manager'] },
+        { name: "合同管理", href: "/contracts", icon: ScrollText, roles: ['admin', 'sales', 'designer', 'manager'] },
+      ]
+    },
+    {
+      group: "施工",
+      items: [
+        { name: "施工管理", href: "/projects", icon: Hammer, roles: ['admin', 'sales', 'designer', 'manager'] },
+      ]
+    },
+    {
+      group: "物料",
+      items: [
+        { name: "材料大厅", href: "/materials", icon: PackageOpen, roles: ['admin', 'sales', 'designer', 'manager'] },
+        { name: "库存管理", href: "/inventory", icon: Warehouse, roles: ['admin', 'manager'] },
+      ]
+    },
+    {
+      group: "管理",
+      items: [
+        { name: "组织架构", href: "/employees", icon: Building2, roles: ['admin'] },
+      ]
+    },
   ];
 
-  // 过滤当前角色可见的菜单
-  const visibleNavItems = navItems.filter(item => currentUser && item.roles.includes(currentUser.role));
+  // 过滤当前角色可见的分组（空分组不显示）
+  const visibleGroups = navGroups.map(g => ({
+    ...g,
+    items: g.items.filter(item => currentUser && item.roles.includes(currentUser.role))
+  })).filter(g => g.items.length > 0);
 
   return (
     <div className="h-screen flex overflow-hidden bg-[var(--bg-color)]">
@@ -169,24 +199,31 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </h1>
         </div>
         
-        <nav className="flex-1 py-6 px-3 space-y-2">
-          {visibleNavItems.map((item) => {
-            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-            return (
-              <Link 
-                key={item.name} 
-                href={item.href} 
-                className={`flex items-center px-4 py-2.5 rounded-md transition-colors ${
-                  isActive 
-                    ? "text-primary-900 bg-white shadow-sm border border-primary-100 font-bold" 
-                    : "text-primary-600 hover:text-primary-900 hover:bg-white/50"
-                }`}
-              >
-                <item.icon className="w-5 h-5 mr-3" strokeWidth={1.5} />
-                <span className="text-sm">{item.name}</span>
-              </Link>
-            );
-          })}
+        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+          {visibleGroups.map((group, gi) => (
+            <div key={gi} className={gi > 0 ? "pt-2" : ""}>
+              {group.group && (
+                <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-primary-400">{group.group}</p>
+              )}
+              {group.items.map((item) => {
+                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`flex items-center px-4 py-2.5 rounded-md transition-colors ${
+                      isActive
+                        ? "text-primary-900 bg-white shadow-sm border border-primary-100 font-bold"
+                        : "text-primary-600 hover:text-primary-900 hover:bg-white/50"
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 mr-3" strokeWidth={1.5} />
+                    <span className="text-sm">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="p-6 border-t border-primary-100">
@@ -218,25 +255,32 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </h1>
         </div>
 
-        <nav className="flex-1 py-8 px-4 space-y-2">
-          {visibleNavItems.map((item) => {
-            const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.name} 
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={`flex items-center px-4 py-2.5 rounded-md transition-colors ${
-                  isActive
-                    ? "text-primary-900 bg-white shadow-sm border border-primary-100 font-bold"
-                    : "text-primary-600 hover:text-primary-900 hover:bg-white/50"
-                }`}
-              >
-                <item.icon className="w-5 h-5 mr-3" strokeWidth={1.5} />      
-                <span className="text-sm">{item.name}</span>
-              </Link>
-            );
-          })}
+        <nav className="flex-1 py-8 px-4 space-y-1 overflow-y-auto">
+          {visibleGroups.map((group, gi) => (
+            <div key={gi} className={gi > 0 ? "pt-2" : ""}>
+              {group.group && (
+                <p className="px-4 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-primary-400">{group.group}</p>
+              )}
+              {group.items.map((item) => {
+                const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`flex items-center px-4 py-2.5 rounded-md transition-colors ${
+                      isActive
+                        ? "text-primary-900 bg-white shadow-sm border border-primary-100 font-bold"
+                        : "text-primary-600 hover:text-primary-900 hover:bg-white/50"
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 mr-3" strokeWidth={1.5} />
+                    <span className="text-sm">{item.name}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </aside>
 

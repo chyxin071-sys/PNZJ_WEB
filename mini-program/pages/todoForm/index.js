@@ -385,6 +385,7 @@ Page({
       const userInfo = wx.getStorageSync('userInfo');
       updateData.status = 'pending';
       updateData.creatorId = userInfo.id || userInfo._id;
+      updateData.creatorName = userInfo.name || '未知';
       updateData.createdAt = new Date().toISOString();
       
       db.collection('todos').add({

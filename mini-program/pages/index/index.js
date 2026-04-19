@@ -669,6 +669,7 @@ Page({
         dueDate: dueDate || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`,
         assignees: selectedAssigneeData,
         creatorId: userInfo.id || userInfo._id,
+        creatorName: userInfo.name || '未知',
         createdAt: now.toISOString(),
         relatedTo: relatedTo
       }

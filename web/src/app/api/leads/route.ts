@@ -24,27 +24,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
-    // 生成客户编号：P + YYYY + 序号
+
+    // 生成客户编号：P + YYYY + 时间戳后6位，避免并发冲突
     const year = new Date().getFullYear();
-    let sequence = 1;
-    
-    try {
-       // TCB HTTP API 的语法：查出当年最新的一个编号
-       const lastLeadQuery = `db.collection("leads").where({ customerNo: db.RegExp({ regexp: '^P${year}', options: 'i' }) }).orderBy("customerNo", "desc").limit(1).get()`;
-       const lastLeadData = await tcbQuery(lastLeadQuery);
-       if (lastLeadData && lastLeadData.length > 0 && lastLeadData[0].customerNo) {
-         const lastNo = lastLeadData[0].customerNo;
-         const match = lastNo.match(/P\d{4}(\d{3,})/);
-         if (match && match[1]) {
-           sequence = parseInt(match[1], 10) + 1;
-         }
-       }
-    } catch(e) {
-       console.error("生成客户编号失败，回退到默认", e);
-    }
-    
-    const customerNo = `P${year}${sequence.toString().padStart(3, '0')}`;
+    const customerNo = `P${year}${String(Date.now()).slice(-6)}`;
 
     // 为新增数据附加创建时间和更新时间
     const docData = JSON.stringify({

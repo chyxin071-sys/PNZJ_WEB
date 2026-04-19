@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { tcbQuery, tcbAdd } from '@/lib/wechat-tcb';
+import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
 
 export async function GET(request: Request) {
   try {
@@ -7,26 +7,31 @@ export async function GET(request: Request) {
     const userName = searchParams.get('userName');
     const role = searchParams.get('role');
     const onlyUnread = searchParams.get('unread') === '1';
+    const page = parseInt(searchParams.get('page') || '0');
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '100')));
+    const skip = page > 0 ? (page - 1) * pageSize : 0;
+    const limit = page > 0 ? pageSize : 100;
 
-    let query: string;
-
+    let baseWhere: string;
     if (!userName) {
-      // 未传用户名，返回全部（管理后台用）
-      query = `db.collection("notifications").orderBy("createTime", "desc").limit(100).get()`;
+      baseWhere = '';
     } else if (role === 'admin') {
-      // admin 看自己的 + all + admin 标签的
-      query = `db.collection("notifications").where({ targetUser: db.command.in(["${userName}", "all", "admin"]) }).orderBy("createTime", "desc").limit(100).get()`;
+      baseWhere = `.where({ targetUser: db.command.in(["${userName}", "all", "admin"]) })`;
     } else {
-      // 普通用户看自己的 + all
-      query = `db.collection("notifications").where({ targetUser: db.command.in(["${userName}", "all"]) }).orderBy("createTime", "desc").limit(100).get()`;
+      baseWhere = `.where({ targetUser: db.command.in(["${userName}", "all"]) })`;
     }
 
+    const query = `db.collection("notifications")${baseWhere}.orderBy("createTime", "desc").skip(${skip}).limit(${limit}).get()`;
     let data = await tcbQuery(query);
 
     if (onlyUnread) {
       data = data.filter((n: any) => !n.isRead);
     }
 
+    if (page > 0) {
+      const total = await tcbCount(`db.collection("notifications")${baseWhere}.count()`);
+      return NextResponse.json({ data, total, page, pageSize });
+    }
     return NextResponse.json(data);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

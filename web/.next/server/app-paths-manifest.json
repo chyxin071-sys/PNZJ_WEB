@@ -1,8 +1,10 @@
 {
-  "/employees/page": "app/employees/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/api/todos/route": "app/api/todos/route.js",
   "/page": "app/page.js",
+  "/api/projects/route": "app/api/projects/route.js",
+  "/api/settings/route": "app/api/settings/route.js",
   "/api/notifications/route": "app/api/notifications/route.js",
-  "/analytics/page": "app/analytics/page.js",
-  "/todos/page": "app/todos/page.js",
-  "/notifications/page": "app/notifications/page.js"
+  "/login/page": "app/login/page.js",
+  "/api/leads/route": "app/api/leads/route.js"
 }

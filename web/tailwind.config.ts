@@ -60,6 +60,15 @@ module.exports = {
       fontFamily: {
         sans: ['Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'sans-serif'],
       },
+      keyframes: {
+        'float-up-fade': {
+          '0%': { transform: 'translateY(0)', opacity: '1' },
+          '100%': { transform: 'translateY(-20px)', opacity: '0' },
+        }
+      },
+      animation: {
+        'float-up-fade': 'float-up-fade 2s ease-out forwards',
+      }
     },
   },
   plugins: [],

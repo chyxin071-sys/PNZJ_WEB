@@ -224,7 +224,11 @@ export default function TodosPage() {
     return todos.filter(t => {
       // 1. 视图过滤（与我相关 vs 团队全部）
       if (filterView === "与我相关" && currentUser) {
-        if (t.assignedTo?.name !== currentUser.name && t.createdBy?.name !== currentUser.name) return false;
+        const myName = currentUser.name;
+        const inAssignees = t.assignees?.some((a: any) => a.name === myName);
+        const isAssignedTo = t.assignedTo?.name === myName;
+        const isCreator = t.createdBy?.name === myName || t.creatorName === myName;
+        if (!inAssignees && !isAssignedTo && !isCreator) return false;
       }
       // 2. 状态过滤
       if (filterStatus !== "all" && t.status !== filterStatus) return false;
@@ -234,7 +238,10 @@ export default function TodosPage() {
       if (dateFilter === "month" && !isThisMonth(t.dueDate)) return false;
       // 4. 人员过滤 (仅在"团队全部"且选择了具体人时生效)
       if (filterView === "团队全部" && personFilter !== "all") {
-        if (t.assignedTo?.id !== personFilter && t.createdBy?.id !== personFilter) return false;
+        const inAssignees = t.assignees?.some((a: any) => a.id === personFilter);
+        const isAssignedTo = t.assignedTo?.id === personFilter;
+        const isCreator = t.createdBy?.id === personFilter;
+        if (!inAssignees && !isAssignedTo && !isCreator) return false;
       }
       // 5. 搜索过滤
       if (searchQuery) {
@@ -259,6 +266,15 @@ export default function TodosPage() {
 
   const pendingCount = filteredTodos.filter(t => t.status === 'pending').length;
   const completedCount = filteredTodos.filter(t => t.status === 'completed').length;
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  const totalPages = Math.ceil(filteredTodos.length / itemsPerPage);
+  const paginatedTodos = filteredTodos.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterView, filterStatus, dateFilter, personFilter, searchQuery, dateSort]);
 
   // -- 弹窗表单操作 --
   const openCreateModal = () => {
@@ -535,7 +551,7 @@ export default function TodosPage() {
 
         {/* 待办列表主体 */}
         <div className="space-y-4">
-          {filteredTodos.length > 0 ? filteredTodos.map((todo) => (
+          {filteredTodos.length > 0 ? paginatedTodos.map((todo) => (
             <div 
               key={todo.id} 
               className={`bg-white rounded-xl border p-5 transition-all duration-300 flex flex-col sm:flex-row sm:items-center gap-5 group relative overflow-hidden
@@ -668,6 +684,29 @@ export default function TodosPage() {
             </div>
           )}
         </div>
+
+        {/* 分页控件 */}
+        {filteredTodos.length > 0 && (
+          <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-4 flex flex-col sm:flex-row items-center justify-between text-sm text-primary-600 gap-4">
+            <p>显示 {(currentPage - 1) * itemsPerPage + 1} 至 {Math.min(currentPage * itemsPerPage, filteredTodos.length)} 条，共 {filteredTodos.length} 条</p>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 min-h-[44px] flex items-center justify-center border border-primary-100 rounded-lg hover:bg-primary-50 disabled:opacity-50 font-medium transition-colors"
+              >
+                上一页
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-4 py-2 min-h-[44px] flex items-center justify-center border border-primary-100 rounded-lg hover:bg-primary-50 disabled:opacity-50 font-medium transition-colors"
+              >
+                下一页
+              </button>
+            </div>
+          </div>
+        )}
 
       </div>
 

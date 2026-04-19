@@ -343,6 +343,11 @@ export default function LeadDetailPage() {
           })
         });
 
+        // 标记已签单，用于返回列表时播放动画
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('justSignedLead', 'true');
+        }
+
         // 显示庆祝弹窗
         setShowSuccessModal(true);
         fetchLeadDetail();
@@ -1068,7 +1073,7 @@ export default function LeadDetailPage() {
                   <button
                     onClick={() => projectId
                       ? router.push(`/projects/${projectId}`)
-                      : router.push(`/projects?leadId=${lead.id}&customer=${encodeURIComponent(lead.name)}&phone=${encodeURIComponent(lead.phone || '')}&address=${encodeURIComponent(lead.address || '')}&area=${lead.area || ''}&sales=${encodeURIComponent(lead.sales || '')}&designer=${encodeURIComponent(lead.designer || '')}`)
+                      : router.push(`/projects/new?leadId=${lead.id}`)
                     }
                     className="w-full flex items-center justify-between p-3 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 transition-colors group"
                   >
@@ -1366,7 +1371,7 @@ export default function LeadDetailPage() {
                     </div>
                     {openDropdown === 'edit-source' && (
                       <div className="absolute z-30 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1">
-                        {["自然进店", "抖音", "老介新", "自有关系"].map(option => (
+                        {["自然进店", "老介新", "抖音", "小红书", "大众点评", "自有关系", "其他"].map(option => (
                           <div 
                             key={option}
                             onClick={() => { setEditForm({...editForm, source: option}); setOpenDropdown(null); }}

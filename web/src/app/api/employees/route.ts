@@ -1,18 +1,28 @@
 import { NextResponse } from 'next/server';
-import { tcbQuery, tcbAdd } from '@/lib/wechat-tcb';
+import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
 
 // 获取全部员工列表
 export async function GET(request: Request) {
   try {
-    const query = `db.collection("users").orderBy("created_at", "desc").limit(100).get()`;
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '0');
+    const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '100')));
+    const skip = page > 0 ? (page - 1) * pageSize : 0;
+    const limit = page > 0 ? pageSize : 200;
+
+    const query = `db.collection("users").orderBy("created_at", "desc").skip(${skip}).limit(${limit}).get()`;
     const data = await tcbQuery(query);
-    
+
     // 不返回密码字段
     const users = data.map((user: any) => {
       const { passwordHash, passwordPlain, ...safeUser } = user;
       return safeUser;
     });
 
+    if (page > 0) {
+      const total = await tcbCount(`db.collection("users").count()`);
+      return NextResponse.json({ data: users, total, page, pageSize });
+    }
     return NextResponse.json(users, { status: 200 });
   } catch (error: any) {
     console.error('Fetch Employees Error:', error);

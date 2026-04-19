@@ -26,11 +26,17 @@ export default function QuotesPage() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [filterPersonnel, setFilterPersonnel] = useState("全部");
   const [isPersonnelDropdownOpen, setIsPersonnelDropdownOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   useEffect(() => {
     fetchQuotes();
     fetchLeads();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeStatus, searchQuery, filterMinAmount, filterMaxAmount, filterYear, filterMonth, filterDay, filterPersonnel]);
 
   const fetchQuotes = async () => {
     try {
@@ -88,14 +94,36 @@ export default function QuotesPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "初步": return "bg-zinc-50 text-zinc-600 border-zinc-200";
-      case "待确认": return "bg-amber-50 text-amber-600 border-amber-100";
-      case "已确认": return "bg-emerald-50 text-emerald-600 border-emerald-100";
-      case "已作废": return "bg-rose-50 text-rose-600 border-rose-100";
+      case "确认版": return "bg-amber-50 text-amber-600 border-amber-100";
+      case "最终版": return "bg-emerald-50 text-emerald-600 border-emerald-100";
       default: return "bg-zinc-50 text-zinc-700 border-zinc-200";
     }
   };
 
-  const statuses = ["全部", "初步", "待确认", "已确认", "已作废"];
+  const statuses = ["全部", "初步", "确认版", "最终版"];
+
+  const filteredQuotes = quotesData
+    .filter(q => activeStatus === "全部" || q.status === activeStatus)
+    .filter(q =>
+      (q.customer || '').includes(searchQuery) ||
+      (q.phone || '').includes(searchQuery) ||
+      (q.address && q.address.includes(searchQuery)) ||
+      (q.id || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .filter(q => {
+      const min = parseFloat(filterMinAmount);
+      const max = parseFloat(filterMaxAmount);
+      if (!isNaN(min) && q.final < min) return false;
+      if (!isNaN(max) && q.final > max) return false;
+      if (filterYear !== "全部" && !q.date.startsWith(filterYear)) return false;
+      if (filterMonth !== "全部" && !q.date.startsWith(`${filterYear !== "全部" ? filterYear : new Date().getFullYear()}-${filterMonth.padStart(2, '0')}`)) return false;
+      if (filterDay && !q.date.endsWith(`-${filterDay.padStart(2, '0')}`)) return false;
+      if (filterPersonnel !== '全部' && q.sales !== filterPersonnel) return false;
+      return true;
+    });
+
+  const totalPages = Math.ceil(filteredQuotes.length / itemsPerPage);
+  const paginatedQuotes = filteredQuotes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <MainLayout>
@@ -335,31 +363,7 @@ export default function QuotesPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-100 text-sm">
-                {quotesData
-                  .filter(q => activeStatus === "全部" || q.status === activeStatus)
-                  .filter(q => 
-                    (q.customer || '').includes(searchQuery) || 
-                    (q.phone || '').includes(searchQuery) || 
-                    (q.address && q.address.includes(searchQuery)) ||
-                    (q.id || '').toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-                  .filter(q => {
-                    // 高级筛选: 金额范围
-                    const min = parseFloat(filterMinAmount);
-                    const max = parseFloat(filterMaxAmount);
-                    if (!isNaN(min) && q.final < min) return false;
-                    if (!isNaN(max) && q.final > max) return false;
-                    
-                    // 高级筛选: 时间范围
-                    if (filterYear !== "全部" && !q.date.startsWith(filterYear)) return false;
-                    if (filterMonth !== "全部" && !q.date.startsWith(`${filterYear !== "全部" ? filterYear : new Date().getFullYear()}-${filterMonth.padStart(2, '0')}`)) return false;
-                    if (filterDay && !q.date.endsWith(`-${filterDay.padStart(2, '0')}`)) return false;
-
-                    // 高级筛选: 人员
-                    if (filterPersonnel !== '全部' && q.sales !== filterPersonnel) return false;
-                    
-                    return true;
-                  })
+                {paginatedQuotes
                   .map((quote) => (
                   <tr 
                     key={quote.id} 
@@ -420,6 +424,30 @@ export default function QuotesPage() {
             </table>
           </div>
         </div>
+
+        {/* 分页控件 */}
+        {filteredQuotes.length > 0 && (
+          <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-4 flex flex-col sm:flex-row items-center justify-between text-sm text-primary-600 gap-4">
+            <p>显示 {(currentPage - 1) * itemsPerPage + 1} 至 {Math.min(currentPage * itemsPerPage, filteredQuotes.length)} 条，共 {filteredQuotes.length} 条</p>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 min-h-[44px] flex items-center justify-center border border-primary-100 rounded-lg hover:bg-primary-50 disabled:opacity-50 font-medium transition-colors"
+              >
+                上一页
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-4 py-2 min-h-[44px] flex items-center justify-center border border-primary-100 rounded-lg hover:bg-primary-50 disabled:opacity-50 font-medium transition-colors"
+              >
+                下一页
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 客户选择弹窗 */}
         {isSelectLeadModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

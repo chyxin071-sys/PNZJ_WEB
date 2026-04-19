@@ -24,6 +24,8 @@ function ProjectsContent() {
   const [isManagerDropdownOpen, setIsManagerDropdownOpen] = useState(false);
   const [filterHealth, setFilterHealth] = useState("全部");
   const [isHealthDropdownOpen, setIsHealthDropdownOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
 
   // 移除 body scroll lock，允许筛选框滚动
 
@@ -32,6 +34,10 @@ function ProjectsContent() {
   useEffect(() => {
     fetchProjects();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeStatus, searchQuery, filterYear, filterMonth, filterDay, filterManager, filterHealth]);
 
   const fetchProjects = async () => {
     try {
@@ -128,6 +134,9 @@ function ProjectsContent() {
 
     return true;
   });
+
+  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
+  const paginatedProjects = filteredProjects.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <MainLayout>
@@ -418,7 +427,7 @@ function ProjectsContent() {
 
         {/* 项目卡片列表 */}
         <div className="space-y-4">
-          {filteredProjects.map((project) => (
+          {paginatedProjects.map((project) => (
             <div 
               key={project.id} 
               onClick={() => router.push(`/projects/${project.id}`)}
@@ -540,6 +549,29 @@ function ProjectsContent() {
             </div>
           )}
         </div>
+
+        {/* 分页控件 */}
+        {filteredProjects.length > 0 && (
+          <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-4 flex flex-col sm:flex-row items-center justify-between text-sm text-primary-600 gap-4">
+            <p>显示 {(currentPage - 1) * itemsPerPage + 1} 至 {Math.min(currentPage * itemsPerPage, filteredProjects.length)} 条，共 {filteredProjects.length} 条</p>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 min-h-[44px] flex items-center justify-center border border-primary-100 rounded-lg hover:bg-primary-50 disabled:opacity-50 font-medium transition-colors"
+              >
+                上一页
+              </button>
+              <button
+                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="px-4 py-2 min-h-[44px] flex items-center justify-center border border-primary-100 rounded-lg hover:bg-primary-50 disabled:opacity-50 font-medium transition-colors"
+              >
+                下一页
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </MainLayout>
   );

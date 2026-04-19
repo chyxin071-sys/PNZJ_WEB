@@ -160,9 +160,8 @@ export default function QuoteDetailPage() {
               <h1 className="text-3xl font-bold tracking-tight text-primary-900">报价单详情</h1>
               <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border
                 ${quote.status === '初步' ? 'bg-zinc-50 text-zinc-600 border-zinc-200' : ''}
-                ${quote.status === '待确认' ? 'bg-amber-50 text-amber-600 border-amber-200' : ''}
-                ${quote.status === '已确认' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : ''}
-                ${quote.status === '已作废' ? 'bg-rose-50 text-rose-600 border-rose-200' : ''}
+                ${quote.status === '确认版' ? 'bg-amber-50 text-amber-600 border-amber-200' : ''}
+                ${quote.status === '最终版' ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : ''}
               `}>
                 {quote.status}
               </span>
@@ -383,9 +382,8 @@ export default function QuoteDetailPage() {
                   onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
                   className={`flex items-center justify-between px-3 py-2 border rounded-lg text-sm font-bold cursor-pointer transition-colors w-32 shadow-sm
                     ${quote.status === '初步' ? 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:bg-zinc-100' : ''}
-                    ${quote.status === '待确认' ? 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100' : ''}
-                    ${quote.status === '已确认' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : ''}
-                    ${quote.status === '已作废' ? 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100' : ''}
+                    ${quote.status === '确认版' ? 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100' : ''}
+                    ${quote.status === '最终版' ? 'bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100' : ''}
                   `}
                 >
                   <span>{quote.status}</span>
@@ -395,7 +393,7 @@ export default function QuoteDetailPage() {
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setIsStatusDropdownOpen(false)} />
                     <div className="absolute bottom-full mb-1 right-0 w-32 bg-white border border-primary-100 rounded-lg shadow-lg overflow-hidden z-20 animate-in fade-in slide-in-from-bottom-2 duration-150">
-                      {["初步", "待确认", "已确认", "已作废"].map(option => (
+                      {["初步", "确认版", "最终版"].map(option => (
                         <button 
                           key={option}
                           onClick={() => {

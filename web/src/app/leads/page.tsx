@@ -41,6 +41,7 @@ function LeadsContent() {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [showToast, setShowToast] = useState<string | false>(false);
   const [signModal, setSignModal] = useState({ isOpen: false, leadId: '', leadName: '', date: '', signer: '' });
+  const [showSignedAnim, setShowSignedAnim] = useState(false);
 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
@@ -54,6 +55,15 @@ function LeadsContent() {
     fetch('/api/employees').then(r => r.json()).then(data => {
       if (Array.isArray(data)) setUsers(data);
     }).catch(console.error);
+
+    // 检查是否有刚签单返回的标记，播放 +1 动画
+    if (typeof window !== 'undefined') {
+      if (sessionStorage.getItem('justSignedLead') === 'true') {
+        setShowSignedAnim(true);
+        sessionStorage.removeItem('justSignedLead');
+        setTimeout(() => setShowSignedAnim(false), 3000);
+      }
+    }
   }, []);
 
   const fetchLeads = async () => {
@@ -397,14 +407,24 @@ function LeadsContent() {
               <p className="text-2xl font-bold text-primary-900">{leadsData.filter(l => l.status !== '已签单' && l.status !== '已流失').length}</p>
             </div>
           </div>
-          <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+          <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex items-center gap-4 relative overflow-hidden">
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 relative z-10">
               <Check className="w-6 h-6" />
             </div>
-            <div>
+            <div className="relative z-10">
               <p className="text-sm font-medium text-primary-500">已签单</p>
-              <p className="text-2xl font-bold text-primary-900">{leadsData.filter(l => l.status === '已签单').length}</p>
+              <p className="text-2xl font-bold text-primary-900 flex items-center relative">
+                {leadsData.filter(l => l.status === '已签单').length}
+                {showSignedAnim && (
+                  <span className="absolute left-full ml-2 text-rose-500 text-xl font-black animate-float-up-fade">
+                    +1
+                  </span>
+                )}
+              </p>
             </div>
+            {showSignedAnim && (
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-50 to-transparent animate-[pulse_2s_ease-in-out] z-0"></div>
+            )}
           </div>
         </div>
       </div>
