@@ -699,9 +699,14 @@ export default function LeadDetailPage() {
                               取消
                             </button>
                             <button 
-                              onClick={() => {
-                                setDeleteConfirmId(null);
-                                router.push('/leads');
+                              onClick={async () => {
+                                try {
+                                  await fetch(`/api/leads/${lead.id}`, { method: 'DELETE' });
+                                  setDeleteConfirmId(null);
+                                  router.push('/leads');
+                                } catch (e) {
+                                  console.error("删除失败", e);
+                                }
                               }} 
                               className="px-3 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-medium hover:bg-rose-600 transition-colors shadow-sm shadow-rose-200"
                             >
