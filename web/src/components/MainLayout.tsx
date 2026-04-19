@@ -155,7 +155,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       ]
     },
     {
-      group: "客户与销售",
+      group: "客户",
       items: [
         { name: "客户管理", href: "/leads", icon: Users, roles: ['admin', 'sales', 'designer', 'manager'] },
         { name: "报价管理", href: "/quotes", icon: FileSignature, roles: ['admin', 'sales', 'designer', 'manager'] },
