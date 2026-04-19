@@ -292,9 +292,17 @@ Page({
         }
         return l;
       }).sort((a, b) => {
-        const timeA = a && a.createdAt ? String(a.createdAt) : '';
-        const timeB = b && b.createdAt ? String(b.createdAt) : '';
-        return timeB.localeCompare(timeA);
+        const getTime = (dateVal) => {
+          if (!dateVal) return 0;
+          if (dateVal instanceof Date) return dateVal.getTime();
+          if (typeof dateVal === 'string') {
+            const cleanStr = dateVal.replace(/-/g, '/').replace(/T/g, ' ').replace(/\.[\d]{3}Z/, '');
+            return new Date(cleanStr).getTime() || 0;
+          }
+          if (dateVal.$date) return dateVal.$date;
+          return 0;
+        };
+        return getTime(b.createdAt) - getTime(a.createdAt);
       });
       
       this.setData({ allLeads: list }, () => {

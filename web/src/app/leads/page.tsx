@@ -73,12 +73,15 @@ function LeadsContent() {
         const data = await res.json();
         const formatted = data.map((item: any) => {
           let dateStr = new Date().toISOString().split('T')[0];
+          let timestamp = Date.now();
           if (item.createdAt) {
             try {
               if (item.createdAt.$date) {
                 dateStr = new Date(item.createdAt.$date).toISOString().split('T')[0];
+                timestamp = item.createdAt.$date;
               } else {
                 dateStr = new Date(item.createdAt).toISOString().split('T')[0];
+                timestamp = new Date(item.createdAt).getTime();
               }
             } catch(err) {
               console.error('Date parse error', err);
@@ -87,9 +90,14 @@ function LeadsContent() {
           return {
             ...item,
             id: item._id,
-            createdAt: dateStr
+            createdAt: dateStr,
+            _timestamp: timestamp
           };
         });
+        
+        // 强制前端按时间倒序排列（最新创建在最上面）
+        formatted.sort((a: any, b: any) => b._timestamp - a._timestamp);
+        
         setLeadsData(formatted);
       }
     } catch (e) {
