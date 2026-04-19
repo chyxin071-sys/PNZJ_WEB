@@ -184,14 +184,22 @@ Page({
       try {
         const lastRes = await db.collection('leads')
           .where({ customerNo: db.RegExp({ regexp: '^P' + year, options: 'i' }) })
-          .orderBy('customerNo', 'desc')
-          .limit(1)
           .get();
           
-        if (lastRes.data && lastRes.data.length > 0 && lastRes.data[0].customerNo) {
-          const match = lastRes.data[0].customerNo.match(/P\d{4}(\d{3,})/);
-          if (match && match[1]) {
-            sequence = parseInt(match[1], 10) + 1;
+        if (lastRes.data && lastRes.data.length > 0) {
+          const validSequences = lastRes.data
+            .map(l => {
+              if (!l.customerNo) return 0;
+              const match = l.customerNo.match(/P\d{4}(\d{3,})/);
+              if (match && match[1] && match[1].length < 6) {
+                return parseInt(match[1], 10);
+              }
+              return 0;
+            })
+            .filter(seq => seq > 0);
+            
+          if (validSequences.length > 0) {
+            sequence = Math.max(...validSequences) + 1;
           }
         }
       } catch (err) {
