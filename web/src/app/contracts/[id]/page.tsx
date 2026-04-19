@@ -130,7 +130,7 @@ export default function ContractDetailPage() {
                 </div>
               )}
             </div>
-            <p className="text-primary-600 mt-2 font-mono text-sm">关联客户：{customer.name} ({customer._id || customer.id})</p>
+            <p className="text-primary-600 mt-2 font-mono text-sm">关联客户：{customer.name} ({customer.customerNo || customer._id || customer.id})</p>
           </div>
 
           <div className="flex gap-3">

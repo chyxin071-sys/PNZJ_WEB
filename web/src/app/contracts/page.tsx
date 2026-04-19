@@ -332,7 +332,7 @@ export default function ContractsPage() {
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-primary-900">{lead.name}</span>
-                            <span className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded font-mono">{lead.id}</span>
+                            <span className="text-xs px-2 py-0.5 bg-primary-100 text-primary-700 rounded font-mono">{lead.customerNo || lead.id}</span>
                           </div>
                           <p className="text-xs text-primary-600 font-mono mt-1">{lead.phone}</p>
                         </div>
