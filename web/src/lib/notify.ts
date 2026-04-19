@@ -19,7 +19,7 @@ export async function sendNotification(
       title,
       content,
       link: link || '',
-      type: 'system',
+      type: 'lead',
       isRead: false,
       isStarred: false,
       createTime: { $date: Date.now() }

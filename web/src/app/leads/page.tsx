@@ -250,6 +250,12 @@ function LeadsContent() {
         setSignModal({ ...signModal, isOpen: false });
         setShowToast('签单保存成功');
         setTimeout(() => setShowToast(false), 2500);
+        
+        // 触发本地开单动效
+        if (typeof window !== 'undefined') {
+          setShowSignedAnim(true);
+          setTimeout(() => setShowSignedAnim(false), 3000);
+        }
 
         // 写入系统跟进记录（对齐小程序）
         fetch('/api/followUps', {
