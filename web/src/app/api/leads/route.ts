@@ -25,9 +25,18 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // 生成客户编号：P + YYYY + 时间戳后6位，避免并发冲突
-    const year = new Date().getFullYear();
-    const customerNo = `P${year}${String(Date.now()).slice(-6)}`;
+    // 生成客户编号：统一对齐小程序端，使用 P + YYYY + 3位递增流水号
+    const year = new Date().getFullYear().toString();
+    const latestLead = await tcbQuery(`db.collection("leads").where({ customerNo: db.RegExp({ regexp: '^P${year}', options: 'i' }) }).orderBy("customerNo", "desc").limit(1).get()`);
+    
+    let sequence = 1;
+    if (latestLead && latestLead.length > 0 && latestLead[0].customerNo) {
+      const match = latestLead[0].customerNo.match(/P\d{4}(\d{3,})/i);
+      if (match && match[1]) {
+        sequence = parseInt(match[1], 10) + 1;
+      }
+    }
+    const customerNo = \`P\${year}\${sequence.toString().padStart(3, '0')}\`;
 
     // 为新增数据附加创建时间和更新时间
     const docData = JSON.stringify({
