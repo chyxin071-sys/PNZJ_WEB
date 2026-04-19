@@ -93,9 +93,11 @@ export default function Dashboard() {
 
   const [targets, setTargets] = useState<Record<string, Record<string, number>>>({});
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // 从数据库加载营收目标
   useEffect(() => {
+    setMounted(true);
     fetch('/api/settings?key=revenueTargets')
       .then(r => r.json())
       .then(data => { if (data) setTargets(data); })
@@ -151,6 +153,10 @@ export default function Dashboard() {
       body: JSON.stringify({ key: 'revenueTargets', value: newTargets })
     }).catch(console.error);
   };
+
+  if (!mounted) {
+    return <MainLayout><div className="p-8 h-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-900"></div></div></MainLayout>;
+  }
 
   return (
     <MainLayout>
