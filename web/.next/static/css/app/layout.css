@@ -1202,6 +1202,15 @@ video {
 .transform {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
+@keyframes pulse {
+
+  50% {
+    opacity: .5;
+  }
+}
+.animate-\[pulse_2s_ease-in-out\] {
+  animation: pulse 2s ease-in-out;
+}
 @keyframes float-up-fade {
 
   0% {
@@ -1214,17 +1223,8 @@ video {
     opacity: 0;
   }
 }
-.animate-\[float-up-fade_2s_ease-out_forwards\] {
+.animate-float-up-fade {
   animation: float-up-fade 2s ease-out forwards;
-}
-@keyframes pulse {
-
-  50% {
-    opacity: .5;
-  }
-}
-.animate-\[pulse_2s_ease-in-out\] {
-  animation: pulse 2s ease-in-out;
 }
 @keyframes pulse {
 
@@ -1243,21 +1243,6 @@ video {
 }
 .animate-spin {
   animation: spin 1s linear infinite;
-}
-@keyframes float-up-fade {
-
-  0% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-
-  100% {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-}
-.animate-float-up-fade {
-  animation: float-up-fade 2s ease-out forwards;
 }
 .cursor-default {
   cursor: default;

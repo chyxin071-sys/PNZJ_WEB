@@ -602,7 +602,7 @@ Page({
     
     // 全员通知
     const db = wx.cloud.database();
-    db.collection('employees').get().then(res => {
+    db.collection('employees').limit(100).get().then(res => {
       const users = res.data;
       users.forEach(u => {
         db.collection('notifications').add({
@@ -614,6 +614,8 @@ Page({
           }
         });
       });
+    }).catch(err => {
+      console.error('发送签单通知失败', err);
     });
 
     wx.showToast({

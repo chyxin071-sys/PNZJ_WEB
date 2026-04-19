@@ -49,9 +49,13 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       sendNotifications(['admin'], '线索已分配', `线索【${leadName}】已分配给设计师：${body.designer}`, link);
     }
     if (body.status === '已签单' && old.status !== '已签单') {
-      const employees = await tcbQuery(`db.collection("employees").get()`);
-      const allNames = employees ? employees.map((e: any) => e.name) : ['admin'];
-      sendNotifications(allNames, '🎉 恭喜开单', `好消息！客户【${leadName}】已成功签单，大家再接再厉！`, link);
+      try {
+        const employees = await tcbQuery(`db.collection("employees").limit(100).get()`);
+        const allNames = employees ? employees.map((e: any) => e.name) : ['admin'];
+        await sendNotifications(allNames, '🎉 恭喜开单', `好消息！客户【${leadName}】已成功签单，大家再接再厉！`, link);
+      } catch (err) {
+        console.error('发送签单通知失败', err);
+      }
     }
 
     return NextResponse.json(res);

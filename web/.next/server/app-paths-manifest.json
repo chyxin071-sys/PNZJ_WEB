@@ -1,14 +1,8 @@
 {
-  "/login/page": "app/login/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/page": "app/page.js",
-  "/api/auth/login/route": "app/api/auth/login/route.js",
-  "/api/leads/route": "app/api/leads/route.js",
-  "/api/todos/route": "app/api/todos/route.js",
   "/api/notifications/route": "app/api/notifications/route.js",
-  "/api/projects/route": "app/api/projects/route.js",
-  "/api/settings/route": "app/api/settings/route.js",
-  "/api/leads/[id]/route": "app/api/leads/[id]/route.js",
-  "/api/followUps/route": "app/api/followUps/route.js",
-  "/api/employees/route": "app/api/employees/route.js",
+  "/login/page": "app/login/page.js",
+  "/todos/page": "app/todos/page.js",
   "/leads/page": "app/leads/page.js"
 }

@@ -402,7 +402,7 @@ Page({
       // 签单通知 (全员)
       const db2 = wx.cloud.database();
       const lead = this.data.lead;
-      db2.collection('employees').get().then(res => {
+      db2.collection('employees').limit(100).get().then(res => {
         const users = res.data;
         users.forEach(u => {
           db2.collection('notifications').add({
@@ -414,6 +414,8 @@ Page({
             }
           });
         });
+      }).catch(err => {
+        console.error('发送签单通知失败', err);
       });
 
       wx.showToast({

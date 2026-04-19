@@ -251,7 +251,7 @@ Page({
         
         if (this.data.isSigningNow) {
           // 签单全员通知
-          db.collection('employees').get().then(resEmp => {
+          db.collection('employees').limit(100).get().then(resEmp => {
             resEmp.data.forEach(u => {
               db.collection('notifications').add({
                 data: {
@@ -262,6 +262,8 @@ Page({
                 }
               });
             });
+          }).catch(err => {
+            console.error('发送签单通知失败', err);
           });
           // 如果是签单，显示开单喜报弹窗（不使用 setTimeout，等待用户手动点击返回）
           this.setData({ 
