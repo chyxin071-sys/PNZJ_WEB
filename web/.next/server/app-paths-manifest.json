@@ -1,3 +1,9 @@
 {
-  "/page": "app/page.js"
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/api/todos/route": "app/api/todos/route.js",
+  "/api/leads/route": "app/api/leads/route.js",
+  "/api/projects/route": "app/api/projects/route.js",
+  "/login/page": "app/login/page.js",
+  "/api/settings/route": "app/api/settings/route.js"
 }

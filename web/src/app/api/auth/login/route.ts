@@ -20,14 +20,14 @@ export async function POST(request: Request) {
     let bodyData: any = { env: ENV, query: `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()` };
 
     // 获取 token
-    const tokenRes = await fetch(`http://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
+    const tokenRes = await fetch(`https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
     const tokenData = await tokenRes.json();
     const accessToken = tokenData.access_token;
     
     if (!accessToken) {
-      return NextResponse.json({ error: '无法连接云数据库(Token获取失败)' }, { status: 500 });
+      return NextResponse.json({ error: `Token获取失败: ${JSON.stringify(tokenData)}` }, { status: 500 });
     }
-    url = `http://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
+    url = `https://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
 
     // 发起查询
     const dbRes = await fetch(url, {
@@ -39,7 +39,11 @@ export async function POST(request: Request) {
     const dbData = await dbRes.json();
     
     // 如果 dbData.data 不存在或者为空，说明查询失败或找不到数据
-    if (!dbData || dbData.errcode !== 0 || !dbData.data || dbData.data.length === 0) {
+    if (!dbData || dbData.errcode !== 0) {
+      return NextResponse.json({ error: `数据库查询失败: ${JSON.stringify(dbData)}` }, { status: 500 });
+    }
+    
+    if (!dbData.data || dbData.data.length === 0) {
       return NextResponse.json({ error: '账号不存在或密码错误' }, { status: 401 });
     }
 
