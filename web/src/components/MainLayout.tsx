@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { LayoutDashboard, Users, FileText, Hammer, Bell, Menu, Building2, PackageOpen, FileSignature, AlertCircle, LogOut, Settings, User, KeyRound, Loader2, CheckSquare, BarChart2, Warehouse, ScrollText } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Hammer, Bell, Menu, Building2, PackageOpen, FileSignature, AlertCircle, LogOut, Settings, User, KeyRound, Loader2, CheckSquare, BarChart2, Warehouse, ScrollText, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -16,6 +16,9 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ old: "", new: "", confirm: "" });
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+  const [showOldPwd, setShowOldPwd] = useState(false);
+  const [showNewPwd, setShowNewPwd] = useState(false);
+  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
   const [recentNotifs, setRecentNotifs] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -489,38 +492,65 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-primary-900">原密码 <span className="text-rose-500">*</span></label>
-                <input 
-                  type="password" 
-                  value={passwordForm.old}
-                  onChange={(e) => setPasswordForm({...passwordForm, old: e.target.value})}
-                  placeholder="请输入当前登录密码"
-                  className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
-                  required
-                />
+                <div className="relative">
+                  <input 
+                    type={showOldPwd ? "text" : "password"} 
+                    value={passwordForm.old}
+                    onChange={(e) => setPasswordForm({...passwordForm, old: e.target.value})}
+                    placeholder="请输入当前登录密码"
+                    className="w-full px-3 py-2 pr-10 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
+                    required
+                  />
+                  <button 
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 focus:outline-none"
+                    onClick={() => setShowOldPwd(!showOldPwd)}
+                  >
+                    {showOldPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-primary-900">新密码 <span className="text-rose-500">*</span></label>
-                <input 
-                  type="password" 
-                  value={passwordForm.new}
-                  onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
-                  placeholder="请输入新密码"
-                  className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
-                  required
-                />
+                <div className="relative">
+                  <input 
+                    type={showNewPwd ? "text" : "password"} 
+                    value={passwordForm.new}
+                    onChange={(e) => setPasswordForm({...passwordForm, new: e.target.value})}
+                    placeholder="请输入新密码"
+                    className="w-full px-3 py-2 pr-10 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
+                    required
+                  />
+                  <button 
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 focus:outline-none"
+                    onClick={() => setShowNewPwd(!showNewPwd)}
+                  >
+                    {showNewPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-primary-900">确认新密码 <span className="text-rose-500">*</span></label>
-                <input 
-                  type="password" 
-                  value={passwordForm.confirm}
-                  onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
-                  placeholder="请再次输入新密码"
-                  className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
-                  required
-                />
+                <div className="relative">
+                  <input 
+                    type={showConfirmPwd ? "text" : "password"} 
+                    value={passwordForm.confirm}
+                    onChange={(e) => setPasswordForm({...passwordForm, confirm: e.target.value})}
+                    placeholder="请再次输入新密码"
+                    className="w-full px-3 py-2 pr-10 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm"
+                    required
+                  />
+                  <button 
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-primary-400 hover:text-primary-600 focus:outline-none"
+                    onClick={() => setShowConfirmPwd(!showConfirmPwd)}
+                  >
+                    {showConfirmPwd ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
               </div>
               
               <div className="pt-4 flex gap-3 border-t border-primary-100 mt-6">

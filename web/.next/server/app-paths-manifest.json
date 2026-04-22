@@ -1,11 +1,8 @@
 {
-  "/page": "app/page.js",
   "/api/notifications/route": "app/api/notifications/route.js",
-  "/leads/[id]/page": "app/leads/[id]/page.js",
-  "/leads/[id]/files/page": "app/leads/[id]/files/page.js",
   "/projects/page": "app/projects/page.js",
-  "/projects/[id]/page": "app/projects/[id]/page.js",
-  "/api/leads/[id]/route": "app/api/leads/[id]/route.js",
-  "/api/leads/[id]/files/route": "app/api/leads/[id]/files/route.js",
-  "/api/download/route": "app/api/download/route.js"
+  "/leads/[id]/page": "app/leads/[id]/page.js",
+  "/page": "app/page.js",
+  "/leads/[id]/files/page": "app/leads/[id]/files/page.js",
+  "/projects/[id]/page": "app/projects/[id]/page.js"
 }

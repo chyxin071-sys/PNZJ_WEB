@@ -104,8 +104,15 @@ Page({
     this.setData({
       showPasswordModal: true,
       oldPassword: "",
-      newPassword: ""
+      newPassword: "",
+      showOldPwd: false,
+      showNewPwd: false
     });
+  },
+
+  togglePwdVisibility(e) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({ [field]: !this.data[field] });
   },
 
   closePasswordModal() {
