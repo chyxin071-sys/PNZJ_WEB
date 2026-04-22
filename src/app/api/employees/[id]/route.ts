@@ -26,6 +26,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     const db = getDb();
+
+    // 先查出旧名字，如果修改了名字，需要去同步更新别的表
+    const oldUserRes = await db.collection('users').doc(id).get();
+    const oldUser = oldUserRes.data && oldUserRes.data.length > 0 ? oldUserRes.data[0] : null;
+    const oldName = oldUser ? oldUser.name : '';
     
     // 只允许更新特定的安全字段
     const updateData: any = {};
@@ -38,6 +43,57 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (body.password) updateData.password = body.password; // Admin reset password
 
     await db.collection('users').doc(id).update(updateData);
+
+    // 如果修改了名字，并且旧名字存在，去全库联动更新相关名字
+    const newName = updateData.name;
+    if (oldName && newName && oldName !== newName) {
+      const _ = db.command;
+      
+      // 更新 leads 表里的 sales, designer, manager
+      await db.collection('leads').where(_.or([
+        { 'sales._id': id },
+        { 'designer._id': id },
+        { 'manager._id': id }
+      ])).update({
+        'sales.name': _.eq('sales._id', id).then(newName),
+        'designer.name': _.eq('designer._id', id).then(newName),
+        'manager.name': _.eq('manager._id', id).then(newName)
+      }).catch(console.error);
+
+      // 为了兼容旧数据只存了名字字符串的情况，直接把字符串等于旧名字的替换掉
+      await db.collection('leads').where({ sales: oldName }).update({ sales: newName }).catch(() => {});
+      await db.collection('leads').where({ designer: oldName }).update({ designer: newName }).catch(() => {});
+      await db.collection('leads').where({ manager: oldName }).update({ manager: newName }).catch(() => {});
+
+      // 更新 projects 表
+      await db.collection('projects').where({ 'manager._id': id }).update({ 'manager.name': newName }).catch(() => {});
+      await db.collection('projects').where({ manager: oldName }).update({ manager: newName }).catch(() => {});
+      await db.collection('projects').where({ sales: oldName }).update({ sales: newName }).catch(() => {});
+      await db.collection('projects').where({ designer: oldName }).update({ designer: newName }).catch(() => {});
+
+      // 补充一条全系统的跟进记录
+      try {
+        const leadRes = await db.collection('leads').where(_.or([
+          { sales: newName },
+          { designer: newName },
+          { manager: newName }
+        ])).get();
+        if (leadRes.data && leadRes.data.length > 0) {
+          const followUps = leadRes.data.map((lead: any) => ({
+            leadId: lead._id,
+            content: `负责人员更名：【${oldName}】已更名为【${newName}】`,
+            method: '系统记录',
+            createdBy: '系统',
+            createdAt: db.serverDate(),
+            displayTime: new Date().toISOString().replace('T', ' ').substring(0, 16)
+          }));
+          // CloudBase 批量添加
+          for (const f of followUps) {
+            await db.collection('followUps').add(f);
+          }
+        }
+      } catch(e) { console.error('添加更名跟进记录失败', e); }
+    }
 
     return NextResponse.json({ message: '员工信息已更新' }, { status: 200 });
 

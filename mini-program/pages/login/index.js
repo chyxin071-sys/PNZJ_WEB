@@ -92,6 +92,12 @@ Page({
 
     wx.showToast({ title: '登录成功', icon: 'success' });
 
+    // 绑定当前微信的 OpenID 到此账号，用于接收订阅消息
+    wx.cloud.callFunction({
+      name: 'bindOpenId',
+      data: { userId: userInfo.id }
+    }).catch(console.error);
+
     setTimeout(() => {
       wx.switchTab({
         url: '/pages/index/index'

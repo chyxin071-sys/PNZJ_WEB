@@ -1,4 +1,5 @@
 import { maskName } from '../../utils/format.js';
+import { requestSubscribe, TEMPLATE_IDS } from '../../utils/subscribe';
 
 // 移除 mock 数据引入
 // const todosData = require('../../mock/todos.js');
@@ -720,18 +721,15 @@ Page({
     });
   },
 
-  saveNewTodo() {
+  async saveNewTodo() {
     const { title, priority, dueDate, assignees } = this.data.newTodo;
     if (!(title || '').trim() || assignees.length === 0) {
       return wx.showToast({ title: '请填写任务标题并选择执行人', icon: 'none' });
     }
 
-    wx.showLoading({ title: '保存中' });
-    const db = wx.cloud.database();
     const userInfo = wx.getStorageSync('userInfo');
-    
-    const now = new Date();
-    
+    const operatorName = userInfo.name || '未知';
+
     // 构造选中的执行人数据结构 [{id, name, avatar}]
     const selectedAssigneeData = this.data.filterEmployees
       .filter(e => assignees.includes(e.id))
@@ -740,6 +738,17 @@ Page({
         name: e.name,
         avatar: ''
       }));
+
+    // 如果派发给别人，则静默请求订阅消息授权
+    const isAssigningOthers = selectedAssigneeData.some(a => a.name !== operatorName);
+    if (isAssigningOthers) {
+      await requestSubscribe();
+    }
+
+    wx.showLoading({ title: '保存中' });
+    const db = wx.cloud.database();
+    
+    const now = new Date();
 
     // 如果有选择关联客户
     let relatedTo = null;
@@ -782,6 +791,22 @@ Page({
               link: `/pages/todoForm/index?id=${newTodoId}`
             }
           });
+
+          // 触发微信订阅消息（静默请求）
+          wx.cloud.callFunction({
+            name: 'sendSubscribeMessage',
+            data: {
+              receiverUserId: assignee.id,
+              templateId: TEMPLATE_IDS.TODO_REMINDER,
+              page: `/pages/todoForm/index?id=${newTodoId}`,
+              data: {
+                thing1: { value: title.trim().substring(0, 20) },
+                time2: { value: dueDate || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}` },
+                thing3: { value: operatorName.substring(0, 20) },
+                thing4: { value: assignee.name.substring(0, 20) }
+              }
+            }
+          }).catch(console.error);
         }
       });
       

@@ -1,5 +1,5 @@
-
 import { maskName } from '../../utils/format.js';
+import { requestSubscribe, TEMPLATE_IDS } from '../../utils/subscribe';
 
 Page({
   data: {
@@ -356,7 +356,7 @@ Page({
     this.setData({ showAssigneeModal: false });
   },
 
-  saveTodo() {
+  async saveTodo() {
     if (this.data.mode === 'view') return;
     
     const d = this.data.formData;
@@ -364,6 +364,15 @@ Page({
     if (d.assignees.length === 0) return wx.showToast({ title: '请至少选择一位执行人', icon: 'none' });
     if (d.relatedType !== 'none' && !d.relatedId) {
       return wx.showToast({ title: '请选择关联的具体对象', icon: 'none' });
+    }
+
+    const userInfo = wx.getStorageSync('userInfo');
+    const operatorName = userInfo.name || '未知人员';
+
+    const isAssigningOthers = d.assignees.some(a => a.name !== operatorName);
+    if (!this.data.isEdit && isAssigningOthers) {
+      // 只有新建派发给别人时，静默请求授权
+      await requestSubscribe();
     }
 
     wx.showLoading({ title: '保存中...' });
@@ -454,6 +463,22 @@ Page({
                 link: `/pages/todoForm/index?id=${newTodoId}`
               }
             });
+
+            // 触发微信订阅消息（静默请求）
+            wx.cloud.callFunction({
+              name: 'sendSubscribeMessage',
+              data: {
+                receiverUserId: assignee.id,
+                templateId: TEMPLATE_IDS.TODO_REMINDER,
+                page: `/pages/todoForm/index?id=${newTodoId}`,
+                data: {
+                  thing1: { value: updateData.title.trim().substring(0, 20) },
+                  time2: { value: updateData.dueDate },
+                  thing3: { value: operatorName.substring(0, 20) },
+                  thing4: { value: assignee.name.substring(0, 20) }
+                }
+              }
+            }).catch(console.error);
           }
         });
         

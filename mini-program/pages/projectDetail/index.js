@@ -1,5 +1,6 @@
 import { getNextWorkingDay, calculateEndDate, formatDate } from '../../utils/date';
 import { maskName, maskAddress } from '../../utils/format.js';
+import { requestSubscribe, TEMPLATE_IDS } from '../../utils/subscribe';
 
 Page({
   data: {
@@ -1131,10 +1132,14 @@ Page({
     }
   },
 
-  submitAcceptance() {
+  async submitAcceptance() {
     if (this.data.acceptancePhotos.length === 0 && !this.data.acceptanceRemark.trim()) {
       return wx.showToast({ title: '请填写现场说明或上传影像', icon: 'none' });
     }
+
+    // 静默请求订阅授权
+    await requestSubscribe();
+
     wx.showLoading({ title: '提交中' });
 
     const { popupMajorIdx, popupSubIdx, acceptanceRemark, acceptancePhotos, acceptanceMode, userName } = this.data;
@@ -1347,25 +1352,74 @@ Page({
     
     if (operatorName !== 'admin') notifyUsers.add('admin');
 
-    notifyUsers.forEach(u => {
-      if (!u) return;
-      let notifyContent = '';
-      const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
-      if (content.startsWith('工地【')) {
-        notifyContent = `${operatorName} 更新了进度：${shortContent}`;
-      } else {
-        notifyContent = `${operatorName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
-      }
-      db.collection('notifications').add({
-        data: {
-          type: 'project',
-          title: '工地有新进度',
-          content: notifyContent,
-          targetUser: u,
-          isRead: false,
-          createTime: db.serverDate(),
-          link: `/pages/projectDetail/index?id=${this.data.id}`
+    // 获取用户 ID 后触发微信订阅消息（静默请求）
+    db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+      const adminNames = adminRes.data.map(u => u.name);
+      
+      notifyUsers.forEach(u => {
+        if (!u) return;
+        let notifyContent = '';
+        const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
+        if (content.startsWith('工地【')) {
+          notifyContent = `${operatorName} 更新了进度：${shortContent}`;
+        } else {
+          notifyContent = `${operatorName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
         }
+        
+        // 发送站内信，如果是 admin 字符串则特殊处理，其他发具体名字
+        if (u === 'admin') {
+          adminNames.forEach(adminName => {
+             db.collection('notifications').add({
+              data: {
+                type: 'project',
+                title: '工地有新进度',
+                content: notifyContent,
+                targetUser: adminName,
+                isRead: false,
+                createTime: db.serverDate(),
+                link: `/pages/projectDetail/index?id=${this.data.id}`
+              }
+            });
+          });
+        } else {
+          db.collection('notifications').add({
+            data: {
+              type: 'project',
+              title: '工地有新进度',
+              content: notifyContent,
+              targetUser: u,
+              isRead: false,
+              createTime: db.serverDate(),
+              link: `/pages/projectDetail/index?id=${this.data.id}`
+            }
+          });
+        }
+
+        // 发送微信订阅消息
+        const queryCondition = u === 'admin' ? { role: 'admin' } : { name: u };
+        db.collection('users').where(queryCondition).get().then(res => {
+          if (res.data && res.data.length > 0) {
+            res.data.forEach(userDoc => {
+              if (userDoc.name === operatorName) return; // 不要发给自己
+              
+              wx.cloud.callFunction({
+                name: 'sendSubscribeMessage',
+                data: {
+                  receiverUserId: userDoc._id,
+                  templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+                  page: `/pages/projectDetail/index?id=${this.data.id}`,
+                  data: {
+                    thing1: { value: (p.address || p.customer || '未知项目').substring(0, 20) }, // 项目名称
+                    time2: { value: nowStr }, // 更新时间
+                    thing4: { value: operatorName.substring(0, 20) }, // 操作员
+                    thing6: { value: '请及时点击进入小程序查看详情' }, // 备注
+                    thing7: { value: shortContent.substring(0, 20) } // 更新内容
+                  }
+                }
+              }).catch(console.error);
+            });
+          }
+        });
       });
     });
   }

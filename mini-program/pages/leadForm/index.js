@@ -1,3 +1,5 @@
+import { requestSubscribe, TEMPLATE_IDS } from '../../utils/subscribe';
+
 Page({
   data: {
     id: null,
@@ -170,7 +172,7 @@ Page({
     this.setData({ customSource: e.detail.value });
   },
 
-  saveLead() {
+  async saveLead() {
     const d = this.data.formData;
     if (!(d.name || '').trim()) return wx.showToast({ title: '请输入姓名', icon: 'none' });
     if (!(d.phone || '').trim()) return wx.showToast({ title: '请输入电话', icon: 'none' });
@@ -189,6 +191,13 @@ Page({
         signDate: new Date().toISOString().split('T')[0]
       });
       return;
+    }
+
+    const userInfo = wx.getStorageSync('userInfo');
+    const operatorName = userInfo.name || '未知';
+    const isAssigningOthers = (d.sales && d.sales !== operatorName) || (d.designer && d.designer !== operatorName);
+    if (isAssigningOthers) {
+      await requestSubscribe();
     }
 
     this.executeSave();
@@ -218,10 +227,15 @@ Page({
     this.executeSave(this.data.signDate);
   },
 
-  executeSave(signDate = null) {
+  async executeSave(signDate = null) {
     const d = this.data.formData;
-    wx.showLoading({ title: '保存中...', mask: true });
     const db = wx.cloud.database();
+    const userInfo = wx.getStorageSync('userInfo');
+    const operatorName = userInfo.name || '未知';
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    wx.showLoading({ title: '保存中...', mask: true });
     
     let updateData = { ...d };
     if (signDate) {
@@ -229,6 +243,7 @@ Page({
     }
 
     if (this.data.isEdit) {
+      // 这是修改客户的情况
       db.collection('leads').doc(this.data.id).update({
         data: updateData
       }).then(() => {
@@ -283,6 +298,26 @@ Page({
               link: `/pages/leadDetail/index?id=${this.data.id}`
             }
           });
+          
+          db.collection('users').where({ name: d.sales }).get().then(res => {
+            if (res.data && res.data.length > 0) {
+              wx.cloud.callFunction({
+                name: 'sendSubscribeMessage',
+                data: {
+                  receiverUserId: res.data[0]._id,
+                  templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+                  page: `/pages/leadDetail/index?id=${this.data.id}`,
+                  data: {
+                    thing1: { value: d.name.substring(0, 20) },
+                    time2: { value: nowStr },
+                    thing4: { value: operatorName.substring(0, 20) },
+                    thing6: { value: '请及时联系跟进' },
+                    thing7: { value: '已分配给你跟进' }
+                  }
+                }
+              }).catch(console.error);
+            }
+          });
         }
         // 精准通知：分配了新设计师
         if (d.designer && d.designer !== this.data.oldDesigner) {
@@ -292,6 +327,26 @@ Page({
               content: `客户【${d.name}】已分配给你跟进方案。`,
               targetUser: d.designer, isRead: false, createTime: db.serverDate(),
               link: `/pages/leadDetail/index?id=${this.data.id}`
+            }
+          });
+
+          db.collection('users').where({ name: d.designer }).get().then(res => {
+            if (res.data && res.data.length > 0) {
+              wx.cloud.callFunction({
+                name: 'sendSubscribeMessage',
+                data: {
+                  receiverUserId: res.data[0]._id,
+                  templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+                  page: `/pages/leadDetail/index?id=${this.data.id}`,
+                  data: {
+                    thing1: { value: d.name.substring(0, 20) },
+                    time2: { value: nowStr },
+                    thing4: { value: operatorName.substring(0, 20) },
+                    thing6: { value: '请及时出具设计方案' },
+                    thing7: { value: '已分配给你跟进方案' }
+                  }
+                }
+              }).catch(console.error);
             }
           });
         }
@@ -362,6 +417,7 @@ Page({
       });
     } else {
       // 新增逻辑已在其他地方处理
+      // TODO: 触发通知逻辑已移至新增处理处
     }
   },
 
