@@ -1237,11 +1237,18 @@ Page({
         
             notifyUsers.forEach(u => {
               if (!u) return;
+              let notifyContent = '';
+              const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
+              if (content.startsWith('工地【')) {
+                notifyContent = `${userName} 更新了进度：${shortContent}`;
+              } else {
+                notifyContent = `${userName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
+              }
               db.collection('notifications').add({
                 data: {
                   type: 'project',
                   title: '工地有新进度',
-                  content: `${userName} 更新了工地【${p.address || '未知'}】: ${content.substring(0, 20)}...`,
+                  content: notifyContent,
                   targetUser: u,
                   isRead: false,
                   createTime: db.serverDate(),
@@ -1342,11 +1349,18 @@ Page({
 
     notifyUsers.forEach(u => {
       if (!u) return;
+      let notifyContent = '';
+      const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
+      if (content.startsWith('工地【')) {
+        notifyContent = `${operatorName} 更新了进度：${shortContent}`;
+      } else {
+        notifyContent = `${operatorName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
+      }
       db.collection('notifications').add({
         data: {
           type: 'project',
           title: '工地有新进度',
-          content: `${operatorName} 更新了工地【${p.address || '未知'}】: ${content.substring(0, 20)}...`,
+          content: notifyContent,
           targetUser: u,
           isRead: false,
           createTime: db.serverDate(),
