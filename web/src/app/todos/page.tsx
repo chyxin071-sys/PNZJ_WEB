@@ -253,6 +253,20 @@ export default function TodosPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus })
       });
+      
+      // 如果待办关联了客户，且状态变为已完成，则写入系统跟进记录
+      if (newStatus === 'completed' && todo.relatedTo?.type === 'lead' && todo.relatedTo?.id) {
+        await fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: todo.relatedTo.id,
+            content: `【待办已完成】${todo.title}`,
+            method: '系统记录',
+            createdBy: currentUser?.name || '系统'
+          })
+        });
+      }
     } catch (e) {
       console.error('更新状态失败', e);
       // 失败则回滚

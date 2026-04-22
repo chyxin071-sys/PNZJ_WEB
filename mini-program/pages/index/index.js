@@ -531,20 +531,24 @@ Page({
         // 自动添加客户跟进记录（仅关联了客户的待办完成时）
         if (todo.relatedTo && todo.relatedTo.type === 'lead' && todo.relatedTo.id) {
           const now = new Date();
+          const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+          
           db.collection('followUps').add({
             data: {
               leadId: todo.relatedTo.id,
               content: `【待办已完成】${todo.title.trim()}`,
               createdBy: operatorName,
-              createdAt: now.toISOString(),
-              type: 'system'
+              createdAt: db.serverDate(),
+              method: '系统记录',
+              displayTime: nowStr,
+              timestamp: db.serverDate()
             }
           });
           
           // 更新客户的最后跟进时间
           db.collection('leads').doc(todo.relatedTo.id).update({
             data: {
-              lastFollowUp: `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+              lastFollowUp: nowStr
             }
           });
         }

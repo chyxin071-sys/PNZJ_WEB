@@ -464,6 +464,18 @@ export default function LeadDetailPage() {
       if (res.ok) {
         setLead(payload);
         setIsEditModalOpen(false);
+        // 同步系统跟进记录
+        await fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId,
+            content: `更新了客户基本信息`,
+            method: '系统记录',
+            createdBy: currentUser?.name || '系统'
+          })
+        });
+        fetchAllData();
       }
     } catch (e) {
       console.error('Failed to update lead', e);

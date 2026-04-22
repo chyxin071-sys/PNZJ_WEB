@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { tcbQuery, tcbAdd, tcbUpdate, tcbCount } from '@/lib/wechat-tcb';
 import { sendNotifications } from '@/lib/notify';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);

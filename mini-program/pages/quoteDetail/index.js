@@ -265,7 +265,7 @@ Page({
         wx.hideLoading();
         wx.showToast({ title: '保存成功', icon: 'success' });
         this.setData({ isNewQuote: false });
-        this.addSystemFollowUpToLead(`已更新报价单，总价${updateData.final}元，修改人：${modifierName}`);
+        this.addSystemFollowUpToLead(`已更新报价单，总价${updateData.final}元`);
       }).catch(() => {
         wx.hideLoading();
         wx.showToast({ title: '保存失败', icon: 'none' });
@@ -287,7 +287,7 @@ Page({
         wx.hideLoading();
         wx.showToast({ title: '已存为新版本', icon: 'success' });
         this.setData({ id: addRes._id, quote: { ...newQuote, _id: addRes._id }, isNewQuote: false });
-        this.addSystemFollowUpToLead(`已更新报价单，总价${newQuote.final}元，修改人：${modifierName}`);
+        this.addSystemFollowUpToLead(`已生成报价单，总价${newQuote.final}元`);
       }).catch(() => {
         wx.hideLoading();
         wx.showToast({ title: '保存失败', icon: 'none' });
@@ -491,13 +491,47 @@ Page({
   addSystemFollowUpToLead(content) {
     const db = wx.cloud.database();
     const userInfo = wx.getStorageSync('userInfo');
-    const followUp = {
-      leadId: this.data.quote.leadId,
-      content: content,
-      type: 'system',
-      creator: userInfo ? userInfo.name : '系统',
-      createdAt: db.serverDate()
-    };
-    db.collection('followUps').add({ data: followUp }).catch(() => {});
+    const operatorName = userInfo ? (userInfo.name || '未知') : '未知';
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    db.collection('followUps').add({
+      data: {
+        leadId: this.data.quote.leadId,
+        content: content,
+        method: '系统记录',
+        createdBy: operatorName,
+        createdAt: db.serverDate(),
+        displayTime: nowStr,
+        timestamp: db.serverDate()
+      }
+    }).catch(() => {});
+    
+    // 更新 lead lastFollowUp
+    db.collection('leads').doc(this.data.quote.leadId).update({
+      data: { lastFollowUp: nowStr }
+    }).catch(() => {});
+
+    // 通知相关人员
+    const q = this.data.quote;
+    const notifyUsers = new Set();
+    if (q.sales && q.sales !== operatorName) notifyUsers.add(q.sales);
+    if (q.designer && q.designer !== operatorName) notifyUsers.add(q.designer);
+    if (userInfo?.role !== 'admin') notifyUsers.add('admin');
+
+    notifyUsers.forEach(u => {
+      if (!u) return;
+      db.collection('notifications').add({
+        data: {
+          type: 'quote',
+          title: '报价单已更新',
+          content: `${operatorName} 更新了客户【${q.customer || '未知'}】的报价单。`,
+          targetUser: u,
+          isRead: false,
+          createTime: db.serverDate(),
+          link: `/pages/quoteDetail/index?leadId=${q.leadId}`
+        }
+      });
+    });
   }
 });

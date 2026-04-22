@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
-import { sendNotification } from '@/lib/notify';
+import { sendNotifications } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,11 +39,12 @@ export async function POST(request: Request) {
     const res = await tcbAdd(query);
     const newQuoteId = res.id_list?.[0];
 
-    // 通知 admin
-    sendNotification(
-      'admin',
+    // 通知相关人员
+    const targets = Array.from(new Set(['admin', body.sales, body.designer, body.manager])).filter(Boolean);
+    sendNotifications(
+      targets,
       '新报价单已创建',
-      `${body.sales || '销售'} 为客户【${body.customer || ''}】创建了报价单，成交价 ¥${(body.final || 0).toLocaleString()}`,
+      `${body.sales || body.designer || '团队成员'} 为客户【${body.customer || ''}】创建了报价单，成交价 ¥${(body.final || 0).toLocaleString()}`,
       body.leadId ? `/leads/${body.leadId}` : '/quotes'
     );
 
@@ -54,9 +55,9 @@ export async function POST(request: Request) {
         const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         const followUpData = JSON.stringify({
           leadId: body.leadId,
-          content: `已更新报价单，总价${body.final || 0}元，修改人：${body.sales || body.designer || '系统'}`,
+          content: `已生成报价单，总价${body.final || 0}元`,
           method: '系统记录',
-          createdBy: '系统',
+          createdBy: body.modifier || body.sales || body.designer || '系统',
           createdAt: { $date: Date.now() },
           displayTime: nowStr
         }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');

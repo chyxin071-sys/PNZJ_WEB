@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
+import { sendNotifications } from '@/lib/notify';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
@@ -75,6 +78,9 @@ export async function POST(request: Request) {
     const query = `db.collection("projects").add({ data: ${docData} })`;
     const res = await tcbAdd(query);
     const newProjectId = res.id_list?.[0];
+
+    const targets = Array.from(new Set(['admin', body.manager, body.sales, body.designer])).filter(Boolean);
+    sendNotifications(targets, '新工地已创建', `为客户【${body.customer || '未知'}】创建了新工地，项目经理：${body.manager || '待定'}`, `/projects/${newProjectId}`);
 
     // BUG-24: 新建工地未自动添加跟进记录
     if (body.leadId && newProjectId) {

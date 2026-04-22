@@ -43,7 +43,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     // 触发通知
     const customerName = old.customer || '客户';
     const link = `/projects/${id}`;
-    const targets = ['admin', old.manager, old.sales, old.designer];
+    const targets = Array.from(new Set(['admin', old.manager, old.sales, old.designer, body.manager])).filter(Boolean);
+
+    // 开工通知
+    if (body.status === '施工中' && old.status !== '施工中') {
+      sendNotifications(targets, '工地正式开工', `【${customerName}】工地已正式开工，预计完工日期：${body.expectedEndDate}`, link);
+    }
 
     // 节点完成通知
     if (body.nodesData && old.nodesData) {

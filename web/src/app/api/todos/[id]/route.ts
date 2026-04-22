@@ -14,6 +14,18 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const query = `db.collection("todos").doc("${id}").update({ data: ${docData} })`;
     const res = await tcbUpdate(query);
 
+    // 状态变更为已完成时，发送通知
+    if (body.status === 'completed' && oldTodo.status !== 'completed') {
+      const assigneeNames = (oldTodo.assignees || []).map((a: any) => a.name);
+      const targets = Array.from(new Set([...assigneeNames, oldTodo.createdBy?.name, 'admin'])).filter(Boolean);
+      sendNotifications(
+        targets,
+        '待办已完成',
+        `待办任务【${oldTodo.title}】已完成`,
+        '/todos'
+      );
+    }
+
     // 修改待办时通知相关的人
     if (body.assignees) {
       const operatorName = body.updatedBy || '';

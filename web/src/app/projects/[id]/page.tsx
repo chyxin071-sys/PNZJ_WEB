@@ -195,6 +195,20 @@ export default function ProjectDetailPage() {
     if (await save(patch)) {
       setProject({ ...project, ...patch });
       setStartModal(false); setIsEditingNodes(false); setExpandedIdx(0);
+      
+      // 同步到跟进记录
+      if (project.leadId) {
+        await fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: project.leadId,
+            content: `工地正式开工，预计完工日期：${patch.expectedEndDate}`,
+            method: '系统记录',
+            createdBy: userName
+          })
+        });
+      }
     }
   };
 
@@ -266,6 +280,24 @@ export default function ProjectDetailPage() {
       setProject({ ...project, ...patch });
       setSubNodeModal(null); setTempPhotos([]); setRemark('');
       if (allDone && majorIdx + 1 < nodes.length) setExpandedIdx(majorIdx + 1);
+
+      // 写入跟进记录
+      if (project.leadId) {
+        let content = `工地进度更新：【${nodes[majorIdx].name}】阶段的【${sub.name}】已完工。`;
+        if (allDone) {
+          content += `\n此工序完成标志着【${nodes[majorIdx].name}】大阶段已全部验收通过。`;
+        }
+        await fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: project.leadId,
+            content,
+            method: '系统记录',
+            createdBy: userName
+          })
+        });
+      }
     } else alert('提交失败');
   };
 

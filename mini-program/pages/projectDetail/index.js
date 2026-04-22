@@ -1172,43 +1172,9 @@ Page({
           
           if (leadId) {
             // 自动在客户跟进中更新跟进记录
-            db.collection('followUps').add({
-              data: {
-                leadId: leadId,
-                method: '系统记录',
-                content: content,
-                createdBy: operatorName,
-                createdAt: nowFull,
-                timestamp: db.serverDate()
-              }
-            });
-            db.collection('leads').doc(leadId).update({
-              data: { lastFollowUp: nowFull }
-            }).catch(() => {});
+            this.addSystemFollowUpToLead(content);
           }
 
-          // 通知消息到所有相关人员，包括管理员
-          const notifyUsers = new Set();
-          if (p.manager && p.manager !== operatorName) notifyUsers.add(p.manager);
-          if (p.sales && p.sales !== operatorName) notifyUsers.add(p.sales);
-          if (p.designer && p.designer !== operatorName) notifyUsers.add(p.designer);
-          if (p.creatorName && p.creatorName !== operatorName) notifyUsers.add(p.creatorName);
-          if (this.data.userRole !== 'admin') notifyUsers.add('admin');
-
-          notifyUsers.forEach(u => {
-            if (!u) return;
-            db.collection('notifications').add({
-              data: {
-                type: 'project',
-                title: '工序验收完成',
-                content: `${operatorName} 完成了工地【${p.address || p.customer || '未知'}】的【${sub.name}】工序验收。`,
-                targetUser: u,
-                isRead: false,
-                createTime: db.serverDate(),
-                link: `/pages/projectDetail/index?id=${this.data.id}`
-              }
-            });
-          });
         }
 
         wx.hideLoading();
@@ -1283,6 +1249,34 @@ Page({
       }
     }).catch(err => {
       console.error('添加系统跟进记录失败', err);
+    });
+
+    db.collection('leads').doc(this.data.project.leadId).update({
+      data: { lastFollowUp: nowStr }
+    }).catch(() => {});
+
+    // 全局通知
+    const p = this.data.project;
+    const notifyUsers = new Set();
+    if (p.manager && p.manager !== operatorName) notifyUsers.add(p.manager);
+    if (p.sales && p.sales !== operatorName) notifyUsers.add(p.sales);
+    if (p.designer && p.designer !== operatorName) notifyUsers.add(p.designer);
+    if (p.creatorName && p.creatorName !== operatorName) notifyUsers.add(p.creatorName);
+    if (userInfo?.role !== 'admin') notifyUsers.add('admin');
+
+    notifyUsers.forEach(u => {
+      if (!u) return;
+      db.collection('notifications').add({
+        data: {
+          type: 'project',
+          title: '工地状态更新',
+          content: `${operatorName} 更新了工地【${p.address || p.customer || '未知'}】的状态。`,
+          targetUser: u,
+          isRead: false,
+          createTime: db.serverDate(),
+          link: `/pages/projectDetail/index?id=${this.data.id}`
+        }
+      });
     });
   }
 });

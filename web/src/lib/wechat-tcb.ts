@@ -77,3 +77,16 @@ export async function tcbCount(queryStr: string): Promise<number> {
   if (data.errcode !== 0) return 0;
   return data.count || 0;
 }
+
+export async function tcbBatchDownloadFile(fileList: { fileid: string; max_age: number }[]) {
+  const url = `${getBaseUrl()}/tcb/batchdownloadfile?access_token=${await getAccessToken()}`;
+
+  const res = await axios.post(url, {
+    env: ENV,
+    file_list: fileList
+  });
+  
+  const data = res.data;
+  if (data.errcode !== 0) throw new Error(data.errmsg || 'Batch download failed');
+  return data.file_list;
+}

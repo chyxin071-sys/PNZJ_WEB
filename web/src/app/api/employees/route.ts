@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
 
+export const dynamic = 'force-dynamic';
+
 // 获取全部员工列表
 export async function GET(request: Request) {
   try {

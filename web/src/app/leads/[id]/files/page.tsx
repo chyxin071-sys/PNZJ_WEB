@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Upload, Trash2, FileText, Image, Film, File, Loader2, FolderOpen } from "lucide-react";
+import { ArrowLeft, Upload, Trash2, FileText, Image, Film, File, Loader2, FolderOpen, Download, ExternalLink } from "lucide-react";
 import MainLayout from "../../../../components/MainLayout";
 
 function formatSize(bytes: number): string {
@@ -136,6 +136,26 @@ export default function LeadFilesPage() {
     }
   };
 
+  const handleDownload = async (file: any) => {
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileIds: [file.fileID] })
+      });
+      if (!res.ok) throw new Error('无法获取下载链接');
+      const data = await res.json();
+      if (data && data[0] && data[0].download_url) {
+        window.open(data[0].download_url, '_blank');
+      } else {
+        throw new Error('下载链接无效');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('下载/预览失败，请稍后再试');
+    }
+  };
+
   const handleDelete = async (idx: number) => {
     const newFiles = files.filter((_, i) => i !== idx);
     try {
@@ -190,7 +210,7 @@ export default function LeadFilesPage() {
               <FolderOpen className="w-16 h-16 mb-4 opacity-20" />
               <p className="text-sm">暂无项目资料</p>
               {canUpload() && (
-                <p className="text-xs mt-1 text-primary-300">点击下方按钮上传文件</p>
+                <p className="text-xs mt-1 text-primary-300">点击下方按钮上传资料</p>
               )}
             </div>
           ) : (
@@ -201,42 +221,52 @@ export default function LeadFilesPage() {
                     <FileIcon type={file.type || getFileType(file.name || '')} />
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-primary-900 truncate">{file.name}</p>
+                  <div className="flex-1 min-w-0 cursor-pointer group-hover:text-primary-600 transition-colors" onClick={() => handleDownload(file)}>
+                    <p className="text-sm font-medium text-primary-900 truncate group-hover:text-primary-600 transition-colors">{file.name}</p>
                     <p className="text-xs text-primary-400 mt-0.5">
                       {file.sizeStr || formatSize(file.size)} · {file.uploader || '未知'} · {formatTime(file.uploadTime || file.createdAt)}
                     </p>
                   </div>
 
-                  {canUpload() && (
-                    <div className="shrink-0 relative">
-                      <button
-                        onClick={() => setDeleteConfirmIdx(idx)}
-                        className="p-2 text-primary-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                      {deleteConfirmIdx === idx && (
-                        <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-primary-100 rounded-xl shadow-xl p-3 z-20 animate-in fade-in zoom-in-95 duration-150">
-                          <p className="text-xs font-medium text-primary-900 mb-2">确定删除这份文件吗？</p>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setDeleteConfirmIdx(null)}
-                              className="flex-1 px-2 py-1.5 border border-primary-200 text-primary-600 rounded-lg text-xs font-medium hover:bg-primary-50"
-                            >
-                              取消
-                            </button>
-                            <button
-                              onClick={() => handleDelete(idx)}
-                              className="flex-1 px-2 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-medium hover:bg-rose-600"
-                            >
-                              删除
-                            </button>
+                  <div className="shrink-0 relative flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownload(file)}
+                      className="p-2 text-primary-300 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      title="下载 / 预览"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    {canUpload() && (
+                      <div className="relative">
+                        <button
+                          onClick={() => setDeleteConfirmIdx(idx)}
+                          className="p-2 text-primary-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                          title="删除"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        {deleteConfirmIdx === idx && (
+                          <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-primary-100 rounded-xl shadow-xl p-3 z-20 animate-in fade-in zoom-in-95 duration-150">
+                            <p className="text-xs font-medium text-primary-900 mb-2">确定删除这份文件吗？</p>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setDeleteConfirmIdx(null)}
+                                className="flex-1 px-2 py-1.5 border border-primary-200 text-primary-600 rounded-lg text-xs font-medium hover:bg-primary-50"
+                              >
+                                取消
+                              </button>
+                              <button
+                                onClick={() => handleDelete(idx)}
+                                className="flex-1 px-2 py-1.5 bg-rose-500 text-white rounded-lg text-xs font-medium hover:bg-rose-600"
+                              >
+                                删除
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

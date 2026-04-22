@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { FileText, Image, Film, File, Paperclip, Upload, Loader2, ArrowRight } from "lucide-react";
+import { FileText, Image, Film, File, Paperclip, Upload, Loader2, ArrowRight, Download } from "lucide-react";
 import Link from "next/link";
 
 interface CustomerDocumentsProps {
@@ -98,6 +98,27 @@ export default function CustomerDocuments({ leadId, canUpload = false, uploaderN
     }
   };
 
+  const handleDownload = async (file: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileIds: [file.fileID] })
+      });
+      if (!res.ok) throw new Error('无法获取下载链接');
+      const data = await res.json();
+      if (data && data[0] && data[0].download_url) {
+        window.open(data[0].download_url, '_blank');
+      } else {
+        throw new Error('下载链接无效');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('下载失败，请稍后再试');
+    }
+  };
+
   const preview = files.slice(0, 4);
 
   return (
@@ -131,16 +152,23 @@ export default function CustomerDocuments({ leadId, canUpload = false, uploaderN
         ) : (
           <>
             {preview.map((file, idx) => (
-              <div key={idx} className="flex items-center gap-3 p-2.5 bg-primary-50/30 border border-primary-100 rounded-lg">
+              <div key={idx} className="flex items-center gap-3 p-2.5 bg-primary-50/30 border border-primary-100 rounded-lg group">
                 <div className="w-7 h-7 bg-white rounded flex items-center justify-center shrink-0 border border-primary-100">
                   <FileIcon type={file.type || getFileType(file.name || '')} />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-primary-900 truncate">{file.name}</p>
+                <div className="flex-1 min-w-0 cursor-pointer" onClick={(e) => handleDownload(file, e)}>
+                  <p className="text-xs font-medium text-primary-900 truncate hover:text-primary-600 transition-colors">{file.name}</p>
                   <p className="text-[10px] text-primary-400">
                     {file.sizeStr || formatSize(file.size)} · {String(file.uploadTime || '').substring(0, 10)}
                   </p>
                 </div>
+                <button
+                  onClick={(e) => handleDownload(file, e)}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 text-primary-400 hover:text-primary-600 hover:bg-primary-100 rounded transition-all"
+                  title="下载/预览"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                </button>
               </div>
             ))}
             {files.length > 4 && (
@@ -173,7 +201,7 @@ export default function CustomerDocuments({ leadId, canUpload = false, uploaderN
             {uploading ? (
               <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 上传中...</>
             ) : (
-              <><Upload className="w-3.5 h-3.5" /> 上传文件</>
+              <><Upload className="w-3.5 h-3.5" /> 上传资料</>
             )}
           </button>
         </div>

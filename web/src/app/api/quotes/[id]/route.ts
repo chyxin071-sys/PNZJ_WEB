@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { tcbQuery, tcbUpdate, tcbDelete, tcbAdd } from '@/lib/wechat-tcb';
+import { sendNotifications } from '@/lib/notify';
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -30,6 +31,15 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const query = `db.collection("quotes").doc("${id}").update({ data: ${docData} })`;
     const res = await tcbUpdate(query);
 
+    // 发送通知
+    const targets = Array.from(new Set(['admin', body.sales, body.designer, body.manager])).filter(Boolean);
+    sendNotifications(
+      targets,
+      '报价单已更新',
+      `${body.modifier || body.sales || body.designer || '团队成员'} 更新了客户【${body.customer || ''}】的报价单，最新总价 ¥${(body.final || 0).toLocaleString()}`,
+      body.leadId ? `/leads/${body.leadId}` : '/quotes'
+    );
+
     // BUG-23: 报价单保存时自动写入跟进记录
     if (body.leadId) {
       try {
@@ -37,9 +47,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         const followUpData = JSON.stringify({
           leadId: body.leadId,
-          content: `已更新报价单，总价${body.final || 0}元，修改人：${body.modifier || body.sales || body.designer || '未知'}`,
+          content: `已更新报价单，总价${body.final || 0}元`,
           method: '系统记录',
-          createdBy: '系统',
+          createdBy: body.modifier || body.sales || body.designer || '未知',
           createdAt: { $date: Date.now() },
           displayTime: nowStr
         }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
