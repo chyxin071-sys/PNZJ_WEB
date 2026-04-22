@@ -5,6 +5,7 @@ Page({
     quote: null,
     loading: true,
     isNewQuote: false,
+    isEditMode: false,
     groupedItems: [],
     showCustomModal: false,
     customItem: {
@@ -104,7 +105,7 @@ Page({
       
       db.collection('quotes').add({ data: newQuote }).then(addRes => {
         newQuote._id = addRes._id;
-        this.setData({ id: addRes._id, quote: newQuote, loading: false, isNewQuote: true });
+        this.setData({ id: addRes._id, quote: newQuote, loading: false, isNewQuote: true, isEditMode: true });
         wx.hideLoading();
         // 取消提示，直接让用户停留在空白报价单编辑页面
       }).catch(() => {
@@ -264,7 +265,7 @@ Page({
       }).then(() => {
         wx.hideLoading();
         wx.showToast({ title: '保存成功', icon: 'success' });
-        this.setData({ isNewQuote: false });
+        this.setData({ isNewQuote: false, isEditMode: false });
         this.addSystemFollowUpToLead(`已更新报价单，总价${updateData.final}元`);
       }).catch(() => {
         wx.hideLoading();
@@ -286,7 +287,7 @@ Page({
       db.collection('quotes').add({ data: newQuote }).then((addRes) => {
         wx.hideLoading();
         wx.showToast({ title: '已存为新版本', icon: 'success' });
-        this.setData({ id: addRes._id, quote: { ...newQuote, _id: addRes._id }, isNewQuote: false });
+        this.setData({ id: addRes._id, quote: { ...newQuote, _id: addRes._id }, isNewQuote: false, isEditMode: false });
         this.addSystemFollowUpToLead(`已生成报价单，总价${newQuote.final}元`);
       }).catch(() => {
         wx.hideLoading();
@@ -336,6 +337,10 @@ Page({
         }
       }
     });
+  },
+
+  toggleEditMode() {
+    this.setData({ isEditMode: !this.data.isEditMode });
   },
 
   openCustomModal() {

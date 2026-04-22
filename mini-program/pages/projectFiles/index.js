@@ -94,7 +94,7 @@ Page({
 
   chooseAndUpload() {
     wx.showActionSheet({
-      itemList: ['从聊天记录选择文件', '从手机相册选择图片/视频'],
+      itemList: ['从聊天记录选择文件', '从手机相册选择图片/视频', '从手机存储选择文件'],
       success: (res) => {
         if (res.tapIndex === 0) {
           wx.chooseMessageFile({
@@ -122,6 +122,14 @@ Page({
               });
               this.uploadToCloud(tempFiles);
             }
+          });
+        } else if (res.tapIndex === 2) {
+          // 微信小程序原生暂不支持直接浏览手机本地文件系统（非相册/聊天），这里为了体验依然调用 chooseMessageFile 作为替代或提示
+          wx.showModal({
+            title: '提示',
+            content: '微信小程序目前不支持直接浏览手机本地文件夹，请将文件发送到任意微信聊天中，然后使用“从聊天记录选择文件”功能上传。',
+            showCancel: false,
+            confirmColor: '#992933'
           });
         }
       }

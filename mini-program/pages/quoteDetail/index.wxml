@@ -4,10 +4,10 @@
   <view class="quote-header" style="background: #fff; padding: 40rpx; border-radius: 16rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.02);">
     <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30rpx; border-bottom: 1rpx solid #f1f5f9; padding-bottom: 20rpx;">
       <view style="font-size: 36rpx; font-weight: bold; color: #1e293b;">报价单</view>
-      <picker bindchange="onStatusChange" range="{{['初步', '确认版', '最终版']}}">
-        <view class="status-badge" style="background: #f8fafc; color: #475569; padding: 8rpx 24rpx; border-radius: 8rpx; font-size: 26rpx; border: 1rpx solid #e2e8f0; display: flex; align-items: center; gap: 8rpx;">
+      <picker bindchange="onStatusChange" range="{{['初步', '确认版', '最终版']}}" disabled="{{!isEditMode}}">
+        <view class="status-badge" style="background: #f8fafc; color: #475569; padding: 8rpx 24rpx; border-radius: 8rpx; font-size: 26rpx; border: 1rpx solid #e2e8f0; display: flex; align-items: center; gap: 8rpx; opacity: {{isEditMode ? 1 : 0.7}};">
           <text>{{quote.status || '初步'}}</text>
-          <text style="font-size: 20rpx; color: #94a3b8;">▼</text>
+          <text wx:if="{{isEditMode}}" style="font-size: 20rpx; color: #94a3b8;">▼</text>
         </view>
       </picker>
     </view>
@@ -61,7 +61,8 @@
       <text style="font-size: 28rpx; color: #475569;">优惠减免</text>
       <view style="display: flex; align-items: center;">
         <text style="font-size: 28rpx; color: var(--rose-600); margin-right: 8rpx;">-¥</text>
-        <input type="digit" value="{{quote.discount}}" bindinput="onDiscountInput" bindblur="onDiscountBlur" placeholder="0" style="width: 140rpx; text-align: right; font-size: 32rpx; font-weight: bold; color: var(--rose-600); background: var(--rose-50); padding: 4rpx 16rpx; border-radius: 8rpx; border: 1rpx solid var(--rose-100);" />
+        <input wx:if="{{isEditMode}}" type="digit" value="{{quote.discount}}" bindinput="onDiscountInput" bindblur="onDiscountBlur" placeholder="0" style="width: 140rpx; text-align: right; font-size: 32rpx; font-weight: bold; color: var(--rose-600); background: var(--rose-50); padding: 4rpx 16rpx; border-radius: 8rpx; border: 1rpx solid var(--rose-100);" />
+        <text wx:else style="width: 140rpx; text-align: right; font-size: 32rpx; font-weight: bold; color: var(--rose-600); padding: 4rpx 16rpx;">{{quote.discount || 0}}</text>
       </view>
     </view>
 
@@ -74,7 +75,7 @@
   <view class="items-section" style="background: #fff; border-radius: 16rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.02); overflow: hidden; margin-bottom: 40rpx;">
     <view class="section-title flex justify-between items-center" style="display: flex; justify-content: space-between; align-items: center; padding: 30rpx 40rpx; background: #f8fafc; border-bottom: 1rpx solid #e2e8f0;">
       <text style="font-size: 30rpx; font-weight: bold; color: #1e293b;">费用明细</text>
-      <view style="display: flex; gap: 16rpx;">
+      <view style="display: flex; gap: 16rpx;" wx:if="{{isEditMode}}">
         <view bindtap="openCustomModal" style="font-size: 24rpx; color: #475569; background: #fff; padding: 10rpx 20rpx; border-radius: 30rpx; font-weight: 500; display: flex; align-items: center; border: 1rpx solid #e2e8f0;">
           非标项
         </view>
@@ -112,13 +113,14 @@
           
           <!-- 下半部分：左侧步进器，右侧删除 -->
           <view style="display: flex; justify-content: space-between; align-items: center;">
-            <view style="display: flex; align-items: center; border: 1rpx solid #e2e8f0; border-radius: 8rpx; overflow: hidden; background: #f8fafc; height: 60rpx;">
+            <view wx:if="{{isEditMode}}" style="display: flex; align-items: center; border: 1rpx solid #e2e8f0; border-radius: 8rpx; overflow: hidden; background: #f8fafc; height: 60rpx;">
               <view bindtap="updateQty" data-index="{{item._originalIndex}}" data-delta="-1" style="width: 60rpx; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32rpx; color: #64748b; font-weight: bold; background: #f1f5f9;">-</view>
               <input type="digit" value="{{item.quantity}}" bindinput="onQtyInput" data-index="{{item._originalIndex}}" bindblur="onQtyBlur" style="width: 90rpx; height: 100%; min-height: 100%; text-align: center; font-size: 28rpx; color: #334155; font-weight: bold; border-left: 1rpx solid #e2e8f0; border-right: 1rpx solid #e2e8f0; background: #fff;" />
               <view bindtap="updateQty" data-index="{{item._originalIndex}}" data-delta="1" style="width: 60rpx; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 32rpx; color: #64748b; font-weight: bold; background: #f1f5f9;">+</view>
             </view>
+            <view wx:else style="font-size: 26rpx; color: #475569; font-weight: 500;">数量: {{item.quantity}}</view>
             
-            <view style="font-size: 24rpx; color: var(--rose-600); padding: 10rpx 30rpx; border: 1rpx solid var(--rose-100); border-radius: 30rpx; background: var(--rose-50); font-weight: 500;" bindtap="deleteItem" data-index="{{item._originalIndex}}">删除</view>
+            <view wx:if="{{isEditMode}}" style="font-size: 24rpx; color: var(--rose-600); padding: 10rpx 30rpx; border: 1rpx solid var(--rose-100); border-radius: 30rpx; background: var(--rose-50); font-weight: 500;" bindtap="deleteItem" data-index="{{item._originalIndex}}">删除</view>
           </view>
         </view>
       </block>
@@ -130,10 +132,13 @@
     </view>
   </view>
 
-  <view style="position: fixed; bottom: 0; left: 0; right: 0; background: #fff; padding: 20rpx 40rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.05); z-index: 100;">
-    <view class="btn-save" bindtap="saveQuote" style="width: 100%; background: #4a403a; color: #fff; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; box-shadow: 0 4rpx 12rpx rgba(74, 64, 58, 0.2);">
-      保存报价单
-    </view>
+  <!-- 底部操作栏 -->
+  <view class="pb-tabbar" style="background: #fff; padding: 20rpx 40rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); border-top: 1rpx solid #e2e8f0; display: flex; gap: 24rpx; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.02);">
+    <view bindtap="deleteQuote" style="flex: 1; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; color: var(--rose-600); background: var(--rose-50); border: 1rpx solid var(--rose-100);">删除报价单</view>
+    
+    <view wx:if="{{isEditMode}}" bindtap="saveQuote" style="flex: 2; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; color: #fff; background: var(--amber-600); box-shadow: 0 4rpx 12rpx rgba(217, 119, 6, 0.2);">保存并查看</view>
+    
+    <view wx:else bindtap="toggleEditMode" style="flex: 2; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; color: #fff; background: var(--amber-600); box-shadow: 0 4rpx 12rpx rgba(217, 119, 6, 0.2);">编辑报价单</view>
   </view>
   
   <view style="height: calc(280rpx + env(safe-area-inset-bottom));"></view> <!-- 底部占位 -->
