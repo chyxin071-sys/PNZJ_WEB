@@ -315,7 +315,7 @@ Page({
         db.collection('followUps').add({
           data: {
             leadId: this.data.id,
-            content: `客户创建\n创建人：${operatorName}\n创建时间：${nowStr}\n初始状态：${d.status}`,
+            content: `更新了客户资料`,
             method: '系统记录',
             createdBy: operatorName,
             createdAt: db.serverDate(),

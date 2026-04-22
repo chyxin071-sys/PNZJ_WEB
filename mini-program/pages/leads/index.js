@@ -220,7 +220,7 @@ Page({
       if (role === 'designer') autoDesigner = creatorName;
       if (role === 'manager') autoManager = creatorName;
       
-      await db.collection('leads').add({
+      const res = await db.collection('leads').add({
         data: {
           name: (name || '').trim(),
           phone: (phone || '').trim(),
@@ -240,6 +240,24 @@ Page({
           createdAt: db.serverDate(),
           updatedAt: db.serverDate()
         }
+      });
+      
+      const newLeadId = res._id;
+      const now = new Date();
+      const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      
+      db.collection('followUps').add({
+        data: {
+          leadId: newLeadId,
+          content: `客户创建\n创建人：${creatorName}\n创建时间：${nowStr}\n初始状态：待跟进`,
+          method: '系统记录',
+          createdBy: creatorName,
+          createdAt: db.serverDate(),
+          displayTime: nowStr,
+          timestamp: db.serverDate()
+        }
+      }).catch(err => {
+        console.error('添加创建跟进记录失败', err);
       });
       
       wx.hideLoading();

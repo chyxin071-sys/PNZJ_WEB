@@ -74,7 +74,7 @@ export async function POST(request: Request) {
         const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
         
         // 修正换行符问题
-        const contentStr = `客户创建\n创建人：${body.creatorName || '未知'}\n创建时间：${nowStr}\n初始状态：${body.status || '新录入'}`;
+        const contentStr = `客户创建\n创建人：${body.creatorName || '未知'}\n创建时间：${nowStr}\n初始状态：待跟进`;
         
         const followUpData = JSON.stringify({
           leadId: newLeadId,
