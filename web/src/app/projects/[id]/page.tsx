@@ -264,6 +264,9 @@ export default function ProjectDetailPage() {
     if (!sub.records) sub.records = [];
     sub.records.push({ remark, photos: tempPhotos, uploader: userName, createdAt: nowStr });
 
+    // 动态排期：只要有工序完成，就重新推算后续所有工序的排期
+    nodes = recalculateGantt(nodes, project.startDate);
+
     let newCurrentNode = project.currentNode || 1;
     let newStatus = project.status;
     const allDone = nodes[majorIdx].subNodes.every((s: any) => s.status === 'completed');

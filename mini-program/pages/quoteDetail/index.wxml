@@ -134,11 +134,9 @@
 
   <!-- 底部操作栏 -->
   <view class="pb-tabbar" style="background: #fff; padding: 20rpx 40rpx; padding-bottom: calc(20rpx + env(safe-area-inset-bottom)); border-top: 1rpx solid #e2e8f0; display: flex; gap: 24rpx; position: fixed; bottom: 0; left: 0; right: 0; z-index: 100; box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.02);">
-    <view bindtap="deleteQuote" style="flex: 1; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; color: var(--rose-600); background: var(--rose-50); border: 1rpx solid var(--rose-100);">删除报价单</view>
+    <view wx:if="{{isEditMode}}" bindtap="saveQuote" style="flex: 1; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; color: #fff; background: var(--amber-600); box-shadow: 0 4rpx 12rpx rgba(217, 119, 6, 0.2);">保存报价单</view>
     
-    <view wx:if="{{isEditMode}}" bindtap="saveQuote" style="flex: 2; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; color: #fff; background: var(--amber-600); box-shadow: 0 4rpx 12rpx rgba(217, 119, 6, 0.2);">保存并查看</view>
-    
-    <view wx:else bindtap="toggleEditMode" style="flex: 2; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; color: #fff; background: var(--amber-600); box-shadow: 0 4rpx 12rpx rgba(217, 119, 6, 0.2);">编辑报价单</view>
+    <view wx:else bindtap="toggleEditMode" style="flex: 1; padding: 24rpx 0; border-radius: 12rpx; font-size: 30rpx; font-weight: bold; text-align: center; color: #fff; background: var(--amber-600); box-shadow: 0 4rpx 12rpx rgba(217, 119, 6, 0.2);">编辑报价单</view>
   </view>
   
   <view style="height: calc(280rpx + env(safe-area-inset-bottom));"></view> <!-- 底部占位 -->

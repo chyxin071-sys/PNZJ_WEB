@@ -1161,17 +1161,21 @@ Page({
         sub.status = 'completed';
         if (!sub.actualStartDate) sub.actualStartDate = nowStr;
         sub.actualEndDate = nowStr;
+        
+        // 动态排期：只要有工序完成，就根据其实际完成时间重新推算后续所有工序的排期
+        nodes = this.recalculateGantt(nodes, this.data.project.startDate);
+        newExpectedEndDate = nodes[nodes.length - 1].endDate;
       }
 
       // 检查大节点是否全部完成
       let newCurrentNode = this.data.currentNodeIndex + 1;
       let newProjectStatus = this.data.project.status;
-      let newExpectedEndDate = this.data.project.expectedEndDate;
 
       const allCompleted = nodes[popupMajorIdx].subNodes.every(s => s.status === 'completed');
       if (allCompleted && acceptanceMode === 'new') {
         nodes[popupMajorIdx].status = 'completed';
         nodes[popupMajorIdx].endDate = nowStr;
+        nodes[popupMajorIdx].actualEndDate = nowStr;
         if (popupMajorIdx + 1 < nodes.length) {
           nodes[popupMajorIdx + 1].status = 'current';
           nodes[popupMajorIdx + 1].startDate = nowStr;
