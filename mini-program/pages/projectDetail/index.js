@@ -762,25 +762,41 @@ Page({
     const now = new Date();
     const timeStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-    // 这里由于是本地模拟，没有真正上传云存储。实际项目需要先 wx.cloud.uploadFile
-    const record = {
-      desc: this.data.uploadDesc,
-      files: this.data.uploadFiles,
-      uploader: userInfo.name,
-      time: timeStr
-    };
+    const uploadTasks = this.data.uploadFiles.map((file, index) => {
+      const path = file.url || file;
+      // 忽略已上传的云文件或正常的https远程图片，但不忽略 http://tmp/ 等本地临时文件
+      if (path.startsWith('cloud://') || path.startsWith('https://')) return Promise.resolve({ fileID: path });
+      const ext = path.split('.').pop() || 'jpg';
+      const cloudPath = `upload/${this.data.id}/${idx}_${Date.now()}_${index}.${ext}`;
+      return wx.cloud.uploadFile({ cloudPath, filePath: path });
+    });
 
-    if (!nodes[idx].records) nodes[idx].records = [];
-    nodes[idx].records.unshift(record);
+    Promise.all(uploadTasks).then(resList => {
+      const fileIDs = resList.map((res, i) => ({
+        url: res.fileID,
+        type: this.data.uploadFiles[i].type || 'image'
+      }));
 
-    const db = wx.cloud.database();
-    db.collection('projects').doc(this.data.id).update({
-      data: { nodesData: nodes }
+      const record = {
+        desc: this.data.uploadDesc,
+        files: fileIDs,
+        uploader: userInfo.name,
+        time: timeStr
+      };
+
+      if (!nodes[idx].records) nodes[idx].records = [];
+      nodes[idx].records.unshift(record);
+
+      const db = wx.cloud.database();
+      return db.collection('projects').doc(this.data.id).update({
+        data: { nodesData: nodes }
+      });
     }).then(() => {
-      this.setData({ nodesList: nodes, showUploadModal: false });
+      this.setData({ nodesList: nodes, showUploadModal: false, uploadDesc: '', uploadFiles: [] });
       wx.hideLoading();
       wx.showToast({ title: '提交成功', icon: 'success' });
-    }).catch(() => {
+    }).catch((err) => {
+      console.error(err);
       wx.hideLoading();
       wx.showToast({ title: '提交失败', icon: 'none' });
     });
@@ -1131,7 +1147,7 @@ Page({
     // 上传图片到云存储
     const uploadTasks = acceptancePhotos.map((item, index) => {
       const path = item.url || item;
-      if (path.startsWith('cloud://')) return Promise.resolve({ fileID: path });
+      if (path.startsWith('cloud://') || path.startsWith('https://')) return Promise.resolve({ fileID: path });
       const ext = path.split('.').pop() || 'jpg';
       const cloudPath = `acceptance/${this.data.id}/${popupMajorIdx}_${popupSubIdx}_${Date.now()}_${index}.${ext}`;
       return wx.cloud.uploadFile({ cloudPath, filePath: path });

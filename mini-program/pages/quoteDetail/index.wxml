@@ -133,7 +133,7 @@
   </view>
 
   <!-- 底部操作栏 -->
-  <view class="pb-tabbar" style="position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; display: flex; gap: 24rpx; box-sizing: border-box;">
+  <view class="bottom-action-bar" style="position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; display: flex; gap: 24rpx; box-sizing: border-box;">
     <view wx:if="{{isEditMode}}" bindtap="saveQuote" style="flex: 1; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; color: #fff; background: var(--primary-900); box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);">保存报价单</view>
     
     <view wx:else bindtap="toggleEditMode" style="flex: 1; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; color: #fff; background: var(--primary-900); box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);">编辑报价单</view>
