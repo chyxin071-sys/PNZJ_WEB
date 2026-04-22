@@ -1173,6 +1173,8 @@ Page({
 
       sub.acceptanceRecord = record;
 
+      let newExpectedEndDate = this.data.project.expectedEndDate;
+
       if (acceptanceMode === 'new') {
         sub.status = 'completed';
         if (!sub.actualStartDate) sub.actualStartDate = nowStr;
