@@ -393,6 +393,45 @@ Page({
       }
     }).then(() => {
       this.loadFollowUps(this.data.leadId);
+      
+      // 发送系统记录通知
+      const lead = this.data.lead;
+      if (lead) {
+        const notifyUsers = new Set();
+        if (lead.sales && lead.sales !== operatorName) notifyUsers.add(lead.sales);
+        if (lead.designer && lead.designer !== operatorName) notifyUsers.add(lead.designer);
+        if (lead.manager && lead.manager !== operatorName) notifyUsers.add(lead.manager);
+        if (lead.creatorName && lead.creatorName !== operatorName) notifyUsers.add(lead.creatorName);
+        
+        notifyUsers.forEach(u => {
+          if (!u) return;
+          db.collection('notifications').add({
+            data: {
+              type: 'lead',
+              title: '客户有新系统记录',
+              content: `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+              targetUser: u,
+              isRead: false,
+              createTime: db.serverDate(),
+              link: `/pages/leadDetail/index?id=${this.data.leadId}`
+            }
+          });
+        });
+        
+        if (operatorName !== 'admin' && !this.data.isAdmin) {
+          db.collection('notifications').add({
+            data: {
+              type: 'lead',
+              title: '客户有新系统记录',
+              content: `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+              targetUser: 'admin',
+              isRead: false,
+              createTime: db.serverDate(),
+              link: `/pages/leadDetail/index?id=${this.data.leadId}`
+            }
+          });
+        }
+      }
     });
   },
 

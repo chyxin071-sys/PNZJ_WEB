@@ -57,15 +57,19 @@ export async function POST(request: Request) {
       await tcbUpdate(updateQuery);
     } catch (e) {}
 
-    // 手动跟进记录才触发通知（系统记录不通知）
-    if (method !== '系统记录') {
-      const leadData = await tcbQuery(`db.collection("leads").doc("${leadId}").get()`);
-      const lead = leadData?.[0];
-      if (lead) {
-        const targets = [lead.sales, lead.designer].filter(n => n && n !== createdBy);
-        if (createdBy !== 'admin') targets.push('admin');
-        sendNotifications(targets, '客户有新跟进', `${createdBy} 对客户【${lead.name}】添加了跟进记录`, `/leads/${leadId}`);
-      }
+    // 所有跟进记录（包括手动和系统自动生成）都触发通知
+    const leadData = await tcbQuery(`db.collection("leads").doc("${leadId}").get()`);
+    const lead = leadData?.[0];
+    if (lead) {
+      const targets = [lead.sales, lead.designer, lead.manager, lead.creatorName].filter(n => n && n !== createdBy);
+      if (createdBy !== 'admin') targets.push('admin');
+      
+      const notifyTitle = method === '系统记录' ? '客户有新系统记录' : '客户有新跟进';
+      const notifyContent = method === '系统记录' 
+        ? `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`
+        : `${createdBy} 对客户【${lead.name}】添加了跟进记录。`;
+        
+      sendNotifications(targets, notifyTitle, notifyContent, `/leads/${leadId}`);
     }
 
     return NextResponse.json({ ...res, createdAt: nowStr });

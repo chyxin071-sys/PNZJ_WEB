@@ -95,6 +95,8 @@ Page({
           const notifyUsers = new Set();
           if (lead.sales && lead.sales !== operatorName) notifyUsers.add(lead.sales);
           if (lead.designer && lead.designer !== operatorName) notifyUsers.add(lead.designer);
+          if (lead.manager && lead.manager !== operatorName) notifyUsers.add(lead.manager);
+          if (lead.creatorName && lead.creatorName !== operatorName) notifyUsers.add(lead.creatorName);
           
           notifyUsers.forEach(userName => {
             db.collection('notifications').add({

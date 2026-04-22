@@ -515,23 +515,33 @@ Page({
     // 通知相关人员
     const q = this.data.quote;
     const notifyUsers = new Set();
-    if (q.sales && q.sales !== operatorName) notifyUsers.add(q.sales);
-    if (q.designer && q.designer !== operatorName) notifyUsers.add(q.designer);
-    if (userInfo?.role !== 'admin') notifyUsers.add('admin');
+    
+    // 如果 quote 数据里没存全人员，最好去查 lead，但为了简单直接存或使用现有
+    db.collection('leads').doc(q.leadId).get().then(res => {
+      const lead = res.data;
+      if (lead) {
+        if (lead.sales && lead.sales !== operatorName) notifyUsers.add(lead.sales);
+        if (lead.designer && lead.designer !== operatorName) notifyUsers.add(lead.designer);
+        if (lead.manager && lead.manager !== operatorName) notifyUsers.add(lead.manager);
+        if (lead.creatorName && lead.creatorName !== operatorName) notifyUsers.add(lead.creatorName);
+      }
+      
+      if (userInfo?.role !== 'admin') notifyUsers.add('admin');
 
-    notifyUsers.forEach(u => {
-      if (!u) return;
-      db.collection('notifications').add({
-        data: {
-          type: 'quote',
-          title: '报价单已更新',
-          content: `${operatorName} 更新了客户【${q.customer || '未知'}】的报价单。`,
-          targetUser: u,
-          isRead: false,
-          createTime: db.serverDate(),
-          link: `/pages/quoteDetail/index?leadId=${q.leadId}`
-        }
+      notifyUsers.forEach(u => {
+        if (!u) return;
+        db.collection('notifications').add({
+          data: {
+            type: 'quote',
+            title: '报价单已更新',
+            content: `${operatorName} 更新了客户【${q.customer || '未知'}】的报价单。`,
+            targetUser: u,
+            isRead: false,
+            createTime: db.serverDate(),
+            link: `/pages/quoteDetail/index?leadId=${q.leadId}`
+          }
+        });
       });
-    });
+    }).catch(() => {});
   }
 });
