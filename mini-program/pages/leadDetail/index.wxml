@@ -189,25 +189,29 @@ module.exports = { getStatusClass: getStatusClass };
         <view class="timeline-dot"></view>
         <view class="timeline-line" wx:if="{{index < followUps.length - 1}}"></view>
         
-        <!-- 左滑组件 (使用 scroll-view 替代 movable-view 解决高度截断问题) -->
-        <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}">
-          <view class="swipe-view">
-            <!-- 表面内容卡片 -->
-            <view class="follow-item-card">
-              <view class="follow-header">
-                <view class="follow-time">{{item.displayTime || item.createdAt}}</view>
+        <!-- 左滑组件 (使用 scroll-view + scroll-snap 实现QQ级完美回弹和高度自适应) -->
+        <view class="swipe-container" style="width: calc(100vw - 152rpx); border-radius: 16rpx; overflow: hidden; transform: translateZ(0);">
+          <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
+            <view class="swipe-view" style="display: inline-flex; min-width: 100%;">
+              
+              <!-- 表面内容卡片 (滚动对齐点) -->
+              <view class="follow-item-card" style="width: calc(100vw - 152rpx); background: #fff; scroll-snap-align: start; flex-shrink: 0; white-space: normal;">
+                <view class="follow-header">
+                  <view class="follow-time">{{item.displayTime || item.createdAt}}</view>
+                </view>
+                <view class="follow-content">{{item.content}}</view>
+                <view class="follow-user">记录人: {{item.createdBy}}</view>
               </view>
-              <view class="follow-content">{{item.content}}</view>
-              <view class="follow-user">记录人: {{item.createdBy}}</view>
+              
+              <!-- 右侧滑动按钮区域 (滚动对齐点) -->
+              <view class="swipe-actions" style="width: 280rpx; display: flex; flex-shrink: 0; scroll-snap-align: end;">
+                <view class="swipe-btn edit" bindtap="editFollowUp" data-id="{{item._id}}">编辑</view>
+                <view class="swipe-btn delete" bindtap="deleteFollowUp" data-id="{{item._id}}">删除</view>
+              </view>
+              
             </view>
-            
-            <!-- 底层滑动按钮区域 -->
-            <view class="swipe-actions">
-              <view class="swipe-btn edit" bindtap="editFollowUp" data-id="{{item._id}}">编辑</view>
-              <view class="swipe-btn delete" bindtap="deleteFollowUp" data-id="{{item._id}}">删除</view>
-            </view>
-          </view>
-        </scroll-view>
+          </scroll-view>
+        </view>
       </view>
       
       <view class="empty-state" wx:if="{{followUps.length === 0}}">

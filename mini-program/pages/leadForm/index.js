@@ -398,6 +398,7 @@ Page({
           db.collection('leads').doc(this.data.id).remove().then(() => {
             wx.hideLoading();
             wx.showToast({ title: '已删除', icon: 'success' });
+            wx.disableAlertBeforeUnload();
             setTimeout(() => {
               // 返回到列表页（返回两层：返回上一页是详情页，再上一层是列表）
               wx.navigateBack({ delta: 2 });
