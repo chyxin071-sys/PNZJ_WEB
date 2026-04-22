@@ -11,7 +11,8 @@ export async function sendNotification(
   targetUser: string,
   title: string,
   content: string,
-  link?: string
+  link?: string,
+  type?: string
 ) {
   try {
     const docData = JSON.stringify({
@@ -19,7 +20,7 @@ export async function sendNotification(
       title,
       content,
       link: link || '',
-      type: 'lead',
+      type: type || (link?.includes('/projects') ? 'project' : 'lead'),
       isRead: false,
       isStarred: false,
       createTime: { $date: Date.now() }
@@ -38,8 +39,9 @@ export async function sendNotifications(
   targets: (string | null | undefined)[],
   title: string,
   content: string,
-  link?: string
+  link?: string,
+  type?: string
 ) {
   const unique = Array.from(new Set(targets.filter(Boolean))) as string[];
-  await Promise.all(unique.map(t => sendNotification(t, title, content, link)));
+  await Promise.all(unique.map(t => sendNotification(t, title, content, link, type)));
 }

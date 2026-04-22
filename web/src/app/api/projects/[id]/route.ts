@@ -56,7 +56,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       const newNodes: any[] = body.nodesData;
       newNodes.forEach(async (node: any, i: number) => {
         if (node.status === 'completed' && oldNodes[i]?.status !== 'completed') {
-          sendNotifications(targets, '施工节点完成', `【${customerName}】工地的【${node.name}】节点已验收完成`, link);
+          // 精简文案：避免地址冗余
+          const operatorName = body.manager || old.manager || '系统';
+          sendNotifications(targets, '施工节点完成', `${operatorName} 更新了进度：工地的【${node.name}】大阶段已验收完成`, link);
           
           // BUG-25: 节点完成时自动写入跟进记录
           if (old.leadId) {
@@ -121,7 +123,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       await sendNotifications(targets, '🎉 工地竣工', `【${customerName}】工地已竣工！`, link);
     }
 
-    return NextResponse.json(res);
+    return NextResponse.json({ success: true, data: res });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
