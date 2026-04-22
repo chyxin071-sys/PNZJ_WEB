@@ -310,6 +310,44 @@ export default function TodosPage() {
     return 'text-emerald-700 bg-emerald-50 border border-emerald-100'; // 未来（绿）
   };
 
+  // --- 资料下载处理 ---
+  const handleDownloadAttachment = async (att: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileIds: [att.url] }) // att.url 存储的是 fileID
+      });
+      if (!res.ok) throw new Error('无法获取下载链接');
+      const data = await res.json();
+      if (data && data[0] && data[0].download_url) {
+        const downloadUrl = data[0].download_url;
+        try {
+          const fileRes = await fetch(downloadUrl);
+          const blob = await fileRes.blob();
+          const objectUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = objectUrl;
+          a.download = att.name; // 强制使用原文件名
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(objectUrl);
+        } catch (fetchErr) {
+          window.open(downloadUrl, '_blank');
+        }
+      } else {
+        throw new Error('下载链接无效');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('下载失败，请稍后再试');
+    }
+  };
+
   // 根据当前条件过滤待办
   const filteredTodos = useMemo(() => {
     return todos.filter(t => {
@@ -925,16 +963,14 @@ export default function TodosPage() {
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {detailTodo.attachments.map((att: any, idx: number) => (
-                      <a 
+                      <button 
                         key={idx} 
-                        href={att.url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
+                        onClick={(e) => handleDownloadAttachment(att, e)}
                         className="flex items-center gap-2 px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors"
                       >
                         {att.type === 'image' ? <ImageIcon className="w-4 h-4 text-primary-500" /> : <Paperclip className="w-4 h-4 text-primary-500" />}
                         <span className="text-xs font-medium text-primary-700 max-w-[150px] truncate">{att.name}</span>
-                      </a>
+                      </button>
                     ))}
                   </div>
                 </div>

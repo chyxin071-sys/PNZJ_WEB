@@ -146,7 +146,23 @@ export default function LeadFilesPage() {
       if (!res.ok) throw new Error('无法获取下载链接');
       const data = await res.json();
       if (data && data[0] && data[0].download_url) {
-        window.open(data[0].download_url, '_blank');
+        const url = data[0].download_url;
+        try {
+          const fileRes = await fetch(url);
+          const blob = await fileRes.blob();
+          const objectUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = objectUrl;
+          a.download = file.name; // 强制保留用户上传的原始后缀名和文件名
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(objectUrl);
+        } catch (fetchErr) {
+          // CORS 拦截等异常时回退
+          window.open(url, '_blank');
+        }
       } else {
         throw new Error('下载链接无效');
       }
@@ -199,7 +215,7 @@ export default function LeadFilesPage() {
         </div>
 
         {/* 文件列表 */}
-        <div className="bg-white rounded-xl border border-primary-100 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl border border-primary-100 shadow-sm">
           {loading ? (
             <div className="flex items-center justify-center py-20 text-primary-400">
               <Loader2 className="w-6 h-6 animate-spin mr-2" />

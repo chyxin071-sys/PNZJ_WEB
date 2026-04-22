@@ -109,7 +109,23 @@ export default function CustomerDocuments({ leadId, canUpload = false, uploaderN
       if (!res.ok) throw new Error('无法获取下载链接');
       const data = await res.json();
       if (data && data[0] && data[0].download_url) {
-        window.open(data[0].download_url, '_blank');
+        const url = data[0].download_url;
+        try {
+          const fileRes = await fetch(url);
+          const blob = await fileRes.blob();
+          const objectUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = objectUrl;
+          a.download = file.name; // 强制使用原文件名
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          window.URL.revokeObjectURL(objectUrl);
+        } catch (fetchErr) {
+          // 如果存在跨域拦截，回退到直接打开新窗口
+          window.open(url, '_blank');
+        }
       } else {
         throw new Error('下载链接无效');
       }
