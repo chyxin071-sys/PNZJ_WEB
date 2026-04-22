@@ -1063,6 +1063,7 @@ Page({
       count: countToChoose,
       mediaType: ['image', 'video'],
       sourceType: ['album', 'camera'],
+      sizeType: ['compressed'], // 强制压缩
       success: (res) => {
         const newFiles = res.tempFiles.map(f => ({ url: f.tempFilePath, type: f.fileType || 'image' }));
         this.setData({ acceptancePhotos: [...this.data.acceptancePhotos, ...newFiles] });

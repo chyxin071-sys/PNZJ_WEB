@@ -109,6 +109,7 @@ Page({
             count: 9,
             mediaType: ['image', 'video'],
             sourceType: ['album', 'camera'],
+            sizeType: ['compressed'], // 强制压缩
             success: (res) => {
               const tempFiles = res.tempFiles.map(f => {
                 const ext = (f.tempFilePath.split('.').pop() || 'jpg').toLowerCase();

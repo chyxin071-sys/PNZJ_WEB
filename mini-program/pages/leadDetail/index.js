@@ -725,8 +725,9 @@ Page({
       });
       wx.hideLoading();
       wx.showToast({ title: '排期已更新', icon: 'success' });
-      const nodesSummary = recalculatedNodes.map(n => `· ${n.name}（${n.duration}天，预计 ${n.startDate} ~ ${n.endDate}）`).join('\n');
-      this.addSystemFollowUp(`修改并重算了设计出图排期\n\n最新排期：\n${nodesSummary}`);
+      const startNode = recalculatedNodes[0];
+      const endNode = recalculatedNodes[recalculatedNodes.length - 1];
+      this.addSystemFollowUp(`修改并重算了设计出图排期\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`);
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '保存失败', icon: 'none' });
