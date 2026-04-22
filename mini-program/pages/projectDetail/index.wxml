@@ -214,16 +214,18 @@
       <view style="font-size: 32rpx; font-weight: bold; text-align: center; margin-bottom: 30rpx;">添加施工记录</view>
       <textarea placeholder="输入文字说明..." bindinput="onDescInput" value="{{uploadDesc}}" style="width: 100%; height: 160rpx; background: #f8fafc; padding: 20rpx; border-radius: 8rpx; font-size: 28rpx; box-sizing: border-box; margin-bottom: 20rpx;"></textarea>
       
-      <view class="media-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20rpx; width: 100%; margin-bottom: 30rpx;">
+      <view class="media-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20rpx; width: 100%; margin-bottom: 30rpx; box-sizing: border-box;">
         <block wx:for="{{uploadFiles}}" wx:key="url">
-          <view style="aspect-ratio: 1; position: relative;">
-            <image src="{{item.url}}" mode="aspectFill" style="width: 100%; height: 100%; border-radius: 8rpx;" wx:if="{{item.type === 'image'}}"></image>
-            <video src="{{item.url}}" style="width: 100%; height: 100%; border-radius: 8rpx;" wx:if="{{item.type === 'video'}}"></video>
+          <view style="width: 100%; padding-bottom: 100%; position: relative;">
+            <image src="{{item.url}}" mode="aspectFill" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8rpx;" wx:if="{{item.type === 'image'}}"></image>
+            <video src="{{item.url}}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 8rpx;" wx:if="{{item.type === 'video'}}"></video>
             <view catchtap="removeUploadPhoto" data-index="{{index}}" style="position: absolute; top: -12rpx; right: -12rpx; width: 44rpx; height: 44rpx; background: var(--rose-600); color: #fff; border-radius: 22rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: bold; z-index: 10;">×</view>
           </view>
         </block>
-        <view class="upload-btn" bindtap="chooseMedia" style="aspect-ratio: 1; border-radius: 8rpx; background: #f1f5f9; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8;">
-          <text style="font-size: 40rpx; line-height: 1;">+</text>
+        <view class="upload-btn" bindtap="chooseMedia" style="width: 100%; padding-bottom: 100%; position: relative; border-radius: 8rpx; background: #f1f5f9;">
+          <view style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8;">
+            <text style="font-size: 40rpx; line-height: 1;">+</text>
+          </view>
         </view>
       </view>
       
@@ -367,15 +369,17 @@
         <!-- 现场影像 -->
         <view style="margin-bottom: 40rpx;">
           <view style="font-size: 26rpx; color: #64748b; margin-bottom: 16rpx;">现场影像 <text style="color: #cbd5e1; font-size: 22rpx; font-weight: normal; margin-left: 8rpx;">(选填)</text></view>
-          <view class="media-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20rpx; width: 100%;">
-            <view wx:for="{{acceptancePhotos}}" wx:key="url" style="aspect-ratio: 1; position: relative;">
-              <image wx:if="{{item.type === 'image' || !item.type}}" src="{{item.url || item}}" mode="aspectFill" style="width: 100%; height: 100%; border-radius: 12rpx; border: 1rpx solid #e2e8f0;" bindtap="previewAcceptancePhoto" data-index="{{index}}"></image>
-              <video wx:else src="{{item.url}}" style="width: 100%; height: 100%; border-radius: 12rpx;"></video>
+          <view class="media-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20rpx; width: 100%; box-sizing: border-box;">
+            <view wx:for="{{acceptancePhotos}}" wx:key="url" style="width: 100%; padding-bottom: 100%; position: relative;">
+              <image wx:if="{{item.type === 'image' || !item.type}}" src="{{item.url || item}}" mode="aspectFill" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 12rpx; border: 1rpx solid #e2e8f0; box-sizing: border-box;" bindtap="previewAcceptancePhoto" data-index="{{index}}"></image>
+              <video wx:else src="{{item.url}}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 12rpx; box-sizing: border-box;"></video>
               <view catchtap="removeAcceptancePhoto" data-index="{{index}}" style="position: absolute; top: -12rpx; right: -12rpx; width: 44rpx; height: 44rpx; background: var(--rose-600); color: #fff; border-radius: 22rpx; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: bold; z-index: 10;">×</view>
             </view>
-            <view bindtap="chooseAcceptanceMedia" style="aspect-ratio: 1; border-radius: 12rpx; background: #f8fafc; border: 2rpx dashed #cbd5e1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-              <text style="font-size: 56rpx; color: #94a3b8; font-weight: 300; line-height: 1;">+</text>
-              <text style="font-size: 22rpx; color: #94a3b8; margin-top: 8rpx;">上传影像</text>
+            <view bindtap="chooseAcceptanceMedia" style="width: 100%; padding-bottom: 100%; position: relative; border-radius: 12rpx; background: #f8fafc; border: 2rpx dashed #cbd5e1; box-sizing: border-box;">
+              <view style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <text style="font-size: 56rpx; color: #94a3b8; font-weight: 300; line-height: 1;">+</text>
+                <text style="font-size: 22rpx; color: #94a3b8; margin-top: 8rpx;">上传影像</text>
+              </view>
             </view>
           </view>
         </view>
