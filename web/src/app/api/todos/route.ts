@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     const assignees: any[] = body.assignees || [];
     const targets = assignees.map((a: any) => a.name).filter(n => n && n !== creatorName);
     if (creatorName) targets.push('admin');
-    sendNotifications(targets, '收到新的待办任务', `${creatorName} 给你指派了待办：【${body.title}】`, '/todos');
+    await sendNotifications(targets, '收到新的待办任务', `${creatorName} 给你指派了待办：【${body.title}】`, '/todos');
 
     return NextResponse.json(res);
   } catch (error: any) {

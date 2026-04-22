@@ -64,12 +64,12 @@ export async function POST(request: Request) {
       const targets = [lead.sales, lead.designer, lead.manager, lead.creatorName].filter(n => n && n !== createdBy);
       if (createdBy !== 'admin') targets.push('admin');
       
-      const notifyTitle = method === '系统记录' ? '客户有新系统记录' : '客户有新跟进';
+      const notifyTitle = method === '系统记录' ? '客户进度更新' : '客户有新跟进';
       const notifyContent = method === '系统记录' 
-        ? `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`
+        ? `系统更新了客户【${lead.name}】的记录：${content.substring(0, 30)}...`
         : `${createdBy} 对客户【${lead.name}】添加了跟进记录。`;
         
-      sendNotifications(targets, notifyTitle, notifyContent, `/leads/${leadId}`);
+      await sendNotifications(targets, notifyTitle, notifyContent, `/leads/${leadId}`);
     }
 
     return NextResponse.json({ ...res, createdAt: nowStr });

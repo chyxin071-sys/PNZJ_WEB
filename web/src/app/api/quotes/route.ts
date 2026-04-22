@@ -41,7 +41,7 @@ export async function POST(request: Request) {
 
     // 通知相关人员
     const targets = Array.from(new Set(['admin', body.sales, body.designer, body.manager])).filter(Boolean);
-    sendNotifications(
+    await sendNotifications(
       targets,
       '新报价单已创建',
       `${body.sales || body.designer || '团队成员'} 为客户【${body.customer || ''}】创建了报价单，成交价 ¥${(body.final || 0).toLocaleString()}`,

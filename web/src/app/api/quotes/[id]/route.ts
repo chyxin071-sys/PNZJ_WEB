@@ -33,7 +33,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     // 发送通知
     const targets = Array.from(new Set(['admin', body.sales, body.designer, body.manager])).filter(Boolean);
-    sendNotifications(
+    await sendNotifications(
       targets,
       '报价单已更新',
       `${body.modifier || body.sales || body.designer || '团队成员'} 更新了客户【${body.customer || ''}】的报价单，最新总价 ¥${(body.final || 0).toLocaleString()}`,

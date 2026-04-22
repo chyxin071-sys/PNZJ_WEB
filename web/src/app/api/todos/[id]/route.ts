@@ -18,7 +18,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (body.status === 'completed' && oldTodo.status !== 'completed') {
       const assigneeNames = (oldTodo.assignees || []).map((a: any) => a.name);
       const targets = Array.from(new Set([...assigneeNames, oldTodo.createdBy?.name, 'admin'])).filter(Boolean);
-      sendNotifications(
+      await sendNotifications(
         targets,
         '待办已完成',
         `待办任务【${oldTodo.title}】已完成`,
@@ -36,7 +36,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       // 所有相关人员（新的、旧的）
       const allTargets = Array.from(new Set([...oldAssigneeNames, ...newAssigneeNames, 'admin'])).filter(n => n && n !== operatorName);
       
-      sendNotifications(allTargets, '待办任务已更新', `${operatorName} 更新了待办：【${body.title}】的执行人或内容`, '/todos');
+      await sendNotifications(allTargets, '待办任务已更新', `${operatorName} 更新了待办：【${body.title}】的执行人或内容`, '/todos');
     }
 
     return NextResponse.json(res);

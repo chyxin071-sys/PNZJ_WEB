@@ -41,10 +41,10 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const link = `/leads/${id}`;
 
     if (body.sales && body.sales !== old.sales) {
-      sendNotifications(['admin', old.sales, body.sales].filter(Boolean), '销售负责人变更', `客户【${leadName}】的销售已从【${old.sales || '无'}】变更为【${body.sales}】`, link);
+      await sendNotifications(['admin', old.sales, body.sales].filter(Boolean), '销售负责人变更', `客户【${leadName}】的销售已从【${old.sales || '无'}】变更为【${body.sales}】`, link);
     }
     if (body.designer && body.designer !== old.designer) {
-      sendNotifications(['admin', old.designer, body.designer].filter(Boolean), '设计师变更', `客户【${leadName}】的设计师已从【${old.designer || '无'}】变更为【${body.designer}】`, link);
+      await sendNotifications(['admin', old.designer, body.designer].filter(Boolean), '设计师变更', `客户【${leadName}】的设计师已从【${old.designer || '无'}】变更为【${body.designer}】`, link);
     }
     if (body.status === '已签单' && old.status !== '已签单') {
       try {

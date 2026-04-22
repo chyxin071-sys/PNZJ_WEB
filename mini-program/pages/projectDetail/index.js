@@ -1198,15 +1198,36 @@ Page({
         // --- 触发通知和跟进记录逻辑 ---
         if (acceptanceMode === 'new') {
           const p = this.data.project;
-          const operatorName = userName;
           const leadId = p.leadId || p.customerNo;
           const content = `工地【${p.address || p.customer || '未知'}】的【${sub.name}】工序已验收完成。${acceptanceRemark ? '现场说明：' + acceptanceRemark : ''}`;
           
           if (leadId) {
-            // 自动在客户跟进中更新跟进记录
+            // 自动在客户跟进中更新跟进记录并触发通知
             this.addSystemFollowUpToLead(content);
+          } else {
+            // 如果没有关联客户，仍然需要发全局通知
+            const notifyUsers = new Set();
+            if (p.manager && p.manager !== userName) notifyUsers.add(p.manager);
+            if (p.sales && p.sales !== userName) notifyUsers.add(p.sales);
+            if (p.designer && p.designer !== userName) notifyUsers.add(p.designer);
+            if (p.creatorName && p.creatorName !== userName) notifyUsers.add(p.creatorName);
+            if (userName !== 'admin') notifyUsers.add('admin');
+        
+            notifyUsers.forEach(u => {
+              if (!u) return;
+              db.collection('notifications').add({
+                data: {
+                  type: 'project',
+                  title: '工地有新进度',
+                  content: `${userName} 更新了工地【${p.address || '未知'}】: ${content.substring(0, 20)}...`,
+                  targetUser: u,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/projectDetail/index?id=${this.data.id}`
+                }
+              });
+            });
           }
-
         }
 
         wx.hideLoading();
@@ -1294,15 +1315,16 @@ Page({
     if (p.sales && p.sales !== operatorName) notifyUsers.add(p.sales);
     if (p.designer && p.designer !== operatorName) notifyUsers.add(p.designer);
     if (p.creatorName && p.creatorName !== operatorName) notifyUsers.add(p.creatorName);
-    if (userInfo?.role !== 'admin') notifyUsers.add('admin');
+    
+    if (operatorName !== 'admin') notifyUsers.add('admin');
 
     notifyUsers.forEach(u => {
       if (!u) return;
       db.collection('notifications').add({
         data: {
           type: 'project',
-          title: '工地状态更新',
-          content: `${operatorName} 更新了工地【${p.address || p.customer || '未知'}】的状态。`,
+          title: '工地有新进度',
+          content: `${operatorName} 更新了工地【${p.address || '未知'}】: ${content.substring(0, 20)}...`,
           targetUser: u,
           isRead: false,
           createTime: db.serverDate(),

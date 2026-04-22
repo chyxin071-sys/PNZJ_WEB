@@ -108,7 +108,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     // 项目经理变更通知
     if (body.manager && old.manager && body.manager !== old.manager) {
-      sendNotifications(
+      await sendNotifications(
         ['admin', old.manager, body.manager, old.sales, old.designer],
         '项目经理变更',
         `【${customerName}】工地的项目经理已从【${old.manager}】变更为【${body.manager}】`,
@@ -118,7 +118,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     // 竣工通知
     if (body.status === '已竣工' && old.status !== '已竣工') {
-      sendNotifications(targets, '🎉 工地竣工', `【${customerName}】工地已竣工！`, link);
+      await sendNotifications(targets, '🎉 工地竣工', `【${customerName}】工地已竣工！`, link);
     }
 
     return NextResponse.json(res);

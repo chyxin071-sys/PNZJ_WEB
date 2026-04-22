@@ -408,8 +408,8 @@ Page({
           db.collection('notifications').add({
             data: {
               type: 'lead',
-              title: '客户有新系统记录',
-              content: `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+              title: '客户进度更新',
+              content: `系统更新了客户【${lead.name}】的记录：${content.substring(0, 30)}...`,
               targetUser: u,
               isRead: false,
               createTime: db.serverDate(),
@@ -422,8 +422,8 @@ Page({
           db.collection('notifications').add({
             data: {
               type: 'lead',
-              title: '客户有新系统记录',
-              content: `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+              title: '客户进度更新',
+              content: `系统更新了客户【${lead.name}】的记录：${content.substring(0, 30)}...`,
               targetUser: 'admin',
               isRead: false,
               createTime: db.serverDate(),
