@@ -30,7 +30,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const docData = JSON.stringify({
       ...body,
       updatedAt: { $date: Date.now() }
-    });
+    }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 
     const query = `db.collection("leads").doc("${id}").update({ data: ${docData} })`;
     const res = await tcbUpdate(query);
@@ -41,17 +41,15 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const link = `/leads/${id}`;
 
     if (body.sales && body.sales !== old.sales) {
-      sendNotifications([body.sales], '你有一条新线索', `${leadName}（${phone}）已分配给你跟进`, link);
-      sendNotifications(['admin'], '线索已分配', `线索【${leadName}】已分配给销售：${body.sales}`, link);
+      sendNotifications(['admin', old.sales, body.sales].filter(Boolean), '销售负责人变更', `客户【${leadName}】的销售已从【${old.sales || '无'}】变更为【${body.sales}】`, link);
     }
     if (body.designer && body.designer !== old.designer) {
-      sendNotifications([body.designer], '你有一条新设计任务', `客户【${leadName}】已分配给你跟进方案`, link);
-      sendNotifications(['admin'], '线索已分配', `线索【${leadName}】已分配给设计师：${body.designer}`, link);
+      sendNotifications(['admin', old.designer, body.designer].filter(Boolean), '设计师变更', `客户【${leadName}】的设计师已从【${old.designer || '无'}】变更为【${body.designer}】`, link);
     }
     if (body.status === '已签单' && old.status !== '已签单') {
       try {
-        const employees = await tcbQuery(`db.collection("employees").limit(100).get()`);
-        const allNames = employees ? employees.map((e: any) => e.name) : ['admin'];
+        const allUsers = await tcbQuery(`db.collection("users").where({ isActive: true }).limit(100).get()`);
+        const allNames = allUsers && allUsers.length > 0 ? allUsers.map((e: any) => e.name).filter(Boolean) : ['admin'];
         await sendNotifications(allNames, '🎉 恭喜开单', `好消息！客户【${leadName}】已成功签单，大家再接再厉！`, link);
       } catch (err) {
         console.error('发送签单通知失败', err);

@@ -5,7 +5,8 @@
       "Bash(mkdir:*)",
       "Bash(npx tsc:*)",
       "Bash(\"E:/XIN Lab/PNZJ/CM1.0/web/.env.local\":*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(curl:*)"
     ]
   }
 }

@@ -72,3 +72,20 @@ page { background: #f5f4f2; }
 .arrow-down { width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 10rpx solid #94a3b8; }
 .btn-save { background: var(--primary-900); color: #fff; text-align: center; padding: 24rpx 0; border-radius: 16rpx; font-size: 32rpx; font-weight: bold; margin-top: 48rpx; }
 
+/* 部门分组视图（非管理员） */
+.dept-group { margin: 0 40rpx 32rpx; }
+.dept-header { display: flex; align-items: center; gap: 16rpx; margin-bottom: 16rpx; padding: 0 4rpx; }
+.dept-label { font-size: 28rpx; font-weight: bold; color: var(--primary-900); }
+.dept-count { font-size: 24rpx; color: var(--primary-400); }
+.dept-members { background: #fff; border-radius: 24rpx; overflow: hidden; box-shadow: 0 4rpx 16rpx rgba(74, 64, 58, 0.04); }
+.member-card { display: flex; align-items: center; gap: 24rpx; padding: 28rpx 32rpx; border-bottom: 1rpx solid #f8f7f5; }
+.member-card:last-child { border-bottom: none; }
+.member-avatar { width: 72rpx; height: 72rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30rpx; font-weight: bold; flex-shrink: 0; }
+.avatar-admin { background: #faf5ff; color: #7e22ce; }
+.avatar-sales { background: #eff6ff; color: #1d4ed8; }
+.avatar-designer { background: var(--emerald-50); color: var(--emerald-600); }
+.avatar-manager { background: #fffbeb; color: var(--amber-600); }
+.member-info { flex: 1; display: flex; flex-direction: column; gap: 6rpx; }
+.member-name-row { display: flex; align-items: center; gap: 12rpx; }
+.member-name { font-size: 30rpx; font-weight: bold; color: var(--primary-900); }
+.member-phone { font-size: 24rpx; color: var(--primary-500); font-family: monospace; }

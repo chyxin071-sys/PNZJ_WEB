@@ -55,7 +55,9 @@ Page({
     
     showEditProjectModal: false,
     editProjectStartDate: '',
-    editProjectManager: ''
+    editProjectManager: '',
+    managerList: [],
+    managerIndex: -1
   },
 
   toggleEditNodes() {
@@ -117,6 +119,14 @@ Page({
   },
 
   preventBubble() {},
+
+  goToLead() {
+    if (this.data.project && this.data.project.leadId) {
+      wx.navigateTo({ url: `/pages/leadDetail/index?id=${this.data.project.leadId}` });
+    } else {
+      wx.showToast({ title: '客户信息不完整', icon: 'none' });
+    }
+  },
 
   onEditMajorNodeName(e) {
     const idx = e.currentTarget.dataset.index;
@@ -228,10 +238,27 @@ Page({
   },
 
   openEditProjectModal() {
-    this.setData({
-      showEditProjectModal: true,
-      editProjectStartDate: this.data.project.startDate || '',
-      editProjectManager: this.data.project.manager || ''
+    // 加载项目经理列表
+    const db = wx.cloud.database();
+    db.collection('users').where({
+      role: 'manager'
+    }).get().then(res => {
+      const managers = res.data;
+      const managerIdx = managers.findIndex(m => m.name === (this.data.project.manager || ''));
+      this.setData({
+        managerList: managers,
+        managerIndex: managerIdx >= 0 ? managerIdx : -1,
+        showEditProjectModal: true,
+        editProjectStartDate: this.data.project.startDate || '',
+        editProjectManager: this.data.project.manager || ''
+      });
+    }).catch(() => {
+      // 降级处理
+      this.setData({
+        showEditProjectModal: true,
+        editProjectStartDate: this.data.project.startDate || '',
+        editProjectManager: this.data.project.manager || ''
+      });
     });
   },
 
@@ -247,34 +274,43 @@ Page({
     this.setData({ editProjectManager: e.detail.value });
   },
 
+  onEditProjectManagerChange(e) {
+    const idx = e.detail.value;
+    this.setData({ managerIndex: idx });
+  },
+
   confirmEditProject() {
-    const { editProjectStartDate, editProjectManager, project } = this.data;
-    if (!editProjectStartDate || !editProjectManager) {
-      return wx.showToast({ title: '开工日期和项目经理不能为空', icon: 'none' });
-    }
+    const { editProjectStartDate, managerIndex, managerList, project } = this.data;
+    const editProjectManager = managerIndex >= 0 ? managerList[managerIndex].name : '';
 
     let newNodes = [...project.nodesData];
-    newNodes = this.recalculateGantt(newNodes, editProjectStartDate);
-    const expectedEndDate = newNodes[newNodes.length - 1].endDate;
+    if (editProjectStartDate && editProjectStartDate !== project.startDate) {
+      newNodes = this.recalculateGantt(newNodes, editProjectStartDate);
+    }
+    const expectedEndDate = newNodes.length > 0 ? newNodes[newNodes.length - 1].endDate : '';
 
+    const updateData = {
+      manager: editProjectManager, 
+      nodesData: newNodes, 
+      expectedEndDate 
+    };
+    if (editProjectStartDate) {
+      updateData.startDate = editProjectStartDate;
+    }
+
+    const db = wx.cloud.database();
     wx.showLoading({ title: '保存中...' });
-    wx.cloud.callFunction({
-      name: 'quickEdit',
-      data: {
-        collection: 'projects',
-        id: this.data.id,
-        data: { 
-          startDate: editProjectStartDate, 
-          manager: editProjectManager, 
-          nodesData: newNodes, 
-          expectedEndDate 
-        }
-      }
+    db.collection('projects').doc(this.data.id).update({
+      data: updateData
     }).then(() => {
       wx.hideLoading();
       wx.showToast({ title: '修改成功', icon: 'success' });
+      // 如果设置了开工日期且原来没有，则认为是启动项目，添加跟进记录
+      if (editProjectStartDate && !project.startDate) {
+        this.addSystemFollowUpToLead(`项目已启动，开工日期：${editProjectStartDate}`);
+      }
       this.setData({
-        'project.startDate': editProjectStartDate,
+        'project.startDate': editProjectStartDate || project.startDate,
         'project.manager': editProjectManager,
         'project.nodesData': newNodes,
         'project.expectedEndDate': expectedEndDate,
@@ -355,11 +391,8 @@ Page({
       const isAdmin = userInfo && userInfo.role === 'admin';
       const isRelated = isAdmin || p.manager === myName || p.sales === myName || p.designer === myName || p.creatorName === myName;
 
-      if (!isRelated) {
-        p._isMasked = true;
-        if (p.customer) p.customer = maskName(p.customer);
-        if (p.address) p.address = maskAddress(p.address);
-      }
+      p._isMasked = false;
+      p._isRelated = isRelated;
 
       const currentNode = p.currentNode || 1;
       
@@ -495,13 +528,9 @@ Page({
     const expectedEndDate = newNodes[newNodes.length - 1].endDate;
 
     wx.showLoading({ title: '重算排期中...' });
-    wx.cloud.callFunction({
-      name: 'quickEdit',
-      data: {
-        collection: 'projects',
-        id: this.data.id,
-        data: { nodesData: newNodes, expectedEndDate }
-      }
+    const db = wx.cloud.database();
+    db.collection('projects').doc(this.data.id).update({
+      data: { nodesData: newNodes, expectedEndDate }
     }).then(() => {
       wx.hideLoading();
       wx.showToast({ title: '重算成功', icon: 'success' });
@@ -541,11 +570,39 @@ Page({
       mediaType: ['image', 'video'],
       sourceType: ['album', 'camera'],
       success: (res) => {
-        const newFiles = res.tempFiles.map(f => ({
-          url: f.tempFilePath,
-          type: f.fileType
-        }));
-        this.setData({ uploadFiles: [...this.data.uploadFiles, ...newFiles] });
+        const tempFiles = res.tempFiles;
+        const compressedPromises = tempFiles.map(file => {
+          if (file.fileType === 'image') {
+            return new Promise((resolve) => {
+              wx.compressImage({
+                src: file.tempFilePath,
+                quality: 80, // 压缩质量
+                success: (compressedRes) => {
+                  resolve({
+                    url: compressedRes.tempFilePath,
+                    type: file.fileType
+                  });
+                },
+                fail: () => {
+                  // 压缩失败，使用原图
+                  resolve({
+                    url: file.tempFilePath,
+                    type: file.fileType
+                  });
+                }
+              });
+            });
+          } else {
+            return Promise.resolve({
+              url: file.tempFilePath,
+              type: file.fileType
+            });
+          }
+        });
+
+        Promise.all(compressedPromises).then(compressedFiles => {
+          this.setData({ uploadFiles: [...this.data.uploadFiles, ...compressedFiles] });
+        });
       }
     });
   },
@@ -776,6 +833,9 @@ Page({
       });
       wx.hideLoading();
       wx.showToast({ title: '正式开工', icon: 'success' });
+
+      // 添加系统跟进记录到客户
+      this.addSystemFollowUpToLead(`工地正式开工\n开工日期：${this.data.baseStartDate}\n项目经理：${this.data.project.manager}\n预计完工：${expectedEndDate}`);
     });
   },
 
@@ -1200,5 +1260,29 @@ Page({
 
   showComingSoon() {
     wx.showToast({ title: '模块正在开发中', icon: 'none' });
+  },
+
+  // 添加系统跟进记录到客户
+  addSystemFollowUpToLead(content) {
+    if (!this.data.project.leadId) return;
+    const db = wx.cloud.database();
+    const userInfo = wx.getStorageSync('userInfo');
+    const operatorName = userInfo ? (userInfo.name || '未知') : '未知';
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    db.collection('followUps').add({
+      data: {
+        leadId: this.data.project.leadId,
+        content: content,
+        method: '系统记录',
+        createdBy: operatorName,
+        createdAt: db.serverDate(),
+        displayTime: nowStr,
+        timestamp: db.serverDate()
+      }
+    }).catch(err => {
+      console.error('添加系统跟进记录失败', err);
+    });
   }
 });

@@ -68,7 +68,7 @@ Page({
           account: user.account,
           department: user.department,
           avatarUrl: ''
-        });
+        }, password);
       } else {
         wx.hideLoading();
         wx.showToast({ title: '账号不存在或密码错误', icon: 'none' });
@@ -80,8 +80,10 @@ Page({
     });
   },
 
-  doLoginSuccess(userInfo) {
+  doLoginSuccess(userInfo, passwordUsed) {
     wx.hideLoading();
+    // 把本次登录使用的密码临时存起来用于校验状态，但不展示在UI
+    userInfo._loginPassword = passwordUsed;
     wx.setStorageSync('userInfo', userInfo);
     
     // 每次重新登录时清空全局状态，防止上一个账号的筛选条件残留

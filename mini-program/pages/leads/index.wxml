@@ -1,3 +1,15 @@
+<wxs module="util">
+var getStatusClass = function(status) {
+  if (status === '沟通中') return 'status-blue';
+  if (status === '已量房') return 'status-indigo';
+  if (status === '已交定金') return 'status-pink';
+  if (status === '方案阶段') return 'status-purple';
+  if (status === '已签单') return 'status-emerald';
+  if (status === '已流失') return 'status-zinc';
+  return 'status-default';
+}
+module.exports = { getStatusClass: getStatusClass };
+</wxs>
 <view class="page-container">
 
   <!-- 顶部数据看板 -->
@@ -67,7 +79,7 @@
   </view>
 
   <!-- 客户列表区 -->
-  <scroll-view scroll-y class="list-container">
+  <view class="list-container">
     <view class="todo-card" hover-class="card-hover" hover-stay-time="100" wx:for="{{leads}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
       
       <!-- 头部：姓名、电话、状态下拉标签 -->
@@ -80,15 +92,15 @@
           />
         </view>
         <view class="status-picker-wrap" catchtap="preventTap">
-          <block wx:if="{{item._isMasked}}">
-            <view class="status-badge {{item.status === '已签单' ? 'status-signed' : 'status-default'}}" bindtap="showNoPermissionToast">
+          <block wx:if="{{!item._isRelated}}">
+            <view class="status-badge {{util.getStatusClass(item.status)}}" bindtap="showNoPermissionToast">
               <text>{{item.status}}</text>
               <view class="icon-arrow-down"></view>
             </view>
           </block>
           <block wx:else>
-            <picker mode="selector" range="{{['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失']}}" bindchange="onStatusChange" data-id="{{item._id}}">
-              <view class="status-badge {{item.status === '已签单' ? 'status-signed' : 'status-default'}}">
+            <picker mode="selector" range="{{['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失']}}" value="{{item._statusIndex}}" bindchange="onStatusChange" data-id="{{item._id}}">
+              <view class="status-badge {{util.getStatusClass(item.status)}}">
                 <text>{{item.status}}</text>
                 <view class="icon-arrow-down"></view>
               </view>
@@ -121,7 +133,7 @@
         </view>
         <view class="meta-assignee" wx:else>
           <view class="icon-user"></view>
-          <text wx:if="{{item.sales || item.designer}}">{{item.sales || '无销售'}} | {{item.designer || '无设计'}}</text>
+          <text wx:if="{{item.sales || item.designer || item.manager}}">{{item.sales || '无销售'}} | {{item.designer || '无设计'}} | {{item.manager || '无经理'}}</text>
           <text wx:else>创建人: {{item.creatorName || '未知'}}</text>
         </view>
       </view>
@@ -134,7 +146,7 @@
     </view>
 
     <view class="pb-tabbar"></view>
-  </scroll-view>
+  </view>
 
   <!-- 高级筛选弹窗 (修改为团队待办样式的居中弹窗) -->
   <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>

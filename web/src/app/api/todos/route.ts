@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
 import { sendNotifications } from '@/lib/notify';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,14 +29,14 @@ export async function POST(request: Request) {
 
     const docData = JSON.stringify({
       ...body,
-      createdAt: { $date: Date.now() }
-    });
+      createdAt: new Date().toISOString()
+    }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 
     const query = `db.collection("todos").add({ data: ${docData} })`;
     const res = await tcbAdd(query);
 
     // 通知被指派的人
-    const creatorName = body.creatorName || '';
+    const creatorName = body.createdBy?.name || '';
     const assignees: any[] = body.assignees || [];
     const targets = assignees.map((a: any) => a.name).filter(n => n && n !== creatorName);
     if (creatorName) targets.push('admin');

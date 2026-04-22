@@ -209,6 +209,16 @@ Page({
       const customerNo = `P${year}${sequence.toString().padStart(3, '0')}`;
       const userInfo = wx.getStorageSync('userInfo');
       const creatorName = userInfo ? (userInfo.name || '未知') : '未知';
+      const role = userInfo ? userInfo.role : '';
+
+      // 自动填入当前操作者
+      let autoSales = '';
+      let autoDesigner = '';
+      let autoManager = '';
+      
+      if (role === 'sales') autoSales = creatorName;
+      if (role === 'designer') autoDesigner = creatorName;
+      if (role === 'manager') autoManager = creatorName;
       
       await db.collection('leads').add({
         data: {
@@ -224,6 +234,9 @@ Page({
           status: '待跟进',
           customerNo,
           creatorName,
+          sales: autoSales,
+          designer: autoDesigner,
+          manager: autoManager,
           createdAt: db.serverDate(),
           updatedAt: db.serverDate()
         }
@@ -279,9 +292,10 @@ Page({
 
       // 按照创建时间倒序，并进行数据脱敏
       const list = res.data.map(l => {
-        const isRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
+        const isRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.manager === myName || l.signer === myName;
+        const isVisible = isRelated || l.status === '已签单';
         
-        if (!isRelated) {
+        if (!isVisible) {
           l._isMasked = true;
           l.name = maskName(l.name);
           l.phone = maskPhone(l.phone);
@@ -290,6 +304,9 @@ Page({
         } else {
           l._isMasked = false;
         }
+        l._isRelated = isRelated;
+        l._statusIndex = ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'].indexOf(l.status);
+        if (l._statusIndex === -1) l._statusIndex = 0;
         return l;
       }).sort((a, b) => {
         const getTime = (dateVal) => {
@@ -564,6 +581,8 @@ Page({
   updateLeadStatusInList(leadId, newStatus, extraData = {}) {
     const all = this.data.allLeads.map(l => {
       if (l._id === leadId) {
+        l._statusIndex = ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'].indexOf(newStatus);
+        if (l._statusIndex === -1) l._statusIndex = 0;
         return { ...l, status: newStatus, ...extraData };
       }
       return l;
@@ -578,7 +597,28 @@ Page({
         data: { status: newStatus, ...extraData }
       }).then(() => {
         wx.showToast({ title: '状态已更新', icon: 'success' });
+        this.addSystemFollowUp(leadId, `将客户状态更改为：${newStatus}`);
       });
+    });
+  },
+
+  addSystemFollowUp(leadId, content) {
+    const db = wx.cloud.database();
+    const userInfo = wx.getStorageSync('userInfo');
+    const operatorName = userInfo ? (userInfo.name || '未知') : '未知';
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    db.collection('followUps').add({
+      data: {
+        leadId: leadId,
+        content: content,
+        method: '系统记录',
+        createdBy: operatorName,
+        createdAt: db.serverDate(),
+        displayTime: nowStr,
+        timestamp: db.serverDate()
+      }
     });
   },
 
@@ -642,7 +682,21 @@ Page({
   },
 
   createLead() {
-    wx.navigateTo({ url: '/pages/leadForm/index' });
+    // 传递当前用户的角色和名字到新建线索页面
+    const userInfo = wx.getStorageSync('userInfo');
+    let defaultSales = '';
+    let defaultDesigner = '';
+    let defaultManager = '';
+    
+    if (userInfo) {
+      if (userInfo.role === 'sales') defaultSales = userInfo.name;
+      if (userInfo.role === 'designer') defaultDesigner = userInfo.name;
+      if (userInfo.role === 'manager') defaultManager = userInfo.name;
+    }
+    
+    wx.navigateTo({ 
+      url: `/pages/leadForm/index?defaultSales=${defaultSales}&defaultDesigner=${defaultDesigner}&defaultManager=${defaultManager}` 
+    });
   },
 
   goToDetail(e) {

@@ -68,19 +68,37 @@ export default function MaterialsPage() {
     }
   };
 
-  const executeProductAction = () => {
+  const executeProductAction = async () => {
     if (!productToConfirm) return;
     const { id, action } = productToConfirm;
-    
+
     if (action === '删除') {
-      setProducts(products.filter(p => p.id !== id));
-    } else {
-      setProducts(products.map(p => {
-        if (p.id === id) {
-          return { ...p, status: action === '下架' ? 'inactive' : 'active' };
+      try {
+        const res = await fetch(`/api/materials/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          setProducts(products.filter(p => p.id !== id));
+        } else {
+          alert('删除失败，请重试');
         }
-        return p;
-      }));
+      } catch (e) {
+        alert('删除失败，请重试');
+      }
+    } else {
+      const newStatus = action === '下架' ? 'inactive' : 'active';
+      try {
+        const res = await fetch(`/api/materials/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        if (res.ok) {
+          setProducts(products.map(p => p.id === id ? { ...p, status: newStatus } : p));
+        } else {
+          alert('操作失败，请重试');
+        }
+      } catch (e) {
+        alert('操作失败，请重试');
+      }
     }
     setProductToConfirm(null);
   };
@@ -494,25 +512,14 @@ export default function MaterialsPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-primary-900 mb-1">标准单价 (¥) *</label>
-                  <input 
-                    type="number" 
-                    value={editingProduct?.price || ""} 
-                    onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})}
-                    className="w-full px-4 py-2 bg-primary-50 border border-transparent rounded-lg focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all outline-none font-mono" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-primary-900 mb-1">当前库存</label>
-                  <input 
-                    type="number" 
-                    value={editingProduct?.stock || ""} 
-                    onChange={e => setEditingProduct({...editingProduct, stock: Number(e.target.value)})}
-                    className="w-full px-4 py-2 bg-primary-50 border border-transparent rounded-lg focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all outline-none font-mono" 
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-900 mb-1">标准单价 (¥) *</label>
+                <input
+                  type="number"
+                  value={editingProduct?.price || ""}
+                  onChange={e => setEditingProduct({...editingProduct, price: Number(e.target.value)})}
+                  className="w-full px-4 py-2 bg-primary-50 border border-transparent rounded-lg focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all outline-none font-mono"
+                />
               </div>
             </div>
             

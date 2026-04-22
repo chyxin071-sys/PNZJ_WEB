@@ -7,6 +7,7 @@ import MainLayout from "../../../components/MainLayout";
 import CustomerDocuments from "../../../../src/components/CustomerDocuments";
 import CustomerInfo from "../../../components/CustomerInfo";
 import { getNextWorkingDay, calculateEndDate, formatDate } from "../../../lib/date";
+import DatePicker from "../../../components/DatePicker";
 
 export default function LeadDetailPage() {
   const params = useParams();
@@ -14,6 +15,7 @@ export default function LeadDetailPage() {
   const leadId = params.id as string;
   
   const [lead, setLead] = useState<any>(null);
+  const [leadNotFound, setLeadNotFound] = useState(false);
   const [newNote, setNewNote] = useState("");
   const [timeline, setTimeline] = useState<any[]>([]);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -65,26 +67,26 @@ export default function LeadDetailPage() {
 
   const isAssignedToMe = (leadData: any) => {
     if (!currentUser) return false;
-    return leadData.sales === currentUser.name || leadData.designer === currentUser.name || leadData.creatorName === currentUser.name || leadData.signer === currentUser.name;
+    return leadData.sales === currentUser.name || leadData.designer === currentUser.name || leadData.manager === currentUser.name || leadData.creatorName === currentUser.name || leadData.signer === currentUser.name;
   };
 
   const maskName = (name: string, leadData: any) => {
     if (!currentUser || currentUser.role === 'admin') return name;
-    if (isAssignedToMe(leadData)) return name;
+    if (isAssignedToMe(leadData) || leadData.status === '已签单' || leadData.status === '施工中') return name;
     if (!name) return name;
     return name.substring(0, 1) + '**';
   };
 
   const maskPhone = (phone: string, leadData: any) => {
     if (!currentUser || currentUser.role === 'admin') return phone;
-    if (isAssignedToMe(leadData)) return phone;
+    if (isAssignedToMe(leadData) || leadData.status === '已签单' || leadData.status === '施工中') return phone;
     if (!phone || phone.length < 11) return phone;
     return phone.substring(0, 3) + '****' + phone.substring(7);
   };
 
   const maskAddress = (address: string, leadData: any) => {
     if (!currentUser || currentUser.role === 'admin') return address;
-    if (isAssignedToMe(leadData)) return address;
+    if (isAssignedToMe(leadData) || leadData.status === '已签单' || leadData.status === '施工中') return address;
     if (!address) return address;
     const parts = address.split(' ');
     if (parts.length > 1) {
@@ -93,12 +95,94 @@ export default function LeadDetailPage() {
     return address + ' ***';
   };
 
+  const fetchAllData = async () => {
+    try {
+      const [leadRes, quoteRes, projectRes, followRes] = await Promise.all([
+        fetch(`/api/leads/${leadId}`),
+        fetch(`/api/quotes?leadId=${leadId}`),
+        fetch(`/api/projects?leadId=${leadId}`),
+        fetch(`/api/followUps?leadId=${leadId}`)
+      ]);
+
+      if (!leadRes.ok) { setLeadNotFound(true); return; }
+
+      const data = await leadRes.json();
+      let dateStr = '';
+      if (data.createdAt) {
+        try {
+          if (data.createdAt.$date) {
+            dateStr = new Date(data.createdAt.$date).toISOString().split('T')[0];
+          } else {
+            dateStr = new Date(data.createdAt).toISOString().split('T')[0];
+          }
+        } catch(err) {}
+      }
+      const formatted = {
+        ...data,
+        id: data._id,
+        createdAt: dateStr,
+        lastFollowUp: data.lastFollowUp || "暂无"
+      };
+      setLead(formatted);
+      setEditForm(formatted);
+
+      // 处理报价
+      if (quoteRes.ok) {
+        const qData = await quoteRes.json();
+        setQuoteId(qData && qData.length > 0 ? qData[0]._id : null);
+      }
+      
+      // 处理项目
+      if (projectRes.ok) {
+        const pData = await projectRes.json();
+        setProjectId(pData && pData.length > 0 ? pData[0]._id : null);
+      }
+
+      // 处理跟进记录
+      if (followRes.ok) {
+        const followUpsData = await followRes.json();
+        const timelineData = Array.isArray(followUpsData.data || followUpsData) ? (followUpsData.data || followUpsData).map((f: any) => {
+          let timeStr = '';
+          if (f.createdAt && typeof f.createdAt === 'object' && f.createdAt.$date) {
+            const d = new Date(f.createdAt.$date);
+            timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+          } else if (f.createdAt && typeof f.createdAt === 'string') {
+            timeStr = f.createdAt.substring(0, 16);
+          }
+          return {
+            id: f._id,
+            type: f.method === '系统记录' ? 'system' : 'user',
+            user: f.createdBy || f.user || '未知',
+            time: timeStr,
+            content: f.content || ''
+          };
+        }) : [];
+
+        if (timelineData.length === 0 && dateStr) {
+          timelineData.push({
+            id: '1',
+            type: 'system',
+            user: '系统',
+            time: `${dateStr} 10:15`,
+            content: `【系统日志】线索已录入系统，初步意向评级：${formatted.rating}。`
+          });
+        }
+        timelineData.sort((a: any, b: any) => (b.time || '').localeCompare(a.time || ''));
+        setTimeline(timelineData);
+      }
+    } catch (e) {
+      console.error('Failed to fetch data concurrently', e);
+    }
+  };
+
   const fetchLeadDetail = async () => {
+    // 保留给手动触发单条刷新时使用
     try {
       const res = await fetch(`/api/leads/${leadId}`);
+      if (!res.ok) { setLeadNotFound(true); return; }
       if (res.ok) {
         const data = await res.json();
-        let dateStr = "未知";
+        let dateStr = '';
         if (data.createdAt) {
           try {
             if (data.createdAt.$date) {
@@ -121,8 +205,7 @@ export default function LeadDetailPage() {
         fetch(`/api/followUps?leadId=${leadId}`)
           .then(res => res.json())
           .then(followUpsData => {
-             const timelineData = Array.isArray(followUpsData) ? followUpsData.map((f: any) => {
-                // createdAt 可能是字符串 "2025-01-01 10:00" 或 { $date: timestamp }
+             const timelineData = Array.isArray(followUpsData.data || followUpsData) ? (followUpsData.data || followUpsData).map((f: any) => {
                 let timeStr = '';
                 if (f.createdAt && typeof f.createdAt === 'object' && f.createdAt.$date) {
                   const d = new Date(f.createdAt.$date);
@@ -139,7 +222,6 @@ export default function LeadDetailPage() {
                 };
              }) : [];
 
-             // 如果云端没有数据，添加一条默认记录
              if (timelineData.length === 0) {
                timelineData.push({
                  id: '1',
@@ -149,6 +231,7 @@ export default function LeadDetailPage() {
                  content: `【系统日志】线索已录入系统，初步意向评级：${formatted.rating}。`
                });
              }
+             timelineData.sort((a: any, b: any) => (b.time || '').localeCompare(a.time || ''));
              setTimeline(timelineData);
           });
       }
@@ -187,11 +270,20 @@ export default function LeadDetailPage() {
 
   useEffect(() => {
     if (leadId) {
-      fetchLeadDetail();
-      fetchQuoteStatus(leadId);
-      fetchProjectStatus(leadId);
+      fetchAllData();
     }
   }, [leadId]);
+
+  if (leadNotFound) {
+    return (
+      <MainLayout>
+        <div className="p-8 text-center">
+          <p className="text-primary-500 mb-4">找不到该客户信息，可能已被删除或链接有误。</p>
+          <button onClick={() => router.push('/leads')} className="px-4 py-2 bg-primary-900 text-white rounded-lg text-sm">返回客户列表</button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   if (!lead) {
     return (
@@ -358,13 +450,19 @@ export default function LeadDetailPage() {
   const handleUpdateInfo = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      let finalSource = editForm.source;
+      if (finalSource === '其他' && editForm.customSource) {
+        finalSource = editForm.customSource;
+      }
+      const payload = { ...editForm, source: finalSource };
+      
       const res = await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify(payload)
       });
       if (res.ok) {
-        setLead(editForm);
+        setLead(payload);
         setIsEditModalOpen(false);
       }
     } catch (e) {
@@ -487,12 +585,26 @@ export default function LeadDetailPage() {
       });
       setLead({ ...lead, designNodes: nodes, designStartDate });
       setShowStartDesignModal(false);
+      const nodesSummary = nodes.map((n: any) => `· ${n.name}（${n.duration}天，预计 ${n.startDate} ~ ${n.endDate}）`).join('\n');
       await fetch('/api/followUps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId, content: `开启了设计出图工作流，预计从 ${designStartDate} 开始`, method: '系统记录', createdBy: currentUser?.name || '系统' })
+        body: JSON.stringify({ leadId, content: `开启了设计出图工作流，预计从 ${designStartDate} 开始\n\n阶段排期：\n${nodesSummary}`, method: '系统记录', createdBy: currentUser?.name || '系统' })
       });
-      fetchLeadDetail();
+      // 关键：重新拉取跟进记录以更新页面
+      fetchAllData();
+      
+      // 触发全员通知 (BUG-07 修复)
+      fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targets: ['admin', lead.designer].filter(Boolean),
+          title: '设计工作流已开启',
+          content: `【${lead.name}】的设计工作流已开启，预计从 ${designStartDate} 开始`,
+          link: `/leads/${leadId}`
+        })
+      }).catch(()=>{});
     } catch (e) { console.error(e); }
   };
 
@@ -508,12 +620,13 @@ export default function LeadDetailPage() {
       });
       setLead({ ...lead, designNodes: nodes });
       setShowEditDesignModal(false);
+      const nodesSummary = nodes.map((n: any) => `· ${n.name}（${n.duration}天，预计 ${n.startDate} ~ ${n.endDate}）`).join('\n');
       await fetch('/api/followUps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId, content: '修改并重算了设计出图排期', method: '系统记录', createdBy: currentUser?.name || '系统' })
+        body: JSON.stringify({ leadId, content: `修改并重算了设计出图排期\n\n最新排期：\n${nodesSummary}`, method: '系统记录', createdBy: currentUser?.name || '系统' })
       });
-      fetchLeadDetail();
+      fetchAllData();
     } catch (e) { console.error(e); }
   };
 
@@ -537,12 +650,20 @@ export default function LeadDetailPage() {
         body: JSON.stringify({ designNodes: recalced })
       });
       setLead({ ...lead, designNodes: recalced });
+      const completedNode = nodes[idx];
+      const nextNode = idx + 1 < nodes.length ? nodes[idx + 1] : null;
+      let content = `已完成设计出图节点：【${nodeName}】（实际完成：${today}）`;
+      if (nextNode) {
+        content += `\n下一阶段：【${nextNode.name}】，预计完成：${nextNode.endDate}`;
+      } else {
+        content += '\n所有设计出图节点已全部完成 🎉';
+      }
       await fetch('/api/followUps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId, content: `已完成设计出图节点：【${nodeName}】`, method: '系统记录', createdBy: currentUser?.name || '系统' })
+        body: JSON.stringify({ leadId, content, method: '系统记录', createdBy: currentUser?.name || '系统' })
       });
-      fetchLeadDetail();
+      fetchAllData();
     } catch (e) { console.error(e); }
   };
 
@@ -662,7 +783,15 @@ export default function LeadDetailPage() {
                   {/* 编辑信息按钮 */}
                   {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
                     <button 
-                      onClick={() => { setEditForm(lead); setIsEditModalOpen(true); }}
+                      onClick={() => { 
+                        const isStandardSource = ["自然进店", "老介新", "抖音", "自有关系", "其他"].includes(lead.source);
+                        setEditForm({
+                          ...lead,
+                          source: isStandardSource ? lead.source : '其他',
+                          customSource: isStandardSource ? '' : lead.source
+                        }); 
+                        setIsEditModalOpen(true); 
+                      }}
                       className="p-1.5 text-primary-400 hover:text-primary-900 hover:bg-primary-50 rounded-md transition-colors relative z-10"
                       title="编辑客户信息"
                     >
@@ -901,7 +1030,7 @@ export default function LeadDetailPage() {
                             <button onClick={() => setEditingNoteId(null)} className="px-3 py-2 border border-primary-200 text-primary-600 rounded-lg text-sm font-medium">取消</button>
                           </div>
                         ) : (
-                          <div className={`text-sm leading-relaxed p-4 rounded-xl border ${item.type === 'system' ? 'bg-zinc-50 border-zinc-100 text-primary-600' : 'bg-primary-50/50 border-primary-100 text-primary-800'}`}>
+                          <div className={`text-sm leading-relaxed p-4 rounded-xl border whitespace-pre-line ${item.type === 'system' ? 'bg-zinc-50 border-zinc-100 text-primary-600' : 'bg-primary-50/50 border-primary-100 text-primary-800'}`}>
                             {item.content}
                           </div>
                         )}
@@ -954,7 +1083,11 @@ export default function LeadDetailPage() {
                       <>
                         <div className="fixed inset-0 z-10 cursor-default" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
                         <div className="absolute right-0 top-full z-20 w-36 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                          {users.filter(u => u.role === 'sales' || u.role === 'admin').map(u => (
+                          {users.filter(u => u.role === 'sales' || u.role === 'admin').sort((a,b) => {
+                            if (a.role === 'admin' && b.role !== 'admin') return 1;
+                            if (a.role !== 'admin' && b.role === 'admin') return -1;
+                            return a.role.localeCompare(b.role) || a.name.localeCompare(b.name);
+                          }).map(u => (
                             <div
                               key={u._id}
                               onClick={() => {
@@ -995,7 +1128,13 @@ export default function LeadDetailPage() {
                       <>
                         <div className="fixed inset-0 z-10 cursor-default" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
                         <div className="absolute right-0 top-full z-20 w-36 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                          {[{ _id: 'unassigned', name: '未分配' }, ...users.filter(u => u.role === 'designer' || u.role === 'admin')].map(u => (
+                          {[{ _id: 'unassigned', name: '未分配', role: 'designer' }, ...users.filter(u => u.role === 'designer' || u.role === 'admin')].sort((a,b) => {
+                            if (a.name === '未分配') return -1;
+                            if (b.name === '未分配') return 1;
+                            if (a.role === 'admin' && b.role !== 'admin') return 1;
+                            if (a.role !== 'admin' && b.role === 'admin') return -1;
+                            return a.role.localeCompare(b.role) || a.name.localeCompare(b.name);
+                          }).map(u => (
                             <div
                               key={u._id}
                               onClick={() => {
@@ -1018,27 +1157,33 @@ export default function LeadDetailPage() {
                   </button>
                 </div>
 
-                {(lead.status === "已签单" || lead.status === "施工中") && (
+                {(lead.status === "已签单" || lead.status === "施工中" || true) && (
                   <div className="flex items-center justify-between pt-4 border-t border-primary-50">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 text-xs font-bold">项目经理</div>
-                      <span className="text-sm font-medium text-primary-900">{lead.manager || "待指派"}</span>
+                      <span className="text-sm font-medium text-primary-900">{lead.manager || "未分配"}</span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => setOpenDropdown(openDropdown === 'edit-manager' ? null : 'edit-manager')}
                       className="text-xs text-emerald-600 hover:text-emerald-700 font-medium relative"
                     >
-                      {lead.manager ? "更改" : "指派"}
+                      {lead.manager ? "更改" : "分配"}
                       {openDropdown === 'edit-manager' && (
                         <>
                           <div className="fixed inset-0 z-10 cursor-default" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
                           <div className="absolute right-0 top-full z-20 w-36 mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 text-left cursor-default max-h-48 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                            {users.filter(u => u.role === 'manager' || u.role === 'admin').map(u => (
+                          {[{ _id: 'unassigned', name: '未分配', role: 'manager' }, ...users.filter(u => u.role === 'manager' || u.role === 'admin')].sort((a,b) => {
+                            if (a.name === '未分配') return -1;
+                            if (b.name === '未分配') return 1;
+                            if (a.role === 'admin' && b.role !== 'admin') return 1;
+                            if (a.role !== 'admin' && b.role === 'admin') return -1;
+                            return a.role.localeCompare(b.role) || a.name.localeCompare(b.name);
+                          }).map(u => (
                               <div
                                 key={u._id}
                                 onClick={() => {
                                   if (lead.manager !== u.name) {
-                                    setPersonnelConfirm({ role: '项目经理', oldName: lead.manager || '待指派', newName: u.name });
+                                    setPersonnelConfirm({ role: '项目经理', oldName: lead.manager || '未分配', newName: u.name });
                                   }
                                   setOpenDropdown(null);
                                 }}
@@ -1115,8 +1260,9 @@ export default function LeadDetailPage() {
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-primary-700 mb-1.5">设计启动日期</label>
-                <input type="date" value={designStartDate} onChange={e => handleDesignStartDateChange(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg text-sm text-primary-900 focus:outline-none focus:border-primary-400" />
+                <div className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg text-sm focus-within:border-primary-400">
+                  <DatePicker value={designStartDate} onChange={handleDesignStartDateChange} placeholder="选择启动日期" />
+                </div>
               </div>
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -1243,12 +1389,9 @@ export default function LeadDetailPage() {
             <div className="space-y-4 text-left mb-8">
               <div>
                 <label className="block text-sm font-medium text-primary-700 mb-1">签单时间</label>
-                <input 
-                  type="date" 
-                  value={signModal.date} 
-                  onChange={e => setSignModal({...signModal, date: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus:border-primary-400 focus:bg-white transition-all outline-none text-sm text-primary-900" 
-                />
+                <div className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus-within:border-primary-400 focus-within:bg-white transition-all text-sm text-primary-900">
+                  <DatePicker value={signModal.date} onChange={v => setSignModal({...signModal, date: v})} placeholder="选择签单日期" />
+                </div>
               </div>
               <div className="relative">
                 <label className="block text-sm font-medium text-primary-700 mb-1">签单人</label>
@@ -1376,7 +1519,7 @@ export default function LeadDetailPage() {
                     </div>
                     {openDropdown === 'edit-source' && (
                       <div className="absolute z-30 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1">
-                        {["自然进店", "老介新", "抖音", "小红书", "大众点评", "自有关系", "其他"].map(option => (
+                        {["自然进店", "老介新", "抖音", "自有关系", "其他"].map(option => (
                           <div 
                             key={option}
                             onClick={() => { setEditForm({...editForm, source: option}); setOpenDropdown(null); }}
@@ -1391,6 +1534,18 @@ export default function LeadDetailPage() {
                       </div>
                     )}
                   </div>
+                  {editForm.source === '其他' && (
+                    <div className="col-span-1 relative z-10 mt-2">
+                      <label className="block text-sm font-medium text-primary-900 mb-1">具体来源</label>
+                      <input 
+                        type="text"
+                        placeholder="请输入具体来源"
+                        value={editForm.customSource || ''}
+                        onChange={e => setEditForm({...editForm, customSource: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-primary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white text-primary-900"
+                      />
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-primary-900 mb-1">房屋面积 (m²)</label>
                     <input type="number" value={editForm.area} onChange={e => setEditForm({...editForm, area: e.target.value})} className="w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all outline-none text-sm text-primary-900" />

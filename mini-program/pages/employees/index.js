@@ -2,8 +2,10 @@ Page({
   data: {
     allEmployees: [],
     filteredEmployees: [],
+    deptGroups: [], // 非管理员用的部门分组数据
     searchQuery: '',
-    activeTab: 'all', // all, sales, designer, manager, admin
+    activeTab: 'all',
+    isAdmin: false,
     tabs: [
       { key: 'all', name: '全部' },
       { key: 'sales', name: '销售' },
@@ -12,7 +14,7 @@ Page({
       { key: 'admin', name: '管理' }
     ],
     showModal: false,
-    modalType: 'add', // 'add' or 'edit'
+    modalType: 'add',
     currentEditId: '',
     formData: {
       name: '',
@@ -33,7 +35,10 @@ Page({
   onLoad() {
     const userInfo = wx.getStorageSync('userInfo');
     if (userInfo) {
-      this.setData({ currentUserId: userInfo.id || userInfo._id });
+      this.setData({
+        currentUserId: userInfo.id || userInfo._id,
+        isAdmin: userInfo.role === 'admin'
+      });
     }
     this.fetchEmployees();
   },
@@ -43,16 +48,35 @@ Page({
     const db = wx.cloud.database();
     db.collection('users').get().then(res => {
       wx.hideLoading();
-      // 按创建时间或名字排序
       const list = res.data.sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
       this.setData({ allEmployees: list }, () => {
         this.filterEmployees();
+        this.buildDeptGroups();
       });
     }).catch(err => {
       wx.hideLoading();
       wx.showToast({ title: '获取数据失败', icon: 'none' });
       console.error(err);
     });
+  },
+
+  buildDeptGroups() {
+    const all = this.data.allEmployees.filter(e => e.status !== 'inactive');
+    const currentUserId = this.data.currentUserId;
+    const depts = [
+      { key: 'admin', label: '管理组' },
+      { key: 'sales', label: '销售部' },
+      { key: 'designer', label: '设计部' },
+      { key: 'manager', label: '工程部' },
+    ];
+    const groups = depts.map(d => ({
+      label: d.label,
+      members: all.filter(e => e.role === d.key).map(e => ({
+        ...e,
+        isMe: e._id === currentUserId
+      }))
+    })).filter(g => g.members.length > 0);
+    this.setData({ deptGroups: groups });
   },
 
   onSearch(e) {
@@ -176,6 +200,7 @@ Page({
       showModal: true,
       modalType: 'edit',
       currentEditId: emp._id,
+      oldName: emp.name,
       formData: {
         name: emp.name || '',
         phone: emp.phone || '',
@@ -266,6 +291,9 @@ Page({
           wx.setStorageSync('userInfo', userInfo);
         }
 
+        // 同步更新 leads 和 projects 中的员工信息
+        this.syncEmployeeReferences(currentEditId, formData.name.trim(), this.data.oldName);
+
         this.closeModal();
         this.fetchEmployees();
       }).catch(err => {
@@ -274,5 +302,84 @@ Page({
         wx.showToast({ title: '修改失败', icon: 'none' });
       });
     }
+  },
+
+  // 同步更新员工引用
+  syncEmployeeReferences(employeeId, newName, oldName) {
+    const db = wx.cloud.database();
+    const _ = db.command;
+
+    // 更新 leads 中的 sales, designer, manager
+    const updateLeads = db.collection('leads').where(_.or([
+      { 'sales._id': employeeId },
+      { 'designer._id': employeeId },
+      { 'manager._id': employeeId }
+    ])).update({
+      data: {
+        'sales.name': _.eq('sales._id', employeeId).then(newName),
+        'designer.name': _.eq('designer._id', employeeId).then(newName),
+        'manager.name': _.eq('manager._id', employeeId).then(newName)
+      }
+    });
+
+    // 更新 projects 中的 manager
+    const updateProjects = db.collection('projects').where({
+      'manager._id': employeeId
+    }).update({
+      data: {
+        'manager.name': newName
+      }
+    });
+
+    // 执行更新（静默，不显示loading）
+    Promise.all([updateLeads, updateProjects]).then(() => {
+      console.log('员工引用同步更新完成');
+      // 如果名字改变，添加跟进记录
+      if (oldName && newName !== oldName) {
+        this.addFollowUpForEmployeeChange(employeeId, oldName, newName);
+      }
+    }).catch(err => {
+      console.error('同步更新失败:', err);
+    });
+  },
+
+  addFollowUpForEmployeeChange(employeeId, oldName, newName) {
+    const db = wx.cloud.database();
+    const _ = db.command;
+
+    // 查询受影响的leads
+    db.collection('leads').where(_.or([
+      { 'sales._id': employeeId },
+      { 'designer._id': employeeId },
+      { 'manager._id': employeeId }
+    ])).get().then(res => {
+      const leads = res.data;
+      const followUps = leads.map(lead => {
+        let role = '';
+        if (lead.sales && lead.sales._id === employeeId) role = '销售';
+        else if (lead.designer && lead.designer._id === employeeId) role = '设计师';
+        else if (lead.manager && lead.manager._id === employeeId) role = '项目经理';
+
+        return {
+          leadId: lead._id,
+          content: `${role}人员变更：${oldName} → ${newName}`,
+          type: 'system',
+          creator: '系统',
+          createdAt: db.serverDate()
+        };
+      });
+
+      // 批量添加跟进记录
+      if (followUps.length > 0) {
+        const promises = followUps.map(f => db.collection('followUps').add({ data: f }));
+        Promise.all(promises).then(() => {
+          console.log('员工变更跟进记录添加完成');
+        }).catch(err => {
+          console.error('添加跟进记录失败:', err);
+        });
+      }
+    }).catch(err => {
+      console.error('查询leads失败:', err);
+    });
   }
 });

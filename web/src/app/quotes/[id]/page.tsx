@@ -124,10 +124,32 @@ export default function QuoteDetailPage() {
     }
   };
 
-  const handleSave = () => {
-    const now = new Date();
-    const timeString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    setLastSavedTime(timeString);
+  const handleSave = async () => {
+    try {
+      const userInfoStr = localStorage.getItem('userInfo');
+      const currentUser = userInfoStr ? JSON.parse(userInfoStr) : null;
+      const res = await fetch(`/api/quotes/${quoteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          items, 
+          discount, 
+          total: totalAmount, 
+          final: finalAmount,
+          leadId: quote.leadId,
+          modifier: currentUser?.name || '未知'
+        })
+      });
+      if (res.ok) {
+        const now = new Date();
+        const timeString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        setLastSavedTime(timeString);
+      } else {
+        alert('保存失败');
+      }
+    } catch (e) {
+      alert('保存出错');
+    }
   };
 
   if (!quote) {

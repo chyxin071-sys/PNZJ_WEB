@@ -4,6 +4,7 @@ Page({
     leadId: null,
     quote: null,
     loading: true,
+    isNewQuote: false,
     groupedItems: [],
     showCustomModal: false,
     customItem: {
@@ -103,7 +104,7 @@ Page({
       
       db.collection('quotes').add({ data: newQuote }).then(addRes => {
         newQuote._id = addRes._id;
-        this.setData({ id: addRes._id, quote: newQuote, loading: false });
+        this.setData({ id: addRes._id, quote: newQuote, loading: false, isNewQuote: true });
         wx.hideLoading();
         // 取消提示，直接让用户停留在空白报价单编辑页面
       }).catch(() => {
@@ -241,64 +242,76 @@ Page({
   },
 
   saveQuote() {
-    const { quote, id } = this.data;
+    const { quote, id, isNewQuote } = this.data;
     const userInfo = wx.getStorageSync('userInfo');
     const modifierName = userInfo ? (userInfo.name || '未知') : '未知';
     const db = wx.cloud.database();
     
-    wx.showModal({
-      title: '保存报价单',
-      content: '请选择保存方式',
-      cancelText: '覆盖当前',
-      confirmText: '存为新版',
-      confirmColor: '#992933',
-      success: (res) => {
-        wx.showLoading({ title: '保存中', mask: true });
-        
-        const updateData = {
-          items: quote.items || [],
-          total: quote.total || 0,
-          discount: quote.discount || 0,
-          final: quote.final || 0,
-          status: quote.status || '初步',
-          modifier: modifierName,
-          updatedAt: db.serverDate()
-        };
+    const updateData = {
+      items: quote.items || [],
+      total: quote.total || 0,
+      discount: quote.discount || 0,
+      final: quote.final || 0,
+      status: quote.status || '初步',
+      modifier: modifierName,
+      updatedAt: db.serverDate()
+    };
 
-        if (res.confirm) {
-          // 存为新版
-          const newQuote = {
-            ...quote,
-            ...updateData,
-            createdAt: db.serverDate(),
-            version: (quote.version || 1) + 1
-          };
-          delete newQuote._id;
-          delete newQuote._openid;
-          
-          db.collection('quotes').add({ data: newQuote }).then(() => {
-            wx.hideLoading();
-            wx.showToast({ title: '已存为新版本', icon: 'success' });
-            setTimeout(() => wx.navigateBack(), 1500);
-          }).catch(() => {
-            wx.hideLoading();
-            wx.showToast({ title: '保存失败', icon: 'none' });
-          });
-        } else if (res.cancel) {
-          // 覆盖当前
-          db.collection('quotes').doc(id).update({
-            data: updateData
-          }).then(() => {
-            wx.hideLoading();
-            wx.showToast({ title: '覆盖保存成功', icon: 'success' });
-            setTimeout(() => wx.navigateBack(), 1500);
-          }).catch(() => {
-            wx.hideLoading();
-            wx.showToast({ title: '保存失败', icon: 'none' });
-          });
+    const doUpdate = () => {
+      wx.showLoading({ title: '保存中', mask: true });
+      db.collection('quotes').doc(id).update({
+        data: updateData
+      }).then(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '保存成功', icon: 'success' });
+        this.setData({ isNewQuote: false });
+        this.addSystemFollowUpToLead(`已更新报价单，总价${updateData.final}元，修改人：${modifierName}`);
+      }).catch(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '保存失败', icon: 'none' });
+      });
+    };
+
+    const doSaveAsNew = () => {
+      wx.showLoading({ title: '保存中', mask: true });
+      const newQuote = {
+        ...quote,
+        ...updateData,
+        createdAt: db.serverDate(),
+        version: (quote.version || 1) + 1
+      };
+      delete newQuote._id;
+      delete newQuote._openid;
+      
+      db.collection('quotes').add({ data: newQuote }).then((addRes) => {
+        wx.hideLoading();
+        wx.showToast({ title: '已存为新版本', icon: 'success' });
+        this.setData({ id: addRes._id, quote: { ...newQuote, _id: addRes._id }, isNewQuote: false });
+        this.addSystemFollowUpToLead(`已更新报价单，总价${newQuote.final}元，修改人：${modifierName}`);
+      }).catch(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '保存失败', icon: 'none' });
+      });
+    };
+
+    if (isNewQuote) {
+      doUpdate();
+    } else {
+      wx.showModal({
+        title: '保存报价单',
+        content: '请选择保存方式',
+        cancelText: '覆盖当前',
+        confirmText: '存为新版',
+        confirmColor: '#992933',
+        success: (res) => {
+          if (res.confirm) {
+            doSaveAsNew();
+          } else if (res.cancel) {
+            doUpdate();
+          }
         }
-      }
-    });
+      });
+    }
   },
 
   deleteQuote() {
@@ -376,8 +389,17 @@ Page({
     const db = wx.cloud.database();
     db.collection('quotes').where({
       leadId: this.data.quote.leadId
-    }).orderBy('version', 'desc').get().then(res => {
-      const historyQuotes = res.data.map(q => {
+    }).orderBy('createdAt', 'asc').get().then(res => {
+      const historyQuotes = res.data.map((q, index) => {
+        // 动态按时间顺序编号
+        q.displayVersion = index + 1;
+        
+        // 如果是当前正在查看的报价单，使用本地最新状态覆盖数据库数据，以便显示未保存的价格
+        if (q._id === this.data.quote._id) {
+          q = { ...q, ...this.data.quote, displayVersion: index + 1 };
+          this.setData({ 'quote.displayVersion': index + 1 });
+        }
+        
         let fmt = '最近';
         if (q.updatedAt) {
           const d = new Date(q.updatedAt);
@@ -385,6 +407,7 @@ Page({
         }
         return { ...q, slideOffset: 0, _updatedAtFormatted: fmt };
       });
+      // 这里可选择对 historyQuotes 反转以倒序显示，如果用户更喜欢最新的在最上面，不过之前已改成升序显示。按用户"V1 V2 V3"自上而下的描述，保持原数组顺序（即升序）。
       this.setData({ showHistoryModal: true, historyQuotes });
       wx.hideLoading();
     }).catch(() => {
@@ -463,5 +486,18 @@ Page({
         }
       }
     });
+  },
+
+  addSystemFollowUpToLead(content) {
+    const db = wx.cloud.database();
+    const userInfo = wx.getStorageSync('userInfo');
+    const followUp = {
+      leadId: this.data.quote.leadId,
+      content: content,
+      type: 'system',
+      creator: userInfo ? userInfo.name : '系统',
+      createdAt: db.serverDate()
+    };
+    db.collection('followUps').add({ data: followUp }).catch(() => {});
   }
 });

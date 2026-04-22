@@ -16,7 +16,7 @@
     </view>
 
     <!-- 客户信息 -->
-    <view style="margin-bottom: 28rpx;">
+    <view style="margin-bottom: 28rpx;" bindtap="goToLead">
       <customer-info name="{{project.customer}}" phone="{{project.phone}}" customerNo="{{project.customerNo || project.leadId}}" />
     </view>
 
@@ -273,9 +273,9 @@
           </view>
 
           <!-- 已完成：验收记录图片 -->
-          <view wx:if="{{popupSub.status === 'completed' && popupSub.acceptanceRecord && popupSub.acceptanceRecord.photos && popupSub.acceptanceRecord.photos.length > 0}}" style="margin-bottom: 32rpx; width: 100%; box-sizing: border-box;">
+          <view wx:if="{{popupSub.status === 'completed' && popupSub.acceptanceRecord && popupSub.acceptanceRecord.photos && popupSub.acceptanceRecord.photos.length > 0}}" style="margin-bottom: 32rpx; width: 100%; box-sizing: border-box; padding: 0 20rpx;">
             <view style="font-size: 26rpx; color: #334155; margin-bottom: 16rpx; font-weight: 600;">施工影像</view>
-            <view style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12rpx; width: 100%; box-sizing: border-box;">
+            <view style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12rpx; width: 100%; box-sizing: border-box;">
               <view wx:for="{{popupSub.acceptanceRecord.photos}}" wx:key="url" style="width: 100%; padding-bottom: 100%; position: relative;">
                 <image src="{{item.url || item}}" mode="aspectFill"
                   style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 12rpx; border: 1rpx solid #e2e8f0; box-sizing: border-box;"
@@ -471,7 +471,12 @@
 
       <view style="margin-bottom: 40rpx;">
         <view style="font-size: 24rpx; color: #64748b; margin-bottom: 12rpx;">项目经理</view>
-        <input type="text" placeholder="输入项目经理姓名" value="{{editProjectManager}}" bindinput="onEditProjectManagerInput" style="width: 100%; height: 88rpx; min-height: 88rpx; padding: 0 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #334155;" />
+        <picker bindchange="onEditProjectManagerChange" value="{{managerIndex}}" range="{{managerList}}" range-key="name">
+          <view style="width: 100%; height: 88rpx; min-height: 88rpx; padding: 0 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #334155; display: flex; align-items: center; justify-content: space-between;">
+            <text>{{managerIndex !== -1 ? managerList[managerIndex].name : '请选择项目经理'}}</text>
+            <text style="font-size: 20rpx; color: #94a3b8;">▼</text>
+          </view>
+        </picker>
       </view>
 
       <view style="font-size: 22rpx; color: var(--amber-600); background: var(--amber-50); padding: 16rpx 20rpx; border-radius: 8rpx; margin-bottom: 40rpx; line-height: 1.5;">

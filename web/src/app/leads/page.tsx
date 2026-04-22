@@ -5,6 +5,7 @@ import { Plus, Search, Filter, MoreHorizontal, MessageSquare, UserPlus, FileText
 import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "../../components/MainLayout";
 import CustomerInfo from "../../components/CustomerInfo";
+import DatePicker from "../../components/DatePicker";
 
 function LeadsContent() {
   const router = useRouter();
@@ -107,26 +108,26 @@ function LeadsContent() {
 
   const isAssignedToMe = (lead: any) => {
     if (!currentUser) return false;
-    return lead.sales === currentUser.name || lead.designer === currentUser.name;
+    return lead.sales === currentUser.name || lead.designer === currentUser.name || lead.manager === currentUser.name || lead.creatorName === currentUser.name || lead.signer === currentUser.name;
   };
 
   const maskName = (name: string, lead: any) => {
     if (!currentUser || currentUser.role === 'admin') return name;
-    if (isAssignedToMe(lead)) return name;
+    if (isAssignedToMe(lead) || lead.status === '已签单' || lead.status === '施工中') return name;
     if (!name) return name;
     return name.substring(0, 1) + '**';
   };
 
   const maskPhone = (phone: string, lead: any) => {
     if (!currentUser || currentUser.role === 'admin') return phone;
-    if (isAssignedToMe(lead)) return phone;
+    if (isAssignedToMe(lead) || lead.status === '已签单' || lead.status === '施工中') return phone;
     if (!phone || phone.length < 11) return phone;
     return phone.substring(0, 3) + '****' + phone.substring(7);
   };
 
   const maskAddress = (address: string, lead: any) => {
     if (!currentUser || currentUser.role === 'admin') return address;
-    if (isAssignedToMe(lead)) return address;
+    if (isAssignedToMe(lead) || lead.status === '已签单' || lead.status === '施工中') return address;
     if (!address) return address;
     // 简单的打码逻辑：隐藏具体的楼栋号等，比如 "万科星城 3栋1单元1204" -> "万科星城 ***"
     const parts = address.split(' ');
@@ -147,12 +148,29 @@ function LeadsContent() {
 
   const handleAddLead = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // BUG-21: 根据创建人角色自动填入对应字段
+    let defaultSales = "";
+    let defaultDesigner = "";
+    let defaultManager = "";
+    
+    if (currentUser?.role === 'sales') defaultSales = currentUser.name;
+    if (currentUser?.role === 'designer') defaultDesigner = currentUser.name;
+    if (currentUser?.role === 'manager') defaultManager = currentUser.name;
+
+    let finalSource = newLead.source;
+    if (finalSource === '其他' && newLead.customSource) {
+      finalSource = newLead.customSource;
+    }
+
     const lead = {
       ...newLead,
+      source: finalSource,
       area: Number(newLead.area) || 0,
       status: "待跟进",
-      sales: "",
-      designer: "",
+      sales: defaultSales || "未分配",
+      designer: defaultDesigner || "未分配",
+      manager: defaultManager || "",
       lastFollowUp: "暂无",
       unread: false,
       notes: "新录入客户",
@@ -358,8 +376,20 @@ function LeadsContent() {
     }
     
     // 高级筛选
-    if (filters.sales !== "全部" && l.sales !== filters.sales) return false;
-    if (filters.designer !== "全部" && l.designer !== filters.designer) return false;
+    if (filters.sales !== "全部") {
+      if (filters.sales === "未分配") {
+        if (l.sales && l.sales !== "" && l.sales !== "未分配") return false;
+      } else {
+        if (l.sales !== filters.sales) return false;
+      }
+    }
+    if (filters.designer !== "全部") {
+      if (filters.designer === "未分配") {
+        if (l.designer && l.designer !== "" && l.designer !== "未分配") return false;
+      } else {
+        if (l.designer !== filters.designer) return false;
+      }
+    }
     if (filters.status !== "全部" && l.status !== filters.status) return false;
     
     // 日期筛选
@@ -458,6 +488,45 @@ function LeadsContent() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto relative">
+          <button
+            onClick={async () => {
+              // 获取所有的跟进记录，并按 leadId 分组
+              let allFollowUps: any[] = [];
+              try {
+                const res = await fetch('/api/followUps');
+                if (res.ok) {
+                  allFollowUps = await res.json();
+                }
+              } catch (e) {
+                console.error("无法获取跟进记录", e);
+              }
+              const followUpMap: Record<string, string> = {};
+              if (Array.isArray(allFollowUps)) {
+                allFollowUps.forEach(f => {
+                  const line = `[${f.displayTime || f.createdAt}] ${f.createdBy}: ${f.content}`;
+                  if (!followUpMap[f.leadId]) followUpMap[f.leadId] = line;
+                  else followUpMap[f.leadId] += `\n${line}`;
+                });
+              }
+
+              const csvContent = "客户编号,姓名,电话,地址,状态,意向评级,需求类型,房屋面积,预算,客户来源,销售人员,设计人员,项目经理,最后跟进,历史跟进记录\n" + 
+                filteredLeads.map(l => {
+                  const history = followUpMap[l._id || l.id] || '';
+                  return `${l.customerNo || l.id},${l.name},${l.phone},"${l.address || ''}",${l.status},${l.rating},${l.requirementType || l.requirement || ''},${l.area || ''},${l.budget || ''},${l.source || ''},${l.sales || ''},${l.designer || ''},${l.manager || ''},"${(l.lastFollowUp || '').replace(/"/g, '""')}","${history.replace(/"/g, '""')}"`;
+                }).join("\n");
+              
+              const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+              const link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = `客户数据导出_${new Date().toISOString().split('T')[0]}.csv`;
+              link.click();
+            }}
+            className="flex items-center justify-center min-h-[44px] px-3 sm:px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium shrink-0 border bg-white border-primary-100 hover:bg-primary-50 text-primary-900"
+          >
+            <span className="hidden sm:inline">导出数据</span>
+            <span className="sm:hidden">导出</span>
+          </button>
+          
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`relative flex items-center justify-center min-w-[44px] min-h-[44px] px-3 sm:px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium shrink-0 border ${
@@ -535,7 +604,7 @@ function LeadsContent() {
                     </div>
                     {openDropdown === 'filter-sales' && (
                       <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
-                        {["全部", ...users.filter(u => u.role === 'sales' || u.role === 'admin').map(u => u.name)].map(option => (
+                        {["全部", ...users.filter(u => u.role === 'sales' || u.role === 'admin').sort((a,b) => a.role === 'sales' ? -1 : 1).map(u => u.name)].map(option => (
                           <div
                             key={option}
                             onClick={() => { setFilters({...filters, sales: option}); setOpenDropdown(null); }}
@@ -561,7 +630,7 @@ function LeadsContent() {
                     </div>
                     {openDropdown === 'filter-designer' && (
                       <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
-                        {["全部", "未分配", ...users.filter(u => u.role === 'designer' || u.role === 'admin').map(u => u.name)].map(option => (
+                        {["全部", "未分配", ...users.filter(u => u.role === 'designer' || u.role === 'admin').sort((a,b) => a.role === 'designer' ? -1 : 1).map(u => u.name)].map(option => (
                           <div
                             key={option}
                             onClick={() => { setFilters({...filters, designer: option}); setOpenDropdown(null); }}
@@ -704,7 +773,7 @@ function LeadsContent() {
                     if ((e.target as HTMLElement).closest('.prevent-row-click')) {
                       return;
                     }
-                    if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
+                    if (currentUser?.role === 'admin' || isAssignedToMe(lead) || lead.status === '已签单' || lead.status === '施工中') {
                       router.push(`/leads/${lead.id}`);
                     } else {
                       setShowToast("您暂无权限查看此客户的详细信息");
@@ -712,7 +781,7 @@ function LeadsContent() {
                     }
                   }}
                   className={`transition-colors group ${
-                    currentUser?.role === 'admin' || isAssignedToMe(lead) 
+                    (currentUser?.role === 'admin' || isAssignedToMe(lead) || lead.status === '已签单' || lead.status === '施工中') 
                       ? 'hover:bg-primary-50/50 cursor-pointer' 
                       : 'opacity-80 cursor-default'
                   } ${isAssignedToMe(lead) ? 'bg-amber-50/30' : ''}`}
@@ -729,7 +798,7 @@ function LeadsContent() {
                           <CustomerInfo 
                             name={maskName(lead.name, lead)}
                             phone={maskPhone(lead.phone, lead)}
-                            customerNo={lead.customerNo || lead.id.substring(0, 6)}
+                            customerNo={lead.customerNo || lead.id}
                           />
                           {isAssignedToMe(lead) && (
                             <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">我</span>
@@ -823,13 +892,13 @@ function LeadsContent() {
                           }
                         }}
                         className={`transition-colors border px-2 py-0.5 rounded text-xs font-medium flex items-center group/sales ${
-                          lead.sales === "未分配" 
+                          (!lead.sales || lead.sales === "未分配") 
                             ? "text-amber-600 bg-amber-50 border-amber-100" 
                             : "text-primary-700 bg-white border-primary-200"
                         } ${currentUser?.role === 'admin' || isAssignedToMe(lead) ? 'cursor-pointer hover:bg-primary-50' : ''}`}
                       >
-                        {lead.sales === "未分配" && <UserPlus className="w-3 h-3 mr-1" />}
-                        {lead.sales}
+                        {(!lead.sales || lead.sales === "未分配") && <UserPlus className="w-3 h-3 mr-1" />}
+                        {lead.sales || "未分配"}
                         {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
                           <ChevronDown className="w-3 h-3 ml-1 opacity-0 group-hover/sales:opacity-100 transition-opacity" />
                         )}
@@ -837,8 +906,12 @@ function LeadsContent() {
                       {openDropdown === `sales-${lead.id}` && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
-                          <div className="absolute z-20 w-36 mt-8 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-12">
-                            {["未分配", ...users.filter(u => u.role === 'sales' || u.role === 'admin').map(u => u.name)].map(option => (
+                          <div className="absolute z-20 w-36 mt-8 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-12 max-h-48 overflow-y-auto">
+                            {["未分配", ...users.filter(u => u.role === 'sales' || u.role === 'admin').sort((a,b) => {
+                              if (a.role === 'admin' && b.role !== 'admin') return 1;
+                              if (a.role !== 'admin' && b.role === 'admin') return -1;
+                              return a.role.localeCompare(b.role) || a.name.localeCompare(b.name);
+                            }).map(u => u.name)].map(option => (
                               <div
                                 key={option}
                                 onClick={(e) => { e.stopPropagation(); updateLeadSales(lead.id, option); setOpenDropdown(null); }}
@@ -864,13 +937,13 @@ function LeadsContent() {
                           }
                         }}
                         className={`transition-colors border px-2 py-0.5 rounded text-xs font-medium flex items-center group/designer ${
-                          lead.designer === "未分配" 
+                          (!lead.designer || lead.designer === "未分配") 
                             ? "text-amber-600 bg-amber-50 border-amber-100" 
                             : "text-primary-700 bg-white border-primary-200"
                         } ${currentUser?.role === 'admin' || isAssignedToMe(lead) ? 'cursor-pointer hover:bg-primary-50' : ''}`}
                       >
-                        {lead.designer === "未分配" && <UserPlus className="w-3 h-3 mr-1" />}
-                        {lead.designer}
+                        {(!lead.designer || lead.designer === "未分配") && <UserPlus className="w-3 h-3 mr-1" />}
+                        {lead.designer || "未分配"}
                         {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
                           <ChevronDown className="w-3 h-3 ml-1 opacity-0 group-hover/designer:opacity-100 transition-opacity" />
                         )}
@@ -878,8 +951,12 @@ function LeadsContent() {
                       {openDropdown === `designer-${lead.id}` && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
-                          <div className="absolute z-20 w-36 mt-8 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-12">
-                            {["未分配", ...users.filter(u => u.role === 'designer' || u.role === 'admin').map(u => u.name)].map(option => (
+                          <div className="absolute z-20 w-36 mt-8 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-12 max-h-48 overflow-y-auto">
+                            {["未分配", ...users.filter(u => u.role === 'designer' || u.role === 'admin').sort((a,b) => {
+                              if (a.role === 'admin' && b.role !== 'admin') return 1;
+                              if (a.role !== 'admin' && b.role === 'admin') return -1;
+                              return a.role.localeCompare(b.role) || a.name.localeCompare(b.name);
+                            }).map(u => u.name)].map(option => (
                               <div
                                 key={option}
                                 onClick={(e) => { e.stopPropagation(); updateLeadDesigner(lead.id, option); setOpenDropdown(null); }}
@@ -895,13 +972,67 @@ function LeadsContent() {
                         </>
                       )}
                     </div>
+                    <div className="text-sm text-primary-900 flex items-center mt-2 relative">
+                      <span className="text-primary-600 w-12 text-xs">经理:</span>
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (currentUser?.role === 'admin' || isAssignedToMe(lead)) {
+                            setOpenDropdown(openDropdown === `manager-${lead.id}` ? null : `manager-${lead.id}`);
+                          }
+                        }}
+                        className={`transition-colors border px-2 py-0.5 rounded text-xs font-medium flex items-center group/manager ${
+                          (!lead.manager || lead.manager === "未分配")
+                            ? "text-amber-600 bg-amber-50 border-amber-100" 
+                            : "text-primary-700 bg-white border-primary-200"
+                        } ${currentUser?.role === 'admin' || isAssignedToMe(lead) ? 'cursor-pointer hover:bg-primary-50' : ''}`}
+                      >
+                        {(!lead.manager || lead.manager === "未分配") && <UserPlus className="w-3 h-3 mr-1" />}
+                        {lead.manager || "未分配"}
+                        {(currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
+                          <ChevronDown className="w-3 h-3 ml-1 opacity-0 group-hover/manager:opacity-100 transition-opacity" />
+                        )}
+                      </div>
+                      {openDropdown === `manager-${lead.id}` && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={(e) => { e.stopPropagation(); setOpenDropdown(null); }} />
+                          <div className="absolute z-20 w-36 mt-8 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 left-12 max-h-48 overflow-y-auto">
+                            {["未分配", ...users.filter(u => u.role === 'manager' || u.role === 'admin').sort((a,b) => {
+                              if (a.role === 'admin' && b.role !== 'admin') return 1;
+                              if (a.role !== 'admin' && b.role === 'admin') return -1;
+                              return a.role.localeCompare(b.role) || a.name.localeCompare(b.name);
+                            }).map(u => u.name)].map(option => (
+                              <div
+                                key={option}
+                                onClick={async (e) => { 
+                                  e.stopPropagation(); 
+                                  setLeadsData(leadsData.map(l => l.id === lead.id ? { ...l, manager: option } : l));
+                                  await fetch(`/api/leads/${lead.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ manager: option }) });
+                                  setOpenDropdown(null); 
+                                }}
+                                className="px-2 py-1 mx-1"
+                              >
+                                <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${(lead.manager || "未分配") === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
+                                  <span className="text-sm">{option}</span>
+                                  {(lead.manager || "未分配") === option && <Check className="w-4 h-4 text-primary-900" />}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </td>
                   <td className="py-4 px-6 whitespace-nowrap">
                     <p className="text-sm text-primary-900">{lead.createdAt}</p>
                   </td>
                   <td className="py-4 px-6 min-w-[200px]">
-                    <p className="text-sm font-medium text-primary-900">{lead.lastFollowUp}</p>
-                    <p className="text-xs text-primary-600 mt-1 line-clamp-2 whitespace-normal" title={lead.notes}>{lead.notes || "暂无跟进记录"}</p>
+                    <p className="text-sm font-medium text-primary-900">
+                      {typeof lead.lastFollowUp === 'string' ? lead.lastFollowUp : '暂无'}
+                    </p>
+                    <p className="text-xs text-primary-600 mt-1 line-clamp-2 whitespace-normal" title={typeof lead.notes === 'string' ? lead.notes : ''}>
+                      {typeof lead.notes === 'string' ? lead.notes : "暂无跟进记录"}
+                    </p>
                   </td>
                 </tr>
               ))}
@@ -998,7 +1129,7 @@ function LeadsContent() {
                     </div>
                     {openDropdown === 'source' && (
                       <div className="absolute z-30 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1">
-                        {["自然进店", "老介新", "抖音", "小红书", "大众点评", "自有关系", "其他"].map(option => (
+                        {["自然进店", "老介新", "抖音", "自有关系", "其他"].map(option => (
                           <div 
                             key={option}
                             onClick={() => { setNewLead({...newLead, source: option}); setOpenDropdown(null); }}
@@ -1013,6 +1144,18 @@ function LeadsContent() {
                       </div>
                     )}
                   </div>
+                  {newLead.source === '其他' && (
+                    <div className="col-span-2 relative z-10 mt-2">
+                      <label className="block text-sm font-medium text-primary-900 mb-1">具体来源</label>
+                      <input 
+                        type="text"
+                        placeholder="请输入具体来源"
+                        value={newLead.customSource || ''}
+                        onChange={e => setNewLead({...newLead, customSource: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-primary-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all bg-white text-primary-900"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -1081,12 +1224,9 @@ function LeadsContent() {
             <div className="space-y-4 text-left mb-6">
               <div>
                 <label className="block text-sm font-medium text-primary-700 mb-1">签单时间</label>
-                <input
-                  type="date"
-                  value={signModal.date}
-                  onChange={e => setSignModal({...signModal, date: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus:border-primary-400 focus:bg-white transition-all outline-none text-sm text-primary-900"
-                />
+                <div className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg focus-within:border-primary-400 focus-within:bg-white transition-all text-sm text-primary-900">
+                  <DatePicker value={signModal.date} onChange={v => setSignModal({...signModal, date: v})} placeholder="选择签单日期" />
+                </div>
               </div>
               <div className="relative">
                 <label className="block text-sm font-medium text-primary-700 mb-1">签单人</label>

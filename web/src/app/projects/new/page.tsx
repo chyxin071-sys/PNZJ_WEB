@@ -2,8 +2,9 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, Search, X } from "lucide-react";
+import { ChevronLeft, Search, X, ChevronDown, Check } from "lucide-react";
 import MainLayout from "../../../components/MainLayout";
+import DatePicker from "../../../components/DatePicker";
 
 function NewProjectContent() {
   const router = useRouter();
@@ -26,6 +27,7 @@ function NewProjectContent() {
   const [showLeadPicker, setShowLeadPicker] = useState(false);
   const [leadSearch, setLeadSearch] = useState('');
   const [saving, setSaving] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     // 如果从线索详情带了参数过来，直接填入
@@ -36,7 +38,7 @@ function NewProjectContent() {
         .then(data => {
           setForm(f => ({
             ...f,
-            leadId: data._id,
+            leadId: data.customerNo || data._id, // 修复通过 URL 传入时的 ID
             customer: data.name || '',
             phone: data.phone || '',
             address: data.address || '',
@@ -72,7 +74,7 @@ function NewProjectContent() {
   const selectLead = (lead: any) => {
     setForm(f => ({
       ...f,
-      leadId: lead._id || lead.id,
+      leadId: lead.customerNo || lead._id || lead.id, // 优先使用 customerNo 作为对外的展示 ID
       customer: lead.name || '',
       phone: lead.phone || '',
       address: lead.address || '',
@@ -110,6 +112,9 @@ function NewProjectContent() {
         const data = await res.json();
         const newId = data.id || data._id;
         router.push(newId ? `/projects/${newId}` : '/projects');
+      } else if (res.status === 409) {
+        const errData = await res.json();
+        alert(errData.error || '该客户已关联其他工地，无法重复创建');
       } else {
         alert('创建失败，请重试');
       }
@@ -170,29 +175,49 @@ function NewProjectContent() {
           )}
 
           {/* 项目经理 */}
-          <div>
+          <div className="relative z-20">
             <label className="block text-sm font-medium text-primary-900 mb-1.5">项目经理 <span className="text-rose-500">*</span></label>
-            <select
-              value={form.manager}
-              onChange={e => setForm(f => ({ ...f, manager: e.target.value }))}
-              className="w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg text-sm text-primary-900 focus:outline-none focus:border-primary-300 focus:bg-white transition-all"
+            <div 
+              onClick={() => setOpenDropdown(openDropdown === 'manager' ? null : 'manager')}
+              className={`w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${openDropdown === 'manager' ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
             >
-              <option value="">请选择项目经理</option>
-              {managers.map(m => (
-                <option key={m._id} value={m.name}>{m.name}</option>
-              ))}
-            </select>
+              <span className={form.manager ? "text-primary-900" : "text-primary-400"}>{form.manager || '请选择项目经理'}</span>
+              <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform duration-200 ${openDropdown === 'manager' ? 'rotate-180' : ''}`} />
+            </div>
+            {openDropdown === 'manager' && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setOpenDropdown(null)} />
+                <div className="absolute z-20 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1">
+                  {managers.map(m => (
+                    <div 
+                      key={m._id}
+                      onClick={() => { setForm(f => ({ ...f, manager: m.name })); setOpenDropdown(null); }}
+                      className="px-2 py-1 mx-1"
+                    >
+                      <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${form.manager === m.name ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
+                        <span className="text-sm">{m.name}</span>
+                        {form.manager === m.name && <Check className="w-4 h-4 text-primary-900" />}
+                      </div>
+                    </div>
+                  ))}
+                  {managers.length === 0 && (
+                    <div className="px-5 py-3 text-sm text-primary-400">暂无可用的项目经理</div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
           {/* 开工日期 */}
           <div>
             <label className="block text-sm font-medium text-primary-900 mb-1.5">开工日期 <span className="text-rose-500">*</span></label>
-            <input
-              type="date"
-              value={form.startDate}
-              onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-              className="w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg text-sm text-primary-900 focus:outline-none focus:border-primary-300 focus:bg-white transition-all"
-            />
+            <div className="w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg text-sm text-primary-900 focus-within:border-primary-300 focus-within:bg-white transition-all">
+              <DatePicker
+                value={form.startDate}
+                onChange={v => setForm(f => ({ ...f, startDate: v }))}
+                placeholder="选择开工日期"
+              />
+            </div>
             <p className="text-xs text-primary-400 mt-1.5">系统将根据开工日期自动生成 8 大节点的标准排期，可在工地详情页调整</p>
           </div>
         </div>

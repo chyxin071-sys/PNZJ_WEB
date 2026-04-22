@@ -7,6 +7,7 @@ import CustomerInfo from "../../../components/CustomerInfo";
 import CustomerDocuments from "../../../components/CustomerDocuments";
 import { useState, useEffect } from "react";
 import { getNextWorkingDay, calculateEndDate, formatDate } from "../../../lib/date";
+import DatePicker from "../../../components/DatePicker";
 
 // 8大节点标准模板
 const TEMPLATE_NODES = [
@@ -67,6 +68,8 @@ export default function ProjectDetailPage() {
   const [userRole, setUserRole] = useState('admin');
   const [userName, setUserName] = useState('未知');
   const [quoteId, setQuoteId] = useState<string | null>(null);
+  const [users, setUsers] = useState<any[]>([]);
+  const [managerDropdownOpen, setManagerDropdownOpen] = useState(false);
 
   // 弹窗状态
   const [startModal, setStartModal] = useState(false);
@@ -91,10 +94,13 @@ export default function ProjectDetailPage() {
 
   useEffect(() => {
     try {
-      const u = JSON.parse(localStorage.getItem('user') || '{}');
+      const u = JSON.parse(localStorage.getItem('pnzj_user') || localStorage.getItem('user') || '{}');
       setUserRole(u.role || 'admin');
       setUserName(u.name || '未知');
     } catch {}
+    fetch('/api/employees').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setUsers(data);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => { if (id) fetchProject(); }, [id]);
@@ -156,20 +162,25 @@ export default function ProjectDetailPage() {
   };
 
   const handleEditProjectSave = async () => {
-    if (!editStartDate || !editManager) return alert('开工日期和项目经理不能为空');
     let nodes = [...project.nodesData];
-    // 重新排期
-    nodes = recalculateGantt(nodes, editStartDate);
-    const patch = { 
-      startDate: editStartDate, 
+    
+    // 如果开工日期有变化，且不为空，才重新排期
+    if (editStartDate && editStartDate !== project.startDate) {
+      nodes = recalculateGantt(nodes, editStartDate);
+    }
+    
+    const patch: any = { 
       manager: editManager, 
       nodesData: nodes,
-      expectedEndDate: nodes[nodes.length-1].endDate
+      expectedEndDate: nodes.length > 0 ? nodes[nodes.length-1].endDate : ''
     };
+    if (editStartDate) {
+      patch.startDate = editStartDate;
+    }
+
     if (await save(patch)) {
       setProject({ ...project, ...patch });
       setEditProjectModal(false);
-      alert('修改成功，排期已重算');
     } else {
       alert('保存失败');
     }
@@ -390,7 +401,7 @@ export default function ProjectDetailPage() {
               <div className="flex flex-wrap gap-2">
                 {/* 跳转快捷按钮 */}
                 <button onClick={() => project.leadId ? router.push(`/leads/${project.leadId}`) : alert('该项目无关联客户线索')} className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-700 rounded-full hover:bg-primary-100 text-sm font-bold border border-primary-200 transition-colors flex-1 md:flex-none">
-                  <User className="w-4 h-4 mr-2" /> 客户档案
+                  <User className="w-4 h-4 mr-2" /> 客户信息
                 </button>
                 <button onClick={() => quoteId ? router.push(`/quotes/${quoteId}`) : (project.leadId ? router.push(`/quotes/new?leadId=${project.leadId}`) : alert('该项目无关联客户线索'))} className="flex items-center justify-center px-4 py-2 bg-primary-50 text-primary-700 rounded-full hover:bg-primary-100 text-sm font-bold border border-primary-200 transition-colors flex-1 md:flex-none">
                   <FileSignature className="w-4 h-4 mr-2" /> 报价明细
@@ -623,8 +634,9 @@ export default function ProjectDetailPage() {
               <div className="p-6 space-y-5">
                 <div>
                   <label className="block text-sm font-bold text-primary-900 mb-2">项目总开工日期 <span className="text-rose-500">*</span></label>
-                  <input type="date" value={baseStartDate} onChange={e => setBaseStartDate(e.target.value)}
-                    className="w-full p-3 border border-primary-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500" />
+                  <div className="w-full p-3 border border-primary-200 rounded-xl text-sm focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500">
+                    <DatePicker value={baseStartDate} onChange={setBaseStartDate} placeholder="选择开工日期" />
+                  </div>
                   <p className="text-xs text-primary-400 mt-1.5">系统将自动按 T+N 算法推算所有工序的预计开/完工日期，自动跳过周末及法定节假日。</p>
                 </div>
                 <button onClick={handleStartProject} className="w-full py-3 bg-primary-900 text-white rounded-xl font-bold hover:bg-primary-800 transition-colors mt-4 shadow-md">
@@ -771,22 +783,38 @@ export default function ProjectDetailPage() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-bold text-primary-900 mb-2">实际开工日期</label>
-                  <input 
-                    type="date" 
-                    value={editStartDate}
-                    onChange={(e) => setEditStartDate(e.target.value)}
-                    className="w-full px-4 py-3 bg-primary-50/50 border border-primary-200 rounded-lg text-primary-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                  />
+                  <div className="w-full px-4 py-3 bg-primary-50/50 border border-primary-200 rounded-lg text-primary-900 font-medium focus-within:ring-2 focus-within:ring-primary-500/20 focus-within:border-primary-500 transition-all">
+                    <DatePicker value={editStartDate} onChange={setEditStartDate} placeholder="选择开工日期" />
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-primary-900 mb-2">项目经理</label>
-                  <input 
-                    type="text" 
-                    placeholder="输入项目经理姓名"
-                    value={editManager}
-                    onChange={(e) => setEditManager(e.target.value)}
-                    className="w-full px-4 py-3 bg-primary-50/50 border border-primary-200 rounded-lg text-primary-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
-                  />
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setManagerDropdownOpen(!managerDropdownOpen)}
+                      className="w-full px-4 py-3 bg-primary-50/50 border border-primary-200 rounded-lg text-primary-900 font-medium focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all text-left flex justify-between items-center"
+                    >
+                      <span>{editManager || '请选择项目经理'}</span>
+                      <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform ${managerDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {managerDropdownOpen && (
+                      <>
+                        <div className="fixed inset-0 z-10" onClick={() => setManagerDropdownOpen(false)} />
+                        <div className="absolute z-20 w-full mt-1 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden py-1 max-h-48 overflow-y-auto">
+                          {users.filter(u => u.role === 'manager').map(u => (
+                            <div
+                              key={u._id}
+                              onClick={() => { setEditManager(u.name); setManagerDropdownOpen(false); }}
+                              className={`px-4 py-2.5 text-sm cursor-pointer transition-colors ${editManager === u.name ? 'bg-primary-50 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}
+                            >
+                              {u.name}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
                 <p className="text-xs text-amber-600 bg-amber-50 p-3 rounded border border-amber-100">
                   提示：修改开工日期后，系统将自动重新推算所有相关工序的开始和结束日期（自动跳过周末及法定节假日）。

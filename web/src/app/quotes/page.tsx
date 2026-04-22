@@ -1,17 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Search, Filter, MoreHorizontal, FileEdit, FileCheck, FileX, Printer, Calculator, PackagePlus, X, ArrowRight, Building2, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Plus, Search, Filter, MoreHorizontal, FileEdit, FileCheck, FileX, Printer, Calculator, PackagePlus, X, ArrowRight, Building2, SlidersHorizontal, ChevronDown, CheckCircle2 } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
 import CustomerInfo from "../../components/CustomerInfo";
 
 export default function QuotesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeStatus, setActiveStatus] = useState("全部");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSelectLeadModalOpen, setIsSelectLeadModalOpen] = useState(false);
   const [leadSearchQuery, setLeadSearchQuery] = useState("");
+  const [showSavedToast, setShowSavedToast] = useState(false);
 
   const [quotesData, setQuotesData] = useState<any[]>([]);
   const [leadsData, setLeadsData] = useState<any[]>([]);
@@ -32,6 +34,10 @@ export default function QuotesPage() {
   useEffect(() => {
     fetchQuotes();
     fetchLeads();
+    if (searchParams.get('saved') === '1') {
+      setShowSavedToast(true);
+      setTimeout(() => setShowSavedToast(false), 3000);
+    }
   }, []);
 
   useEffect(() => {
@@ -45,22 +51,37 @@ export default function QuotesPage() {
         const data = await res.json();
         const formatted = data.map((item: any) => {
           let dateStr = new Date().toISOString().split('T')[0];
+          let timestamp = Date.now();
           if (item.createdAt) {
             try {
               if (item.createdAt.$date) {
-                dateStr = new Date(item.createdAt.$date).toISOString().split('T')[0];
+                const d = new Date(item.createdAt.$date);
+                dateStr = d.toISOString().split('T')[0];
+                timestamp = d.getTime();
               } else {
-                dateStr = new Date(item.createdAt).toISOString().split('T')[0];
+                const d = new Date(item.createdAt);
+                dateStr = d.toISOString().split('T')[0];
+                timestamp = d.getTime();
               }
             } catch(err) {}
           }
           return {
             ...item,
             id: item._id,
-            date: dateStr
+            date: dateStr,
+            _timestamp: timestamp
           };
         });
-        setQuotesData(formatted);
+        // 按客户分组，计算每份报价单是该客户的第几版（按创建时间升序）
+        const versionMap: Record<string, number> = {};
+        const sortedByDate = [...formatted].sort((a, b) => a._timestamp - b._timestamp);
+        sortedByDate.forEach(q => {
+          const key = q.leadId || q.customer;
+          if (!key) return;
+          versionMap[q.id] = (versionMap[key] || 0) + 1;
+          versionMap[key] = versionMap[q.id];
+        });
+        setQuotesData(formatted.map(q => ({ ...q, versionNo: versionMap[q.id] || 1 })));
       }
     } catch (e) {
       console.error('Failed to fetch quotes', e);
@@ -127,6 +148,12 @@ export default function QuotesPage() {
 
   return (
     <MainLayout>
+      {showSavedToast && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-xl shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+          <CheckCircle2 className="w-5 h-5" />
+          <span className="font-medium">报价单保存成功！</span>
+        </div>
+      )}
       <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-4 md:space-y-8">
         {/* 顶部标题区 */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
@@ -377,9 +404,14 @@ export default function QuotesPage() {
                           phone={quote.phone}
                           customerNo={quote.customerNo || quote.id}
                         />
-                        {quote.leadId && (
-                          <span className="text-xs text-primary-400 hover:text-primary-700 mt-0.5 block">点击查看线索 →</span>
-                        )}
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {quote.versionNo > 1 && (
+                            <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-100 px-1.5 py-0.5 rounded">第{quote.versionNo}版</span>
+                          )}
+                          {quote.leadId && (
+                            <span className="text-xs text-primary-400 hover:text-primary-700">点击查看线索 →</span>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">

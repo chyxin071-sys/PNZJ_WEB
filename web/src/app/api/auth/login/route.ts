@@ -21,14 +21,24 @@ export async function POST(request: Request) {
     let bodyData: any = { env: ENV, query: `db.collection('users').where(db.command.or([{account: '${account}'}, {phone: '${account}'}])).get()` };
 
     // 获取 token
-    const tokenRes = await axios.get(`http://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
+    // 强制使用 https 避免微信服务器 301 重定向导致的 GET 方法覆盖
+    const getBaseUrl = () => {
+      if (process.env.CBR_ENV_ID || process.env.KUBERNETES_SERVICE_HOST) {
+        return 'http://api.weixin.qq.com';
+      }
+      return 'https://api.weixin.qq.com';
+    };
+    
+    const baseUrl = getBaseUrl();
+    
+    const tokenRes = await axios.get(`${baseUrl}/cgi-bin/token?grant_type=client_credential&appid=${APPID}&secret=${APPSECRET}`);
     const tokenData = tokenRes.data;
     const accessToken = tokenData.access_token;
     
     if (!accessToken) {
       return NextResponse.json({ error: `Token获取失败: ${JSON.stringify(tokenData)}` }, { status: 500 });
     }
-    url = `http://api.weixin.qq.com/tcb/databasequery?access_token=${accessToken}`;
+    url = `${baseUrl}/tcb/databasequery?access_token=${accessToken}`;
 
     // 发起查询
     const dbRes = await axios.post(url, bodyData);

@@ -155,13 +155,9 @@ Page({
 
           const isRelated = isAdmin || p.manager === myName || p.sales === myName || p.designer === myName || p.creatorName === myName;
           
-          if (!isRelated) {
-            p._isMasked = true;
-            if (p.customer) p.customer = maskName(p.customer);
-            if (p.address) p.address = maskAddress(p.address);
-          } else {
-            p._isMasked = false;
-          }
+          // 项目一定来源于已签单客户，所以全员可见，不再打码
+          p._isMasked = false;
+          p._isRelated = isRelated;
 
         // 模拟数据填充，对齐网页端功能
         const nodesList = ["开工", "水电", "木工", "瓦工", "墙面", "定制", "软装", "交付"];

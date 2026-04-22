@@ -77,7 +77,9 @@ export default function Dashboard() {
   // 待处理事项
   const overdueTodos = todosData.filter((t: any) => {
     if (t.status !== 'pending' || !t.dueDate) return false;
-    return new Date(t.dueDate) < new Date(new Date().toDateString());
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    return t.dueDate < todayStr;
   }).length;
   const delayedProjects = projectsData.filter(p => p.health === '严重延期' || p.health === '预警').length;
   const healthNormal = projectsData.filter(p => p.status === '施工中' && (!p.health || p.health === '正常')).length;

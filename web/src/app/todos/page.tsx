@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Check, Clock, Calendar, Users, Target, Search, Plus, X, Edit2, Trash2, ArrowUpAZ, ArrowDownAZ, ChevronDown, ChevronLeft, ChevronRight, Paperclip, Image as ImageIcon, Upload } from "lucide-react";
+import { Check, Clock, Calendar, Users, Target, Search, Plus, X, Edit2, Trash2, ArrowUpAZ, ArrowDownAZ, ChevronDown, ChevronLeft, ChevronRight, Paperclip, Image as ImageIcon, Upload, CheckSquare, User } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
 import { useRouter } from "next/navigation";
 
@@ -33,7 +33,7 @@ const PRIORITY_COLOR_MAP: Record<string, string> = {
 };
 
 // -- 自定义下拉组件 --
-const CustomSelect = ({ value, onChange, options, placeholder = "请选择", className = "", dropdownClassName = "" }: any) => {
+const CustomSelect = ({ value, onChange, options, placeholder = "请选择", className = "", dropdownClassName = "", multiple = false }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -47,7 +47,32 @@ const CustomSelect = ({ value, onChange, options, placeholder = "请选择", cla
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const selectedOption = options.find((o: any) => o.value === value);
+  const handleSelect = (optionValue: any) => {
+    if (multiple) {
+      let currentValues = Array.isArray(value) ? [...value] : [];
+      if (currentValues.includes(optionValue)) {
+        currentValues = currentValues.filter(v => v !== optionValue);
+      } else {
+        currentValues.push(optionValue);
+      }
+      onChange(currentValues);
+    } else {
+      onChange(optionValue);
+      setIsOpen(false);
+    }
+  };
+
+  const getDisplayContent = () => {
+    if (multiple) {
+      const selectedOpts = options.filter((o: any) => (Array.isArray(value) ? value : []).includes(o.value));
+      if (selectedOpts.length === 0) return placeholder;
+      if (selectedOpts.length <= 2) return selectedOpts.map((o: any) => o.label).join(', ');
+      return `${selectedOpts[0].label}, ${selectedOpts[1].label} 等 ${selectedOpts.length} 人`;
+    } else {
+      const selectedOption = options.find((o: any) => o.value === value);
+      return selectedOption ? (selectedOption.render ? selectedOption.render(selectedOption) : selectedOption.label) : placeholder;
+    }
+  };
 
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
@@ -56,22 +81,33 @@ const CustomSelect = ({ value, onChange, options, placeholder = "请选择", cla
         className="flex items-center justify-between w-full h-full bg-white border border-primary-200 rounded-lg text-sm text-primary-700 focus:outline-none hover:border-primary-300 transition-colors cursor-pointer px-3 py-2"
       >
         <div className="flex-1 truncate text-left flex items-center">
-          {selectedOption ? (selectedOption.render ? selectedOption.render(selectedOption) : selectedOption.label) : placeholder}
+          {getDisplayContent()}
         </div>
         <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </div>
       {isOpen && (
-        <div className={`absolute z-[100] top-full left-0 right-0 mt-1 bg-white border border-primary-100 shadow-xl rounded-xl max-h-64 overflow-y-auto animate-in fade-in zoom-in-95 duration-100 ${dropdownClassName}`}>
-          {options.map((opt: any) => (
-            <div 
-              key={opt.value} 
-              onClick={() => { onChange(opt.value); setIsOpen(false); }} 
-              className={`px-3 py-2 hover:bg-primary-50 cursor-pointer text-sm border-b border-primary-50 last:border-0 transition-colors ${value === opt.value ? 'bg-primary-50 font-bold text-primary-900' : 'text-primary-700'}`}
-            >
-              {opt.render ? opt.render(opt) : opt.label}
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
+          <div className={`absolute z-20 w-full mt-1 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden py-1 ${dropdownClassName}`}>
+            {options.map((option: any) => {
+              const isSelected = multiple 
+                ? (Array.isArray(value) ? value : []).includes(option.value)
+                : option.value === value;
+              return (
+                <div
+                  key={option.value}
+                  onClick={() => handleSelect(option.value)}
+                  className={`px-4 py-2.5 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                    isSelected ? 'bg-primary-50 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'
+                  }`}
+                >
+                  <div className="flex-1">{option.render ? option.render(option) : option.label}</div>
+                  {multiple && isSelected && <Check className="w-4 h-4 text-primary-600 shrink-0 ml-2" />}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
@@ -91,11 +127,23 @@ export default function TodosPage() {
       if (res.ok) {
         const data = await res.json();
         // 适配云开发数据格式
-        const formatted = data.map((item: any) => ({
-          ...item,
-          id: item._id,
-          createdAt: item.createdAt ? new Date(item.createdAt).toISOString() : new Date().toISOString()
-        }));
+        const formatted = data.map((item: any) => {
+          let dateStr = new Date().toISOString();
+          if (item.createdAt) {
+            try {
+              if (typeof item.createdAt === 'object' && item.createdAt.$date) {
+                dateStr = new Date(item.createdAt.$date).toISOString();
+              } else {
+                dateStr = new Date(item.createdAt).toISOString();
+              }
+            } catch(e) {}
+          }
+          return {
+            ...item,
+            id: item._id,
+            createdAt: dateStr
+          };
+        });
         setTodos(formatted);
       }
     } catch (e) {
@@ -105,11 +153,12 @@ export default function TodosPage() {
   
   // -- 筛选器状态 --
   const [filterView, setFilterView] = useState<"与我相关" | "团队全部">("与我相关");
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "completed">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "completed">("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateSort, setDateSort] = useState<"asc" | "desc">("asc");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all");
   const [personFilter, setPersonFilter] = useState<string>("all"); // specific employee id
+  const [relatedLeadFilter, setRelatedLeadFilter] = useState<string>("all"); // 关联客户筛选
 
   // -- 弹窗与表单状态 --
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -133,7 +182,7 @@ export default function TodosPage() {
     description: "",
     dueDate: "",
     priority: "normal",
-    assignedToId: "",
+    assigneesIds: [] as string[],
     relatedType: "lead",
     relatedId: "",
     attachments: [] as { type: string, url: string, name: string }[]
@@ -163,7 +212,22 @@ export default function TodosPage() {
 
     fetch('/api/leads').then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
-        setLeadsData(data.map((l: any) => ({ id: l._id, name: l.name, address: l.address, status: l.status })));
+        const userInfoStr = localStorage.getItem('pnzj_user') || localStorage.getItem('userInfo');
+        const currentUser = userInfoStr ? JSON.parse(userInfoStr) : null;
+        
+        let filteredLeads = data;
+        // 如果不是管理员，只保留：1. 与自己有关的线索 2. 状态为“已签单”的公开线索
+        if (currentUser && currentUser.role !== 'admin') {
+          filteredLeads = data.filter(lead => 
+            lead.sales === currentUser.name || 
+            lead.designer === currentUser.name || 
+            lead.manager === currentUser.name ||
+            lead.creatorName === currentUser.name ||
+            lead.signer === currentUser.name ||
+            lead.status === '已签单'
+          );
+        }
+        setLeadsData(filteredLeads.map((l: any) => ({ id: l._id, name: l.name, address: l.address, status: l.status })));
       }
     }).catch(console.error);
 
@@ -219,6 +283,19 @@ export default function TodosPage() {
     return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
   };
 
+  // 获取截止日期对应的颜色类
+  const getDueDateColorClass = (dueDate: string, status: string) => {
+    if (status === 'completed') return 'text-primary-400 bg-primary-50';
+    if (!dueDate) return 'text-primary-400 bg-primary-50';
+    
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    
+    if (dueDate < todayStr) return 'text-rose-700 bg-rose-50 border border-rose-100'; // 逾期（红）
+    if (dueDate === todayStr) return 'text-amber-700 bg-amber-50 border border-amber-100'; // 今天（黄）
+    return 'text-emerald-700 bg-emerald-50 border border-emerald-100'; // 未来（绿）
+  };
+
   // 根据当前条件过滤待办
   const filteredTodos = useMemo(() => {
     return todos.filter(t => {
@@ -243,7 +320,11 @@ export default function TodosPage() {
         const isCreator = t.createdBy?.id === personFilter;
         if (!inAssignees && !isAssignedTo && !isCreator) return false;
       }
-      // 5. 搜索过滤
+      // 5. 关联客户过滤
+      if (relatedLeadFilter !== "all") {
+        if (t.relatedTo?.id !== relatedLeadFilter) return false;
+      }
+      // 6. 搜索过滤
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         if (!t.title?.toLowerCase().includes(q) && 
@@ -254,15 +335,12 @@ export default function TodosPage() {
       }
       return true;
     }).sort((a, b) => {
-      // 排序逻辑：未完成在前
-      if (a.status === 'pending' && b.status === 'completed') return -1;
-      if (a.status === 'completed' && b.status === 'pending') return 1;
-      // 然后按截止日期升降序
-      const timeA = new Date(a.dueDate).getTime();
-      const timeB = new Date(b.dueDate).getTime();
-      return dateSort === 'asc' ? timeA - timeB : timeB - timeA;
+      // 排序逻辑：默认按 createdAt 创建时间倒序排列（最新的在最上面）
+      const timeA = new Date(a.createdAt).getTime();
+      const timeB = new Date(b.createdAt).getTime();
+      return timeB - timeA;
     });
-  }, [todos, filterView, filterStatus, dateFilter, personFilter, searchQuery, dateSort, currentUser]);
+  }, [todos, filterView, filterStatus, dateFilter, personFilter, relatedLeadFilter, searchQuery]);
 
   const pendingCount = filteredTodos.filter(t => t.status === 'pending').length;
   const completedCount = filteredTodos.filter(t => t.status === 'completed').length;
@@ -274,17 +352,24 @@ export default function TodosPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterView, filterStatus, dateFilter, personFilter, searchQuery, dateSort]);
+  }, [filterView, filterStatus, dateFilter, personFilter, relatedLeadFilter, searchQuery, dateSort]);
+
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailTodo, setDetailTodo] = useState<any>(null);
 
   // -- 弹窗表单操作 --
   const openCreateModal = () => {
     setEditingId(null);
+    // 优先去 employees 里匹配名字获取最准确的 ID，找不到再用 currentUser 里的
+    const myEmp = employees.find(e => e.name === currentUser?.name);
+    const myEmpId = myEmp ? (myEmp._id || myEmp.id) : (currentUser?._id || currentUser?.id || "");
+    
     setFormData({
       title: "",
       description: "",
       dueDate: new Date().toISOString().split('T')[0],
       priority: "normal",
-      assignedToId: currentUser?._id || currentUser?.id || "",
+      assigneesIds: myEmpId ? [myEmpId] : [],
       relatedType: "lead",
       relatedId: "",
       attachments: []
@@ -292,14 +377,26 @@ export default function TodosPage() {
     setIsModalOpen(true);
   };
 
+  const openDetailModal = (todo: any) => {
+    setDetailTodo(todo);
+    setIsDetailModalOpen(true);
+  };
+
   const openEditModal = (todo: any) => {
     setEditingId(todo.id);
+    let assigneesIds: string[] = [];
+    if (todo.assignees && Array.isArray(todo.assignees)) {
+      assigneesIds = todo.assignees.map((a: any) => a.id);
+    } else if (todo.assignedTo?.id) {
+      assigneesIds = [todo.assignedTo.id];
+    }
+    
     setFormData({
       title: todo.title,
       description: todo.description,
       dueDate: todo.dueDate,
       priority: todo.priority,
-      assignedToId: todo.assignedTo?.id || "",
+      assigneesIds: assigneesIds,
       relatedType: todo.relatedTo?.type || "lead",
       relatedId: todo.relatedTo?.id || "",
       attachments: todo.attachments || []
@@ -319,15 +416,17 @@ export default function TodosPage() {
 
   const handleSave = async () => {
     if (!formData.title || !formData.dueDate) return alert("请填写标题和截止日期");
+    if (!formData.assigneesIds || formData.assigneesIds.length === 0) return alert("请至少选择一位执行人");
 
-    const assignedEmp = employees.find(e => (e._id || e.id) === formData.assignedToId) || currentUser;
-    let relatedName = "";
-    if (formData.relatedType === 'lead') {
-      relatedName = leadsData.find(l => l.id === formData.relatedId)?.name || "未知线索";
-    } else {
-      const proj = projectsData.find(p => p.id === formData.relatedId);
-      relatedName = proj ? `${proj.customer} - ${proj.address}` : "未知工地";
-    }
+    const assignees = formData.assigneesIds.map(id => {
+      const emp = employees.find(e => (e._id || e.id) === id);
+      return emp ? { id: emp._id || emp.id, name: emp.name, role: emp.role } : null;
+    }).filter(Boolean);
+
+    // 兼容老的 single assignedTo，但主要用 assignees 数组
+    const primaryAssignee = assignees[0] || currentUser;
+
+    const relatedName = leadsData.find(l => l.id === formData.relatedId)?.name || "";
 
     if (editingId) {
       const updatedData = {
@@ -336,10 +435,11 @@ export default function TodosPage() {
         dueDate: formData.dueDate,
         priority: formData.priority,
         attachments: formData.attachments,
+        assignees: assignees,
         assignedTo: {
-          id: assignedEmp?._id || assignedEmp?.id || '',
-          name: assignedEmp?.name || '',
-          role: assignedEmp?.role || ''
+          id: primaryAssignee?.id || '',
+          name: primaryAssignee?.name || '',
+          role: primaryAssignee?.role || ''
         },
         relatedTo: {
           type: formData.relatedType,
@@ -371,14 +471,15 @@ export default function TodosPage() {
         attachments: formData.attachments,
         status: "pending",
         createdBy: {
-          id: currentUser?.id || 'admin',
+          id: currentUser?.id || currentUser?._id || 'admin',
           name: currentUser?.name || '系统',
           role: currentUser?.role || 'admin'
         },
+        assignees: assignees,
         assignedTo: {
-          id: assignedEmp?._id || assignedEmp?.id || '',
-          name: assignedEmp?.name || '',
-          role: assignedEmp?.role || ''
+          id: primaryAssignee?.id || '',
+          name: primaryAssignee?.name || '',
+          role: primaryAssignee?.role || ''
         },
         relatedTo: {
           type: formData.relatedType,
@@ -397,9 +498,14 @@ export default function TodosPage() {
         });
         if (res.ok) {
           fetchTodos(); // 创建成功后重新拉取
+        } else {
+          const err = await res.json();
+          console.error('新建失败响应:', err);
+          alert(`新建待办失败: ${err.error || '未知错误'}`);
         }
       } catch (e) {
-        console.error('新建失败', e);
+        console.error('新建请求报错', e);
+        alert('网络请求失败，请稍后重试');
       }
     }
   };
@@ -454,14 +560,20 @@ export default function TodosPage() {
               >
                 与我相关
               </button>
-              {currentUser?.role === 'admin' && (
+              {/* currentUser?.role === 'admin' && (
                 <button 
                   onClick={() => setFilterView('团队全部')}
                   className={`flex-1 sm:flex-none px-6 py-2 text-sm font-bold rounded-md transition-colors ${filterView === '团队全部' ? 'bg-white shadow-sm text-primary-900' : 'text-primary-500 hover:text-primary-900'}`}
                 >
                   团队全部
                 </button>
-              )}
+              )*/}
+              <button 
+                onClick={() => setFilterView('团队全部')}
+                className={`flex-1 sm:flex-none px-6 py-2 text-sm font-bold rounded-md transition-colors ${filterView === '团队全部' ? 'bg-white shadow-sm text-primary-900' : 'text-primary-500 hover:text-primary-900'}`}
+              >
+                团队全部
+              </button>
             </div>
             <button 
               onClick={openCreateModal}
@@ -499,6 +611,20 @@ export default function TodosPage() {
                 { label: "本月截止", value: "month" }
               ]}
               className="w-32"
+            />
+
+            {/* 关联客户筛选 */}
+            <CustomSelect
+              value={relatedLeadFilter}
+              onChange={(val: any) => setRelatedLeadFilter(val)}
+              options={[
+                { label: "所有客户", value: "all" },
+                ...leadsData.map(lead => ({
+                  label: `${lead.name}${lead.address ? ' · ' + lead.address : ''}`,
+                  value: lead.id
+                }))
+              ]}
+              className="w-48"
             />
 
             {/* 人员筛选 (仅限团队全部视图) */}
@@ -561,7 +687,7 @@ export default function TodosPage() {
               {/* 左侧：打勾按钮与标题描述 */}
               <div 
                 className="flex items-start gap-4 flex-1 min-w-0 cursor-pointer"
-                onClick={() => openEditModal(todo)}
+                onClick={() => openDetailModal(todo)}
               >
                 <button 
                   onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id); }}
@@ -639,34 +765,27 @@ export default function TodosPage() {
                 {/* 关联跳转 */}
                 <div className="flex items-center gap-1.5 bg-primary-50 px-2.5 py-1 rounded-md w-full sm:w-auto overflow-hidden mt-2 sm:mt-0">
                   <Target className="w-3.5 h-3.5 text-primary-400 shrink-0" />
-                  <span className="shrink-0 text-xs font-medium text-primary-500">
-                    {todo.relatedTo?.type === 'lead' ? '线索' : '工地'}
-                  </span>
-                  <button 
-                    onClick={() => router.push(todo.relatedTo?.type === 'lead' ? `/leads/${todo.relatedTo?.id}` : `/projects/${todo.relatedTo?.id}`)}
+                  <span className="shrink-0 text-xs font-medium text-primary-500">客户</span>
+                  <button
+                    onClick={() => todo.relatedTo?.id && router.push(`/leads/${todo.relatedTo.id}`)}
                     className="text-xs font-bold text-primary-900 hover:text-primary-600 truncate hover:underline"
                     title={todo.relatedTo?.name}
                   >
-                    {todo.relatedTo?.name || '未知关联'}
+                    {todo.relatedTo?.name || '未关联客户'}
                   </button>
                 </div>
 
                 {/* 截止时间 */}
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium
-                  ${todo.status === 'completed' ? 'text-primary-400' : 'text-amber-700 bg-amber-50'}
-                `}>
+                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${getDueDateColorClass(todo.dueDate, todo.status)}`}>
                   <Calendar className="w-3.5 h-3.5" />
                   {todo.dueDate} 截止
                 </div>
 
-                {/* 执行人与创建人 */}
+                {/* 执行人 */}
                 <div className="flex items-center gap-3 text-xs text-primary-500">
-                  <span className="flex items-center gap-1" title="执行人">
-                    <Users className="w-3.5 h-3.5" /> {todo.assignedTo?.name || '未指派'}
-                  </span>
-                  <span className="text-primary-300">|</span>
-                  <span className="truncate max-w-[80px]" title={`派发人: ${todo.createdBy?.name || '系统'}`}>
-                    派发: {todo.createdBy?.name || '系统'}
+                  <span className="flex items-center gap-1 max-w-[200px] truncate" title={todo.assignees?.length > 0 ? todo.assignees.map((a: any) => a.name).join(', ') : todo.assignedTo?.name || '未分配'}>
+                    <Users className="w-3.5 h-3.5 shrink-0" /> 
+                    <span className="truncate">执行人: {todo.assignees?.length > 0 ? todo.assignees.map((a: any) => a.name).join(', ') : todo.assignedTo?.name || '未分配'}</span>
                   </span>
                 </div>
 
@@ -709,6 +828,122 @@ export default function TodosPage() {
         )}
 
       </div>
+
+      {/* 待办详情弹窗 */}
+      {isDetailModalOpen && detailTodo && (
+        <div className="fixed inset-0 bg-primary-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="sticky top-0 bg-white border-b border-primary-100 px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="text-xl font-bold text-primary-900 flex items-center gap-2">
+                <CheckSquare className="w-5 h-5 text-primary-500" />
+                待办详情
+              </h2>
+              <button onClick={() => setIsDetailModalOpen(false)} className="p-2 text-primary-400 hover:bg-primary-50 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <h3 className="text-lg font-bold text-primary-900">{detailTodo.title}</h3>
+                  {detailTodo.status === 'completed' ? (
+                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded text-xs font-bold">已完成</span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded text-xs font-bold">待处理</span>
+                  )}
+                  {detailTodo.priority && PRIORITY_MAP[detailTodo.priority] && (
+                    <span className={`px-2 py-0.5 rounded text-xs font-bold border ${PRIORITY_COLOR_MAP[detailTodo.priority]}`}>
+                      {PRIORITY_MAP[detailTodo.priority]}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-primary-600 whitespace-pre-wrap leading-relaxed mt-3 bg-primary-50/50 p-4 rounded-xl border border-primary-100">
+                  {detailTodo.description || '无详细描述'}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-white p-3 rounded-xl border border-primary-100 flex flex-col gap-1">
+                  <span className="text-xs text-primary-400 font-medium">截止时间</span>
+                  <span className="text-sm font-bold text-primary-900 flex items-center gap-1.5">
+                    <Calendar className="w-4 h-4 text-amber-500" />
+                    {detailTodo.dueDate}
+                  </span>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-primary-100 flex flex-col gap-1">
+                  <span className="text-xs text-primary-400 font-medium">关联客户/项目</span>
+                  {detailTodo.relatedTo?.id ? (
+                    <button
+                      onClick={() => { setIsDetailModalOpen(false); router.push(`/leads/${detailTodo.relatedTo.id}`); }}
+                      className="text-sm font-bold text-primary-600 hover:text-primary-900 flex items-center gap-1.5 text-left hover:underline"
+                    >
+                      <Target className="w-4 h-4" />
+                      {detailTodo.relatedTo.name}
+                    </button>
+                  ) : (
+                    <span className="text-sm font-medium text-primary-500">无关联项</span>
+                  )}
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-primary-100 flex flex-col gap-1">
+                  <span className="text-xs text-primary-400 font-medium">执行人</span>
+                  <span className="text-sm font-bold text-primary-900 flex items-center gap-1.5 truncate">
+                    <Users className="w-4 h-4 text-blue-500" />
+                    <span className="truncate" title={detailTodo.assignees?.length > 0 ? detailTodo.assignees.map((a: any) => a.name).join(', ') : detailTodo.assignedTo?.name || '未分配'}>
+                      {detailTodo.assignees?.length > 0 ? detailTodo.assignees.map((a: any) => a.name).join(', ') : detailTodo.assignedTo?.name || '未分配'}
+                    </span>
+                  </span>
+                </div>
+                <div className="bg-white p-3 rounded-xl border border-primary-100 flex flex-col gap-1">
+                  <span className="text-xs text-primary-400 font-medium">派发人</span>
+                  <span className="text-sm font-bold text-primary-900 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-purple-500" />
+                    {detailTodo.createdBy?.name && detailTodo.createdBy.name !== '系统' ? detailTodo.createdBy.name : '系统自动'}
+                  </span>
+                </div>
+              </div>
+
+              {detailTodo.attachments && detailTodo.attachments.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-bold text-primary-900 mb-3 flex items-center gap-2">
+                    <Paperclip className="w-4 h-4" />
+                    附件材料
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {detailTodo.attachments.map((att: any, idx: number) => (
+                      <a 
+                        key={idx} 
+                        href={att.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg hover:bg-primary-100 transition-colors"
+                      >
+                        {att.type === 'image' ? <ImageIcon className="w-4 h-4 text-primary-500" /> : <Paperclip className="w-4 h-4 text-primary-500" />}
+                        <span className="text-xs font-medium text-primary-700 max-w-[150px] truncate">{att.name}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-primary-100 flex items-center justify-between">
+                <span className="text-xs text-primary-400">
+                  创建时间: {new Date(detailTodo.createdAt).toLocaleString('zh-CN')}
+                </span>
+                {canEditOrDelete(detailTodo) && (
+                  <button 
+                    onClick={() => { setIsDetailModalOpen(false); openEditModal(detailTodo); }}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors text-sm font-medium"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    编辑待办
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 新建/编辑待办弹窗 */}
       {isModalOpen && (
@@ -842,13 +1077,20 @@ export default function TodosPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-bold text-primary-900 mb-1.5">指派给谁 (执行人)</label>
+              <div>
+                  <label className="block text-sm font-bold text-primary-900 mb-1.5">执行人</label>
                   <CustomSelect
-                    value={formData.assignedToId}
-                    onChange={(val: any) => setFormData({...formData, assignedToId: val})}
-                    options={employees.map(emp => ({
+                    value={formData.assigneesIds}
+                    onChange={(val: any) => setFormData({...formData, assigneesIds: val})}
+                    multiple={true}
+                    options={employees
+                      .sort((a, b) => {
+                        if (a.role === 'admin' && b.role !== 'admin') return 1;
+                        if (a.role !== 'admin' && b.role === 'admin') return -1;
+                        if (a.role === b.role) return a.name.localeCompare(b.name);
+                        return a.role.localeCompare(b.role);
+                      })
+                      .map(emp => ({
                       label: emp.name,
                       value: emp._id || emp.id,
                       render: () => (
@@ -862,39 +1104,15 @@ export default function TodosPage() {
                     }))}
                     className="w-full h-[42px]"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-primary-900 mb-1.5">关联类型</label>
-                  <div className="flex p-1 bg-primary-50 rounded-xl border border-primary-200">
-                    <button
-                      onClick={() => setFormData({...formData, relatedType: 'lead', relatedId: ''})}
-                      className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-colors ${formData.relatedType === 'lead' ? 'bg-white shadow text-primary-900' : 'text-primary-500 hover:text-primary-900'}`}
-                    >
-                      未开工(线索)
-                    </button>
-                    <button
-                      onClick={() => setFormData({...formData, relatedType: 'project', relatedId: ''})}
-                      className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-colors ${formData.relatedType === 'project' ? 'bg-white shadow text-primary-900' : 'text-primary-500 hover:text-primary-900'}`}
-                    >
-                      已开工(工地)
-                    </button>
-                  </div>
-                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-primary-900 mb-1.5">
-                  选择关联的{formData.relatedType === 'lead' ? '客户线索' : '施工工地'}
-                </label>
+                <label className="block text-sm font-bold text-primary-900 mb-1.5">关联客户</label>
                 <CustomSelect
                   value={formData.relatedId}
-                  onChange={(val: any) => setFormData({...formData, relatedId: val})}
-                  options={formData.relatedType === 'lead' ? (
-                    leadsData.map(lead => ({ label: `${lead.name} (${lead.address || ''}) - ${lead.status || ''}`, value: lead.id }))
-                  ) : (
-                    projectsData.map(proj => ({ label: `${proj.customer} - ${proj.address || ''} - ${proj.status || ''}`, value: proj.id }))
-                  )}
-                  placeholder={`请选择${formData.relatedType === 'lead' ? '客户' : '工地'}`}
+                  onChange={(val: any) => setFormData({...formData, relatedType: 'lead', relatedId: val})}
+                  options={leadsData.map(lead => ({ label: `${lead.name}${lead.address ? ' · ' + lead.address : ''}`, value: lead.id }))}
+                  placeholder="请选择关联客户（选填）"
                   className="w-full h-[42px]"
                 />
               </div>

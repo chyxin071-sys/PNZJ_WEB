@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, Filter, MoreVertical, CheckCircle2, XCircle, Shield, Building2, Users, X, Edit, Trash2, Ban, ChevronDown, Calendar, ChevronLeft, ChevronRight, Loader2, KeyRound } from "lucide-react";
+import { Search, Plus, Filter, MoreVertical, CheckCircle2, XCircle, Shield, Building2, Users, X, Edit, Trash2, Ban, ChevronDown, Loader2, KeyRound } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
+import DatePicker from "../../components/DatePicker";
 
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -21,7 +22,7 @@ export default function EmployeesPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
-    const userData = localStorage.getItem("userInfo");
+    const userData = localStorage.getItem("pnzj_user");
     if (userData) {
       try {
         setCurrentUser(JSON.parse(userData));
@@ -37,18 +38,7 @@ export default function EmployeesPage() {
   const [newEmployeePhone, setNewEmployeePhone] = useState(""); // 手机号
   const [newEmployeeRoleDropdown, setNewEmployeeRoleDropdown] = useState(false);
   const [newEmployeeRole, setNewEmployeeRole] = useState("sales");
-  
-  // 自定义日历状态
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const [newEmployeeJoinDate, setNewEmployeeJoinDate] = useState(new Date().toISOString().split('T')[0]);
-  const [calendarViewDate, setCalendarViewDate] = useState(new Date());
-
-  // 日历辅助函数
-  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year: number, month: number) => {
-    const day = new Date(year, month, 1).getDay();
-    return day === 0 ? 6 : day - 1; // 转换为周一为0
-  };
 
   const roleMap: Record<string, { label: string, color: string, bg: string, dept: string }> = {
     admin: { label: "管理员", color: "text-purple-700", bg: "bg-purple-50", dept: "管理组" },
@@ -146,7 +136,7 @@ export default function EmployeesPage() {
           await fetchEmployees();
           setIsAddModalOpen(false);
           // 如果修改的是当前登录的用户，更新本地存储并提示重新登录
-          if (currentUser && currentUser.id === editingEmployee.id) {
+          if (currentUser && (currentUser._id === editingEmployee.id || currentUser.id === editingEmployee.id)) {
              const updatedUser = {
                ...currentUser,
                name: newEmployeeName,
@@ -154,7 +144,7 @@ export default function EmployeesPage() {
                phone: newEmployeePhone,
                role: newEmployeeRole,
              };
-             localStorage.setItem("userInfo", JSON.stringify(updatedUser));
+             localStorage.setItem("pnzj_user", JSON.stringify(updatedUser));
              alert("您的个人信息已修改，部分修改可能需要重新登录后生效");
              // 强制刷新页面以更新左下角的全局状态
              window.location.reload();
@@ -250,9 +240,9 @@ export default function EmployeesPage() {
         setNewPassword("");
         
         // 如果管理员重置了自己的密码，强制退出
-        if (currentUser && currentUser.id === resetPasswordModal.id) {
+        if (currentUser && (currentUser._id === resetPasswordModal.id || currentUser.id === resetPasswordModal.id)) {
           alert("您的密码已重置，请使用新密码重新登录！");
-          localStorage.removeItem("userInfo");
+          localStorage.removeItem("pnzj_user");
           window.location.href = "/login";
         } else {
           alert("密码重置成功");
@@ -277,6 +267,8 @@ export default function EmployeesPage() {
     manager: employees.filter(e => e.role === 'manager').length,
   };
 
+  const isAdmin = currentUser?.role === 'admin';
+
   return (
     <MainLayout>
       <div className="p-8 max-w-[1600px] mx-auto space-y-8">
@@ -284,18 +276,17 @@ export default function EmployeesPage() {
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-900">组织架构</h1>
-            <p className="text-primary-600 mt-2">管理员工账号、部门归属与系统权限</p>
+            <p className="text-primary-600 mt-2">{isAdmin ? '管理员工账号、部门归属与系统权限' : '查看公司成员信息与联系方式'}</p>
           </div>
-          <button 
+          {isAdmin && (
+          <button
             onClick={() => {
               setEditingEmployee(null);
               setNewEmployeeName("");
               setNewEmployeeAccount("");
               setNewEmployeePhone("");
               setNewEmployeeRole("sales");
-              const today = new Date();
-              setNewEmployeeJoinDate(today.toISOString().split('T')[0]);
-              setCalendarViewDate(today);
+              setNewEmployeeJoinDate(new Date().toISOString().split('T')[0]);
               setIsAddModalOpen(true);
             }}
             className="flex items-center justify-center min-h-[44px] px-4 py-2.5 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors shadow-sm font-medium w-full sm:w-auto"
@@ -303,9 +294,11 @@ export default function EmployeesPage() {
             <Plus className="w-5 h-5 mr-2" />
             添加员工
           </button>
+          )}
         </div>
 
-        {/* 核心指标卡片 */}
+        {/* 核心指标卡片 - 仅管理员 */}
+        {isAdmin && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
           <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex items-center justify-between">
             <div>
@@ -336,8 +329,10 @@ export default function EmployeesPage() {
             <div className="p-3 bg-amber-50 rounded-lg text-amber-600"><Building2 className="w-6 h-6" /></div>
           </div>
         </div>
+        )} {/* end isAdmin stats */}
 
-        {/* 筛选与搜索 - 融合风格 */}
+        {/* 筛选与搜索 - 仅管理员 */}
+        {isAdmin && (
         <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
             {["all", "sales", "designer", "manager", "admin"].map((tab) => (
@@ -374,26 +369,79 @@ export default function EmployeesPage() {
             )}
           </div>
         </div>
+        )} {/* end isAdmin filter */}
 
-        {/* 员工列表表格 */}
+        {/* 非管理员：部门分组卡片视图 */}
+        {!isAdmin && (
+          <div className="space-y-6">
+            {isLoading ? (
+              <div className="py-16 text-center text-primary-500">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-600" />
+                正在加载...
+              </div>
+            ) : (
+              [
+                { key: 'admin', label: '管理组', color: 'bg-purple-50 text-purple-700 border-purple-100', dot: 'bg-purple-400' },
+                { key: 'sales', label: '销售部', color: 'bg-blue-50 text-blue-700 border-blue-100', dot: 'bg-blue-400' },
+                { key: 'designer', label: '设计部', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-400' },
+                { key: 'manager', label: '工程部', color: 'bg-amber-50 text-amber-700 border-amber-100', dot: 'bg-amber-400' },
+              ].map(dept => {
+                const members = employees.filter(e => e.role === dept.key && e.status !== 'inactive');
+                if (members.length === 0) return null;
+                return (
+                  <div key={dept.key} className="bg-white rounded-xl border border-primary-100 shadow-sm overflow-hidden">
+                    <div className="px-6 py-4 border-b border-primary-100 flex items-center gap-3">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold border ${dept.color}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full mr-2 ${dept.dot}`} />
+                        {dept.label}
+                      </span>
+                      <span className="text-sm text-primary-400">{members.length} 人</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0 divide-y sm:divide-y-0 divide-primary-50">
+                      {members.map(emp => (
+                        <div key={emp.id} className="flex items-center gap-4 px-6 py-4 hover:bg-primary-50/30 transition-colors">
+                          <div className="w-10 h-10 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-900 font-bold text-sm shrink-0">
+                            {emp.name.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-primary-900 flex items-center gap-1.5">
+                              {emp.name}
+                              {currentUser && (currentUser._id === emp.id || currentUser.id === emp.id) && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary-900 text-white">我</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-primary-500 font-mono mt-0.5 truncate">{emp.phone || '暂无电话'}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* 管理员：员工列表表格 */}
+        {isAdmin && (
         <div className="bg-white rounded-xl border border-primary-100 shadow-sm flex flex-col relative z-10">
           <div className="w-full overflow-x-auto rounded-t-xl">
-            <table className="w-full text-left border-collapse min-w-[800px]">
+            <table className="w-full text-left border-collapse min-w-[600px]">
               <thead>
                 <tr className="bg-primary-50/50 border-b border-primary-100 text-primary-600 text-sm whitespace-nowrap">
-                  <th className="py-4 px-6 font-medium">员工姓名 / 账号</th>
+                  <th className="py-4 px-6 font-medium">员工姓名{isAdmin ? ' / 账号' : ''}</th>
                   <th className="py-4 px-6 font-medium">手机号码</th>
                   <th className="py-4 px-6 font-medium">所属部门</th>
-                  <th className="py-4 px-6 font-medium">系统角色</th>
-                  <th className="py-4 px-6 font-medium">状态</th>
-                  <th className="py-4 px-6 font-medium">入职时间</th>
-                  <th className="py-4 px-6 font-medium text-center w-24">操作</th>
+                  {isAdmin && <th className="py-4 px-6 font-medium">系统角色</th>}
+                  {isAdmin && <th className="py-4 px-6 font-medium">状态</th>}
+                  {isAdmin && <th className="py-4 px-6 font-medium">入职时间</th>}
+                  {isAdmin && <th className="py-4 px-6 font-medium text-center w-24">操作</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-primary-100 text-sm">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-primary-500">
+                    <td colSpan={isAdmin ? 7 : 3} className="py-12 text-center text-primary-500">
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary-600" />
                       正在加载员工数据...
                     </td>
@@ -409,13 +457,13 @@ export default function EmployeesPage() {
                           <div className="ml-3">
                             <p className="text-sm font-bold text-primary-900 flex items-center">
                               {emp.name}
-                              {currentUser && currentUser._id === emp.id && (
+                              {currentUser && (currentUser._id === emp.id || currentUser.id === emp.id) && (
                                 <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary-900 text-white">
                                   我
                                 </span>
                               )}
                             </p>
-                            <p className="text-xs text-primary-600 font-mono mt-0.5">{emp.username}</p>
+                            {isAdmin && <p className="text-xs text-primary-600 font-mono mt-0.5">{emp.username}</p>}
                           </div>
                         </div>
                       </td>
@@ -428,29 +476,36 @@ export default function EmployeesPage() {
                           {emp.department}
                         </div>
                       </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${roleMap[emp.role]?.bg || 'bg-gray-50'} ${roleMap[emp.role]?.color || 'text-gray-700'}`}>
-                          <Shield className="w-3 h-3 mr-1" />
-                          {roleMap[emp.role]?.label || emp.role}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        {emp.status === 'active' ? (
-                          <span className="inline-flex items-center text-emerald-600 font-medium">
-                            <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                            在职
+                      {isAdmin && (
+                        <td className="py-4 px-6">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${roleMap[emp.role]?.bg || 'bg-gray-50'} ${roleMap[emp.role]?.color || 'text-gray-700'}`}>
+                            <Shield className="w-3 h-3 mr-1" />
+                            {roleMap[emp.role]?.label || emp.role}
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center text-rose-500 font-medium">
-                            <XCircle className="w-4 h-4 mr-1.5" />
-                            已离职 (禁止登录)
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-4 px-6 text-primary-600 font-medium font-mono text-sm">
-                        {emp.joinDate}
-                      </td>
-                      <td className="py-4 px-6">
+                        </td>
+                      )}
+                      {isAdmin && (
+                        <td className="py-4 px-6">
+                          {emp.status === 'active' ? (
+                            <span className="inline-flex items-center text-emerald-600 font-medium">
+                              <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                              在职
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center text-rose-500 font-medium">
+                              <XCircle className="w-4 h-4 mr-1.5" />
+                              已离职 (禁止登录)
+                            </span>
+                          )}
+                        </td>
+                      )}
+                      {isAdmin && (
+                        <td className="py-4 px-6 text-primary-600 font-medium font-mono text-sm">
+                          {emp.joinDate}
+                        </td>
+                      )}
+                      {isAdmin && (
+                        <td className="py-4 px-6">
                         <div className="relative flex justify-center">
                           <button 
                             onClick={() => setActiveActionMenu(activeActionMenu === emp.id ? null : emp.id)}
@@ -475,9 +530,7 @@ export default function EmployeesPage() {
                                     setNewEmployeeAccount(emp.username);
                                     setNewEmployeePhone(emp.phone);
                                     setNewEmployeeRole(emp.role);
-                                    const joinDate = emp.joinDate || new Date().toISOString().split('T')[0];
-                                    setNewEmployeeJoinDate(joinDate);
-                                    setCalendarViewDate(new Date(joinDate));
+                                    setNewEmployeeJoinDate(emp.joinDate || new Date().toISOString().split('T')[0]);
                                     setIsAddModalOpen(true);
                                     setActiveActionMenu(null);
                                   }}
@@ -525,12 +578,13 @@ export default function EmployeesPage() {
                             </>
                           )}
                         </div>
-                      </td>
+                        </td>
+                      )}
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-primary-500">
+                    <td colSpan={isAdmin ? 7 : 3} className="py-12 text-center text-primary-500">
                       没有找到匹配的员工数据
                     </td>
                   </tr>
@@ -548,10 +602,11 @@ export default function EmployeesPage() {
             </div>
           </div>
         </div>
+        )} {/* end isAdmin table */}
       </div>
 
-      {/* 添加/编辑员工弹窗 (统一UI) */}
-      {isAddModalOpen && (
+      {/* 添加/编辑员工弹窗 (统一UI) - 仅管理员 */}
+      {isAdmin && isAddModalOpen && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-xl flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between px-6 py-4 border-b border-primary-100 shrink-0">
@@ -644,81 +699,8 @@ export default function EmployeesPage() {
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-primary-900">入职时间 <span className="text-rose-500">*</span></label>
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-                    className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-900 text-sm flex items-center justify-between bg-white text-primary-900 text-left"
-                  >
-                    {newEmployeeJoinDate}
-                    <Calendar className="w-4 h-4 text-primary-400" />
-                  </button>
-                  
-                  {isDatePickerOpen && (
-                    <>
-                      <div className="fixed inset-0 z-10" onClick={() => setIsDatePickerOpen(false)} />
-                      <div className="absolute left-0 bottom-full mb-1 bg-white rounded-xl shadow-xl border border-primary-100 p-4 z-30 w-64 origin-bottom-left animate-in fade-in zoom-in-95 duration-150">
-                        <div className="flex justify-between items-center mb-3">
-                          <button 
-                            type="button" 
-                            onClick={() => setCalendarViewDate(new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() - 1, 1))}
-                            className="p-1 hover:bg-primary-50 rounded-md transition-colors"
-                          >
-                            <ChevronLeft className="w-4 h-4 text-primary-600" />
-                          </button>
-                          <span className="font-bold text-sm text-primary-900">
-                            {calendarViewDate.getFullYear()}年{calendarViewDate.getMonth() + 1}月
-                          </span>
-                          <button 
-                            type="button" 
-                            onClick={() => setCalendarViewDate(new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + 1, 1))}
-                            className="p-1 hover:bg-primary-50 rounded-md transition-colors"
-                          >
-                            <ChevronRight className="w-4 h-4 text-primary-600" />
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2 font-medium text-primary-400">
-                          {['一','二','三','四','五','六','日'].map(d => <div key={d}>{d}</div>)}
-                        </div>
-                        <div className="grid grid-cols-7 gap-1 text-center text-sm">
-                          {Array(getFirstDayOfMonth(calendarViewDate.getFullYear(), calendarViewDate.getMonth())).fill(null).map((_, i) => (
-                            <div key={`empty-${i}`} />
-                          ))}
-                          {Array.from({ length: getDaysInMonth(calendarViewDate.getFullYear(), calendarViewDate.getMonth()) }, (_, i) => i + 1).map(d => {
-                            const dateStr = `${calendarViewDate.getFullYear()}-${String(calendarViewDate.getMonth() + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                            const isSelected = dateStr === newEmployeeJoinDate;
-                            return (
-                              <button
-                                key={d}
-                                type="button"
-                                onClick={() => { 
-                                  setNewEmployeeJoinDate(dateStr); 
-                                  setIsDatePickerOpen(false); 
-                                }}
-                                className={`w-7 h-7 flex items-center justify-center rounded-md hover:bg-primary-100 transition-colors mx-auto ${isSelected ? 'bg-primary-900 text-white hover:bg-primary-800 font-bold' : 'text-primary-900'}`}
-                              >
-                                {d}
-                              </button>
-                            );
-                          })}
-                        </div>
-                        <div className="mt-3 pt-3 border-t border-primary-50 flex justify-between">
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              const today = new Date();
-                              setNewEmployeeJoinDate(today.toISOString().split('T')[0]);
-                              setCalendarViewDate(today);
-                              setIsDatePickerOpen(false);
-                            }}
-                            className="text-xs font-medium text-primary-600 hover:text-primary-900"
-                          >
-                            回到今天
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                <div className="w-full px-3 py-2 border border-primary-200 rounded-lg focus-within:ring-2 focus-within:ring-primary-900 text-sm bg-white">
+                  <DatePicker value={newEmployeeJoinDate} onChange={setNewEmployeeJoinDate} placeholder="选择入职日期" />
                 </div>
               </div>
 
@@ -749,8 +731,8 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* 二次确认弹窗 (停用/恢复/删除) */}
-      {employeeToConfirm && (
+      {/* 二次确认弹窗 (停用/恢复/删除) - 仅管理员 */}
+      {isAdmin && employeeToConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold text-primary-900 mb-2">
@@ -788,8 +770,8 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* 重置密码弹窗 */}
-      {resetPasswordModal && (
+      {/* 重置密码弹窗 - 仅管理员 */}
+      {isAdmin && resetPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in duration-200">
             <h3 className="text-lg font-bold text-primary-900 mb-2">

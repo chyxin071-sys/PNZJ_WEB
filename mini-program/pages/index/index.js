@@ -37,6 +37,25 @@ Page({
       return;
     }
 
+    // 每次回到首页时，静默验证密码是否被修改
+    const db = wx.cloud.database();
+    db.collection('users').doc(userInfo.id || userInfo._id).get().then(res => {
+      const user = res.data;
+      if (user && user.passwordPlain !== userInfo._loginPassword && user.passwordHash !== userInfo._loginPassword) {
+        // 密码已被修改，强制退出
+        wx.removeStorageSync('userInfo');
+        wx.showModal({
+          title: '登录已失效',
+          content: '您的密码已在其他设备修改，请重新登录',
+          showCancel: false,
+          success: () => {
+            wx.reLaunch({ url: '/pages/login/index' });
+          }
+        });
+        return;
+      }
+    }).catch(() => {});
+
     if (userInfo.role === 'admin') {
       this.setData({ isAdmin: true });
     }
@@ -64,6 +83,8 @@ Page({
         timeFilterLabel: f.timeFilterLabel || '最近一周',
         filterScope: f.filterScope || (isAdmin ? 'all' : 'related'),
         filterPriority: f.filterPriority || 'all',
+        filterRelatedLeadId: f.filterRelatedLeadId || '',
+        filterRelatedLeadName: f.filterRelatedLeadName || '',
         filterEmployees: f.filterEmployees || this.data.filterEmployees,
         selectedEmployeeIds: f.selectedEmployeeIds || []
       });
@@ -72,6 +93,36 @@ Page({
         this.setData({ filterScope: 'all' });
       }
     }
+    this.fetchLeads();
+  },
+
+  fetchLeads() {
+    const db = wx.cloud.database();
+    const userInfo = wx.getStorageSync('userInfo');
+    const myName = userInfo ? userInfo.name : '';
+    const isAdmin = userInfo && userInfo.role === 'admin';
+
+    db.collection('leads').get().then(res => {
+      const allLeads = res.data;
+      const relatedLeads = isAdmin ? allLeads : allLeads.filter(l => 
+        l.creatorName === myName || 
+        l.sales === myName || 
+        l.designer === myName || 
+        l.manager === myName || 
+        l.signer === myName ||
+        l.status === '已签单'
+      );
+      
+      // 直接显示真实名字，不打码
+      const leadNames = relatedLeads.map(l => l.name);
+
+      this.setData({ 
+        availableLeads: relatedLeads,
+        availableLeadNames: ['全部客户', ...leadNames]
+      });
+    }).catch(err => {
+      console.error('获取关联客户失败', err);
+    });
   },
 
   fetchData() {
@@ -253,6 +304,11 @@ Page({
       filtered = filtered.filter(t => t.priority === this.data.filterPriority);
     }
 
+    // 关联客户过滤
+    if (this.data.filterRelatedLeadId) {
+      filtered = filtered.filter(t => t.relatedTo && t.relatedTo.id === this.data.filterRelatedLeadId);
+    }
+
     // 范围过滤 (与我相关 vs 全部)
     if (this.data.filterScope === 'related') {
       const userInfo = wx.getStorageSync('userInfo');
@@ -373,6 +429,8 @@ Page({
       timeFilterLabel: this.data.timeFilterLabel,
       filterScope: this.data.filterScope,
       filterPriority: this.data.filterPriority,
+      filterRelatedLeadId: this.data.filterRelatedLeadId,
+      filterRelatedLeadName: this.data.filterRelatedLeadName,
       filterEmployees: this.data.filterEmployees,
       selectedEmployeeIds: this.data.selectedEmployeeIds
     };
@@ -517,44 +575,73 @@ Page({
   // ===================== 新建待办逻辑 =====================
   createTodo() {
     // 弹窗时先加载客户列表，以便关联客户，并构造用于 picker 的名称数组
+    const userInfo = wx.getStorageSync('userInfo');
+    const myId = userInfo ? (userInfo.id || userInfo._id) : '';
+    const myName = userInfo ? userInfo.name : '';
+    const isAdmin = userInfo && userInfo.role === 'admin';
+
+    // 重新获取一下最新的线索数据进行过滤，防止旧数据残留
     const db = wx.cloud.database();
     db.collection('leads').get().then(res => {
-      const leads = res.data;
-      const userInfo = wx.getStorageSync('userInfo');
-      const myName = userInfo ? userInfo.name : '';
-      const isAdmin = userInfo && userInfo.role === 'admin';
-
-      const leadNames = leads.map(l => {
-        const isRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
-        return isRelated ? l.name : maskName(l.name);
-      });
+      const allLeads = res.data;
+      const relatedLeads = isAdmin ? allLeads : allLeads.filter(l => 
+        l.creatorName === myName || 
+        l.sales === myName || 
+        l.designer === myName || 
+        l.manager === myName || 
+        l.signer === myName ||
+        l.status === '已签单'
+      );
+      
+      const leadNames = relatedLeads.map(l => l.name);
 
       this.setData({ 
-        availableLeads: leads,
-        availableLeadNames: ['不关联', ...leadNames]
+        availableLeads: relatedLeads,
+        createLeadNames: ['不关联', ...leadNames]
       });
-    }).catch(err => {
-      console.error('获取关联客户失败', err);
+    });
+
+    // 更新 filterEmployees 里的 selected 状态以供 WXML 渲染打勾
+    let foundMyId = myId;
+    const updatedEmps = this.data.filterEmployees.map(emp => {
+      const isMe = emp.id === myId || emp.name === myName;
+      if (isMe) foundMyId = emp.id;
+      return { ...emp, _todoSelected: isMe };
     });
 
     this.setData({
       showAddModal: true,
       showAssigneeDropdown: false,
+      filterEmployees: updatedEmps,
       newTodo: {
         title: '',
         description: '',
         priority: 'medium',
         dueDate: '',
-        assignees: [], // 选中的执行人ID数组
-        assigneeNames: '', // 用于在选择器上显示的中文名
+        assignees: foundMyId ? [foundMyId] : [], // 默认选中自己
+        assigneeNames: foundMyId ? myName : '', // 默认显示自己名字
         relatedLeadId: '',
         relatedLeadName: ''
       }
+    }, () => {
+      this.updateGroupedEmployees && this.updateGroupedEmployees();
     });
   },
 
   closeAddModal() {
-    this.setData({ showAddModal: false, showAssigneeDropdown: false });
+    if (this.data.newTodo.title || this.data.newTodo.description) {
+      wx.showModal({
+        title: '提示',
+        content: '还未保存，确定要取消吗？',
+        success: (res) => {
+          if (res.confirm) {
+            this.setData({ showAddModal: false, showAssigneeDropdown: false });
+          }
+        }
+      });
+    } else {
+      this.setData({ showAddModal: false, showAssigneeDropdown: false });
+    }
   },
 
   toggleAssigneeDropdown() {
@@ -711,7 +798,15 @@ Page({
       
       wx.hideLoading();
       wx.showToast({ title: '新建成功', icon: 'success' });
-      this.closeAddModal();
+      
+      // 清空输入内容，避免触发 closeAddModal 的提示框
+      this.setData({
+        'newTodo.title': '',
+        'newTodo.description': '',
+        showAddModal: false,
+        showAssigneeDropdown: false
+      });
+      
       this.fetchData();
     }).catch(err => {
       wx.hideLoading();
@@ -756,6 +851,18 @@ Page({
     });
   },
 
+  onFilterLeadChange(e) {
+    const idx = parseInt(e.detail.value);
+    if (idx === 0) {
+      this.setData({ filterRelatedLeadId: '', filterRelatedLeadName: '' });
+    } else {
+      const lead = this.data.availableLeads[idx - 1];
+      this.setData({ filterRelatedLeadId: lead._id, filterRelatedLeadName: lead.name });
+    }
+    this.saveFilterState();
+    this.filterTodos();
+  },
+
   resetFilter() {
     const emps = this.data.filterEmployees.map(e => ({...e, selected: false}));
     this.setData({
@@ -763,6 +870,8 @@ Page({
       timeFilterIndex: 1,
       timeFilterLabel: '最近一周',
       filterPriority: 'all',
+      filterRelatedLeadId: '',
+      filterRelatedLeadName: '',
       filterEmployees: emps,
       selectedEmployeeIds: []
     }, () => {

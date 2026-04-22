@@ -49,6 +49,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         `db.collection("leads").where({ creatorName: "${oldName}" }).update({ data: { creatorName: "${newName}" } })`,
         `db.collection("leads").where({ sales: "${oldName}" }).update({ data: { sales: "${newName}" } })`,
         `db.collection("leads").where({ designer: "${oldName}" }).update({ data: { designer: "${newName}" } })`,
+        `db.collection("leads").where({ manager: "${oldName}" }).update({ data: { manager: "${newName}" } })`,
         `db.collection("leads").where({ signer: "${oldName}" }).update({ data: { signer: "${newName}" } })`,
 
         `db.collection("projects").where({ manager: "${oldName}" }).update({ data: { manager: "${newName}" } })`,

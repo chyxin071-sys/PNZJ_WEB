@@ -7,16 +7,24 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const { id } = params;
     const body = await request.json();
 
+    const oldData = await tcbQuery(`db.collection("todos").doc("${id}").get()`);
+    const oldTodo = oldData?.[0] || {};
+
     const docData = JSON.stringify(body);
     const query = `db.collection("todos").doc("${id}").update({ data: ${docData} })`;
     const res = await tcbUpdate(query);
 
-    // 修改待办时通知被指派的人
+    // 修改待办时通知相关的人
     if (body.assignees) {
       const operatorName = body.updatedBy || '';
-      const targets = (body.assignees as any[]).map(a => a.name).filter(n => n && n !== operatorName);
-      if (operatorName) targets.push('admin');
-      sendNotifications(targets, '待办任务已更新', `${operatorName} 更新了待办：【${body.title}】`, '/todos');
+      
+      const oldAssigneeNames = (oldTodo.assignees || []).map((a: any) => a.name);
+      const newAssigneeNames = (body.assignees || []).map((a: any) => a.name);
+      
+      // 所有相关人员（新的、旧的）
+      const allTargets = Array.from(new Set([...oldAssigneeNames, ...newAssigneeNames, 'admin'])).filter(n => n && n !== operatorName);
+      
+      sendNotifications(allTargets, '待办任务已更新', `${operatorName} 更新了待办：【${body.title}】的执行人或内容`, '/todos');
     }
 
     return NextResponse.json(res);

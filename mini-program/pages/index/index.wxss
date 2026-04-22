@@ -1,5 +1,5 @@
 
-.page-container { height: 100vh; display: flex; flex-direction: column; overflow: hidden; background: var(--primary-50); box-sizing: border-box; }
+.page-container { min-height: 100vh; display: flex; flex-direction: column; background: var(--primary-50); box-sizing: border-box; }
 
 /* 顶部数据看板 */
 .dashboard { background: #fff; padding: 40rpx 40rpx 20rpx; border-bottom-left-radius: 40rpx; border-bottom-right-radius: 40rpx; box-shadow: 0 10rpx 30rpx rgba(74, 64, 58, 0.04); z-index: 10; flex-shrink: 0; }
@@ -56,7 +56,7 @@
 .plus-icon::after { top: 0; left: 8rpx; width: 4rpx; height: 20rpx; }
 
 /* 列表�?*/
-.list-container { flex: 1; padding: 20rpx 32rpx; width: 100%; box-sizing: border-box; height: 0; }
+.list-container { flex: 1; padding: 20rpx 32rpx; width: 100%; box-sizing: border-box; }
 
 .icon-sort { width: 36rpx; height: 32rpx; display: flex; flex-direction: column; justify-content: space-between; align-items: center; }
 .icon-sort::before { content: ''; width: 36rpx; height: 4rpx; background: var(--primary-900); border-radius: 2rpx; }

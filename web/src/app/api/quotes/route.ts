@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { tcbQuery, tcbAdd, tcbCount } from '@/lib/wechat-tcb';
 import { sendNotification } from '@/lib/notify';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -35,6 +37,7 @@ export async function POST(request: Request) {
 
     const query = `db.collection("quotes").add({ data: ${docData} })`;
     const res = await tcbAdd(query);
+    const newQuoteId = res.id_list?.[0];
 
     // 通知 admin
     sendNotification(
@@ -44,7 +47,26 @@ export async function POST(request: Request) {
       body.leadId ? `/leads/${body.leadId}` : '/quotes'
     );
 
-    return NextResponse.json(res);
+    // BUG-23: 报价单保存时自动写入跟进记录
+    if (body.leadId && newQuoteId) {
+      try {
+        const now = new Date();
+        const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const followUpData = JSON.stringify({
+          leadId: body.leadId,
+          content: `已更新报价单，总价${body.final || 0}元，修改人：${body.sales || body.designer || '系统'}`,
+          method: '系统记录',
+          createdBy: '系统',
+          createdAt: { $date: Date.now() },
+          displayTime: nowStr
+        }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        await tcbAdd(`db.collection("followUps").add({ data: ${followUpData} })`);
+      } catch (e) {
+        console.error('Failed to create system followUp for new quote', e);
+      }
+    }
+
+    return NextResponse.json({ ...res, _id: newQuoteId });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

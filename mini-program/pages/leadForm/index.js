@@ -15,19 +15,23 @@ Page({
       budget: '暂无',
       source: '自然进店',
       sales: '',
-      designer: ''
+      designer: '',
+      manager: ''
     },
     
     ratingOptions: ['A', 'B', 'C', 'D'],
     statusOptions: ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'],
     reqOptions: ['毛坯', '旧改', '精装微调'],
     budgetOptions: ['暂无', '10-20万', '20-30万', '30-50万', '50万以上'],
-    sourceOptions: ['自然进店', '老介新', '抖音', '小红书', '大众点评', '自有关系', '其他'],
+    sourceOptions: ['自然进店', '老介新', '抖音', '自有关系', '其他'],
+    customSource: '',
     
     salesList: [],
     designerList: [],
+    managerList: [],
     salesIndex: -1,
-    designerIndex: -1
+    designerIndex: -1,
+    managerIndex: -1
   },
 
   onLoad(options) {
@@ -37,18 +41,55 @@ Page({
     // 获取员工列表
     db.collection('users').get().then(res => {
       const emps = res.data;
-      const sales = emps.filter(e => e.role === 'sales' || e.role === 'admin');
-      const designers = emps.filter(e => e.role === 'designer' || e.role === 'admin');
+      const sales = emps.filter(e => e.role === 'sales' || e.role === 'admin').sort((a, b) => (a.role === 'admin' ? 1 : -1) - (b.role === 'admin' ? 1 : -1));
+      const designers = emps.filter(e => e.role === 'designer' || e.role === 'admin').sort((a, b) => (a.role === 'admin' ? 1 : -1) - (b.role === 'admin' ? 1 : -1));
+      const managers = emps.filter(e => e.role === 'manager' || e.role === 'admin').sort((a, b) => (a.role === 'admin' ? 1 : -1) - (b.role === 'admin' ? 1 : -1));
       
-      this.setData({ salesList: sales, designerList: designers });
+      this.setData({ salesList: sales, designerList: designers, managerList: managers });
 
       if (options.id) {
         wx.setNavigationBarTitle({ title: '编辑客户' });
         this.setData({ id: options.id, isEdit: true });
         this.loadLeadData(options.id);
       } else {
+        // 新建客户，根据创建人身份自动关联
+        const userInfo = wx.getStorageSync('userInfo');
+        let formDataSales = '';
+        let formDataDesigner = '';
+        let formDataManager = '';
+        let sIdx = -1;
+        let dIdx = -1;
+        let mIdx = -1;
+
+        if (options.defaultSales) {
+          formDataSales = options.defaultSales;
+          sIdx = sales.findIndex(s => s.name === options.defaultSales);
+        }
+        if (options.defaultDesigner) {
+          formDataDesigner = options.defaultDesigner;
+          dIdx = designers.findIndex(d => d.name === options.defaultDesigner);
+        }
+        if (options.defaultManager) {
+          formDataManager = options.defaultManager;
+          mIdx = managers.findIndex(m => m.name === options.defaultManager);
+        }
+
+        this.setData({
+          'formData.sales': formDataSales,
+          'formData.designer': formDataDesigner,
+          'formData.manager': formDataManager,
+          salesIndex: sIdx,
+          designerIndex: dIdx,
+          managerIndex: mIdx
+        });
         wx.hideLoading();
       }
+    });
+
+    wx.enableAlertBeforeUnload({
+      message: '内容尚未保存，确定要返回吗？',
+      success: () => {},
+      fail: () => {}
     });
   },
 
@@ -60,7 +101,11 @@ Page({
       if (lead) {
         const salesIdx = this.data.salesList.findIndex(s => s.name === lead.sales);
         const designerIdx = this.data.designerList.findIndex(d => d.name === lead.designer);
+        const managerIdx = this.data.managerList.findIndex(m => m.name === lead.manager);
         
+        const leadSource = lead.source || '自然进店';
+        const isStandardSource = this.data.sourceOptions.includes(leadSource);
+
         this.setData({
           oldSales: lead.sales || '',
           oldDesigner: lead.designer || '',
@@ -73,13 +118,16 @@ Page({
             status: lead.status || '待跟进',
             requirementType: lead.requirementType || lead.requirement || '毛坯',
             budget: lead.budget || '暂无',
-            source: lead.source || '自然进店',
+            source: isStandardSource ? leadSource : '其他',
             sales: lead.sales || '',
-            designer: lead.designer || ''
+            designer: lead.designer || '',
+            manager: lead.manager || ''
           },
+          customSource: isStandardSource ? '' : leadSource,
           originalStatus: lead.status || '待跟进',
           salesIndex: salesIdx,
-          designerIndex: designerIdx
+          designerIndex: designerIdx,
+          managerIndex: managerIdx
         });
       }
     }).catch(() => {
@@ -118,10 +166,21 @@ Page({
     });
   },
 
+  inputCustomSource(e) {
+    this.setData({ customSource: e.detail.value });
+  },
+
   saveLead() {
     const d = this.data.formData;
     if (!(d.name || '').trim()) return wx.showToast({ title: '请输入姓名', icon: 'none' });
     if (!(d.phone || '').trim()) return wx.showToast({ title: '请输入电话', icon: 'none' });
+
+    if (d.source === '其他') {
+      if (!this.data.customSource.trim()) {
+        return wx.showToast({ title: '请输入客户来源', icon: 'none' });
+      }
+      d.source = this.data.customSource.trim();
+    }
 
     // 拦截“已签单”状态
     if (d.status === '已签单' && this.data.originalStatus !== '已签单') {
@@ -184,6 +243,7 @@ Page({
           address: d.address,
           sales: d.sales,
           designer: d.designer,
+          manager: d.manager,
           area: d.area,
           budget: d.budget,
           requirementType: d.requirementType
@@ -249,6 +309,23 @@ Page({
         
         wx.hideLoading();
         
+        // 添加系统跟进记录
+        const now = new Date();
+        const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        db.collection('followUps').add({
+          data: {
+            leadId: this.data.id,
+            content: `客户创建\n创建人：${operatorName}\n创建时间：${nowStr}\n初始状态：${d.status}`,
+            method: '系统记录',
+            createdBy: operatorName,
+            createdAt: db.serverDate(),
+            displayTime: nowStr,
+            timestamp: db.serverDate()
+          }
+        }).catch(err => {
+          console.error('添加系统跟进记录失败', err);
+        });
+        
         if (this.data.isSigningNow) {
           // 签单全员通知
           db.collection('employees').limit(100).get().then(resEmp => {
@@ -272,8 +349,9 @@ Page({
           });
         } else {
           // 普通修改，提示后返回
-          wx.showToast({ title: '修改成功', icon: 'success' });
-          this._backTimer = setTimeout(() => {
+          wx.showToast({ title: '保存成功', icon: 'success' });
+            wx.disableAlertBeforeUnload();
+            this._backTimer = setTimeout(() => {
             wx.navigateBack();
             this._backTimer = null;
           }, 1000);
@@ -295,6 +373,7 @@ Page({
   },
 
   onUnload() {
+    wx.disableAlertBeforeUnload();
     if (this._backTimer) {
       clearTimeout(this._backTimer);
       this._backTimer = null;
@@ -303,6 +382,7 @@ Page({
 
   closeSuccessAndBack() {
     this.setData({ showSuccessModal: false });
+    wx.disableAlertBeforeUnload();
     wx.navigateBack();
   },
 

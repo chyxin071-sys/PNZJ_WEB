@@ -25,7 +25,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const docData = JSON.stringify({
       ...body,
       updatedAt: { $date: Date.now() }
-    });
+    }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
     
     const query = `db.collection("followUps").doc("${id}").update({ data: ${docData} })`;
     const res = await tcbUpdate(query);

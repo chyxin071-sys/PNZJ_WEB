@@ -57,6 +57,23 @@ Page({
         this.setData({ isEdit: true, id: options.id, mode: 'view' });
         this.loadTodoData(options.id);
       } else {
+        // 新建待办，默认执行人为当前用户
+        const userInfo = wx.getStorageSync('userInfo');
+        if (userInfo) {
+          const myId = userInfo.id || userInfo._id;
+          const myName = userInfo.name;
+          const updatedEmps = emps.map(e => ({
+            ...e,
+            selected: e.id === myId || e.name === myName
+          }));
+          const currentUser = updatedEmps.find(e => e.id === myId || e.name === myName);
+          
+          this.setData({
+            employees: updatedEmps,
+            'formData.assignees': currentUser ? [{ id: currentUser.id, name: currentUser.name }] : [],
+            selectedEmployeeNames: currentUser ? currentUser.name : ''
+          });
+        }
         wx.hideLoading();
       }
     });
@@ -68,9 +85,33 @@ Page({
   },
 
   cancelEdit() {
-    wx.setNavigationBarTitle({ title: '待办详情' });
-    this.setData({ mode: 'view' });
-    this.loadTodoData(this.data.id); // 还原数据
+    wx.showModal({
+      title: '提示',
+      content: '还未保存，确定要取消吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.setNavigationBarTitle({ title: '待办详情' });
+          this.setData({ mode: 'view' });
+          this.loadTodoData(this.data.id); // 还原数据
+        }
+      }
+    });
+  },
+
+  goBack() {
+    if (this.data.formData.title || this.data.formData.description) {
+      wx.showModal({
+        title: '提示',
+        content: '还未保存，确定要取消吗？',
+        success: (res) => {
+          if (res.confirm) {
+            wx.navigateBack();
+          }
+        }
+      });
+    } else {
+      wx.navigateBack();
+    }
   },
 
   loadTodoData(id) {
@@ -153,10 +194,16 @@ Page({
 
       let relatedOps = [];
       if (typeVal === 'lead') {
-        relatedOps = res.data.map(l => {
-          const isLeadRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
-          const displayName = isLeadRelated ? l.name : maskName(l.name);
-          return { id: l._id, name: `${displayName} - ${l.status}` };
+        const filteredLeads = isAdmin ? res.data : res.data.filter(l => 
+          l.sales === myName || 
+          l.designer === myName || 
+          l.manager === myName ||
+          l.creatorName === myName ||
+          l.signer === myName ||
+          l.status === '已签单'
+        );
+        relatedOps = filteredLeads.map(l => {
+          return { id: l._id, name: `${l.name} - ${l.status}` };
         });
       } else if (typeVal === 'project') {
         relatedOps = res.data.map(p => {
@@ -222,10 +269,14 @@ Page({
 
       let relatedOps = [];
       if (typeVal === 'lead') {
-        relatedOps = res.data.map(l => {
-          const isLeadRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
-          const displayName = isLeadRelated ? l.name : maskName(l.name);
-          return { id: l._id, name: `${displayName} - ${l.status}` };
+        const filteredLeads = isAdmin ? res.data : res.data.filter(l => 
+          l.sales === myName || 
+          l.designer === myName || 
+          l.manager === myName ||
+          l.status === '已签单'
+        );
+        relatedOps = filteredLeads.map(l => {
+          return { id: l._id, name: `${l.name} - ${l.status}` };
         });
       } else if (typeVal === 'project') {
         relatedOps = res.data.map(p => {
@@ -338,48 +389,43 @@ Page({
     };
 
     if (this.data.isEdit) {
-      db.collection('todos').doc(this.data.id).update({
-        data: updateData
-      }).then(() => {
-        // --- 触发通知逻辑：修改了待办 ---
-        const userInfo = wx.getStorageSync('userInfo');
-        const operatorName = userInfo.name || '未知人员';
-        updateData.assignees.forEach(assignee => {
-          if (assignee.name !== operatorName) {
-            db.collection('notifications').add({
-              data: {
-                type: 'todo',
-                title: '待办任务已更新',
-                content: `${operatorName} 更新了指派给你的待办任务：【${updateData.title}】。`,
-                targetUser: assignee.name,
-                isRead: false,
-                createTime: db.serverDate(),
-                link: `/pages/todoForm/index?id=${this.data.id}`
-              }
-            });
-          }
-        });
-        // 抄送给管理员
-        if (userInfo.role !== 'admin') {
-          db.collection('notifications').add({
-            data: {
-              type: 'todo',
-              title: '待办任务已更新',
-              content: `${operatorName} 更新了待办任务：【${updateData.title}】。`,
-              targetUser: 'admin',
-              isRead: false,
-              createTime: db.serverDate(),
-              link: `/pages/todoForm/index?id=${this.data.id}`
+      db.collection('todos').doc(this.data.id).get().then(oldRes => {
+        const oldTodo = oldRes.data || {};
+        
+        db.collection('todos').doc(this.data.id).update({
+          data: updateData
+        }).then(() => {
+          // --- 触发通知逻辑：修改了待办 ---
+          const userInfo = wx.getStorageSync('userInfo');
+          const operatorName = userInfo.name || '未知人员';
+          
+          const oldAssigneeNames = (oldTodo.assignees || []).map(a => a.name);
+          const newAssigneeNames = (updateData.assignees || []).map(a => a.name);
+          const allTargets = Array.from(new Set([...oldAssigneeNames, ...newAssigneeNames, 'admin']));
+          
+          allTargets.forEach(targetName => {
+            if (targetName && targetName !== operatorName) {
+              db.collection('notifications').add({
+                data: {
+                  type: 'todo',
+                  title: '待办任务已更新',
+                  content: `${operatorName} 更新了待办任务：【${updateData.title}】的执行人或内容。`,
+                  targetUser: targetName,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/todoForm/index?id=${this.data.id}`
+                }
+              });
             }
           });
-        }
-        
-        wx.hideLoading();
-        wx.showToast({ title: '修改成功', icon: 'success' });
-        setTimeout(() => wx.navigateBack(), 1000);
-      }).catch(() => {
-        wx.hideLoading();
-        wx.showToast({ title: '修改失败', icon: 'none' });
+          
+          wx.hideLoading();
+          wx.showToast({ title: '修改成功', icon: 'success' });
+          setTimeout(() => wx.navigateBack(), 1000);
+        }).catch(() => {
+          wx.hideLoading();
+          wx.showToast({ title: '修改失败', icon: 'none' });
+        });
       });
     } else {
       const userInfo = wx.getStorageSync('userInfo');

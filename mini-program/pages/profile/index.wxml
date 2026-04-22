@@ -107,7 +107,7 @@
       </view>
     </view>
 
-    <view class="menu-item" hover-class="menu-hover" wx:if="{{userInfo.role === 'admin'}}" bindtap="goToTeam">
+    <view class="menu-item" hover-class="menu-hover" bindtap="goToTeam">
       <view class="menu-left">
         <view class="icon-menu icon-team"></view>
         <text>组织架构</text>

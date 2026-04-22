@@ -67,7 +67,7 @@
   </view>
 
   <!-- 待办列表区 -->
-  <scroll-view scroll-y class="list-container">
+  <view class="list-container">
     <block wx:if="{{groupType === 'none'}}">
       <view class="todo-card {{item.status === 'completed' ? 'opacity-60' : ''}}" hover-class="card-hover" hover-stay-time="100" wx:for="{{todos}}" wx:key="_id" bindtap="onTodoTap" data-id="{{item._id}}">
         
@@ -190,7 +190,7 @@
     </view>
     
     <view class="pb-tabbar"></view>
-  </scroll-view>
+  </view>
 
   <!-- 高级人员筛选弹窗 -->
   <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
@@ -218,6 +218,16 @@
           <view class="filter-tag {{filterPriority === 'medium' ? 'active' : ''}}" bindtap="switchFilterPriority" data-priority="medium">重要</view>
           <view class="filter-tag {{filterPriority === 'low' ? 'active' : ''}}" bindtap="switchFilterPriority" data-priority="low">普通</view>
         </view>
+      </view>
+
+      <!-- 关联客户 (所有人可见) -->
+      <view class="filter-section">
+        <view class="filter-title">关联客户</view>
+        <picker mode="selector" range="{{availableLeadNames}}" bindchange="onFilterLeadChange">
+          <view class="filter-tag active" style="width: auto; padding: 10rpx 20rpx; border-radius: 8rpx; background: #faf9f8; color: #5c4f48; border: 1rpx solid #e6dfda;">
+            {{filterRelatedLeadName || '全部客户 (点击选择)'}}
+          </view>
+        </picker>
       </view>
 
       <!-- 人员选择 (所有人可见) -->
@@ -271,7 +281,7 @@
         
         <view class="form-group">
           <text class="label">关联客户 (选填)</text>
-          <picker bindchange="onNewTodoPickerChange" data-field="relatedLead" range="{{availableLeadNames}}">
+          <picker bindchange="onNewTodoPickerChange" data-field="relatedLead" range="{{createLeadNames}}">
             <view class="picker-view">
               <text class="{{newTodo.relatedLeadName ? 'text-primary' : 'text-placeholder'}}">{{newTodo.relatedLeadName || '请选择要关联的客户'}}</text>
               <view class="arrow-down"></view>

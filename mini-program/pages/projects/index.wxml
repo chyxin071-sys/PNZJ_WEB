@@ -66,7 +66,7 @@
   </view>
 
   <!-- 工地列表区 -->
-  <scroll-view scroll-y class="list-container">
+  <view class="list-container">
     <view class="project-card" wx:for="{{projects}}" wx:key="_id" bindtap="goToDetail" data-id="{{item._id}}">
       
       <!-- 头部信息区 -->
@@ -143,7 +143,7 @@
     </view>
     
     <view class="pb-tabbar"></view>
-  </scroll-view>
+  </view>
 
   <!-- 高级筛选弹窗 (修改为团队待办样式的居中弹窗) -->
   <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>

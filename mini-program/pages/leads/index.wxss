@@ -9,15 +9,20 @@
 .icon-star { font-size: 24rpx; color: var(--amber-600); line-height: 1; font-weight: normal; margin-top: -2rpx; }
 
 /* 列表�?*/
-.list-container { flex: 1; padding: 20rpx 32rpx; width: 100%; box-sizing: border-box; height: 0; }
+.list-container { flex: 1; padding: 20rpx 32rpx; width: 100%; box-sizing: border-box; }
 .title-wrap { display: flex; align-items: baseline; gap: 16rpx; flex: 1; }
 .phone { font-size: 26rpx; color: #666 !important; font-family: -apple-system, sans-serif; }
 
 .status-picker-wrap { position: relative; z-index: 2; }
 .status-badge { display: flex; align-items: center; padding: 6rpx 16rpx; border-radius: 12rpx; font-size: 24rpx; font-weight: bold; border: 1rpx solid transparent; transition: all 0.2s; }
 .status-badge:active { opacity: 0.7; }
-.status-signed { background: var(--emerald-50); color: var(--emerald-600); border-color: var(--emerald-100); }
+.status-signed, .status-emerald { background: var(--emerald-50); color: var(--emerald-600); border-color: var(--emerald-100); }
 .status-default { background: #f1f5f9; color: #475569; border-color: #cbd5e1; }
+.status-blue { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
+.status-indigo { background: #eef2ff; color: #4338ca; border-color: #e0e7ff; }
+.status-pink { background: #fdf2f8; color: #be185d; border-color: #fbcfe8; }
+.status-purple { background: #faf5ff; color: #7e22ce; border-color: #f3e8ff; }
+.status-zinc { background: #f4f4f5; color: #71717a; border-color: #e4e4e7; }
 
 .icon-arrow-down { width: 10rpx; height: 10rpx; border-right: 3rpx solid currentColor; border-bottom: 3rpx solid currentColor; transform: rotate(45deg); margin-left: 8rpx; margin-bottom: 6rpx; }
 

@@ -104,10 +104,19 @@ function ProjectsContent() {
 
   const statuses = ["全部", "未开工", "施工中", "已竣工", "已停工"];
 
-  // Sort by health status to put "严重延期" and "预警" on top
+  // Sort by health status to put "严重延期" and "预警" on top, then sort by createdAt descending
   const sortedProjects = [...projectsData].sort((a, b) => {
     const priority = { "严重延期": 3, "预警": 2, "正常": 1 };
-    return (priority[b.health as keyof typeof priority] || 0) - (priority[a.health as keyof typeof priority] || 0);
+    const priorityDiff = (priority[b.health as keyof typeof priority] || 0) - (priority[a.health as keyof typeof priority] || 0);
+    
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+    
+    // If health status is the same, sort by creation date (newest first)
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return dateB - dateA;
   });
 
   const filteredProjects = sortedProjects.filter(p => {
@@ -145,7 +154,7 @@ function ProjectsContent() {
         <div className="flex flex-col gap-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-900">施工管理</h1>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-primary-900">工地管理</h1>
               <p className="text-primary-600 mt-2">8个标准施工节点管控，异常工地自动置顶预警</p>
             </div>
             <div>

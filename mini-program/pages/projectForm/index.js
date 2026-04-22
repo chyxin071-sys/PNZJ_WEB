@@ -184,43 +184,70 @@ Page({
     const managerName = this.data.managers[this.data.managerIndex].name;
     const selectedLead = this.data.leads[this.data.leadIndex];
 
-    // 计算预计完工日期（最后一个节点的结束时间）
-    const expectedEndDate = projectNodes[projectNodes.length - 1].endDate;
+    // Check if the lead already has a project
+    db.collection('projects').where({ leadId: selectedLead._id }).limit(1).get().then(res => {
+      if (res.data && res.data.length > 0) {
+        wx.hideLoading();
+        wx.showToast({ title: '该客户已关联其他工地', icon: 'none' });
+        return;
+      }
 
-    const projectData = {
-      leadId: selectedLead._id,
-      customer: selectedLead.name,
-      phone: selectedLead.phone || '',
-      customerNo: selectedLead.customerNo || selectedLead._id,
-      address: selectedLead.address || '',
-      manager: managerName === '无' ? '' : managerName,
-      managerId: d.managerId,
-      designer: selectedLead.designer || '',
-      designerId: selectedLead.designerId || '',
-      sales: selectedLead.sales || '',
-      salesId: selectedLead.salesId || '',
-      signDate: selectedLead.signDate || '',
-      signer: selectedLead.signer || '',
-      startDate: d.startDate,
-      expectedEndDate: expectedEndDate,
-      status: status,
-      currentNode: currentNode,
-      health: health,
-      nodesData: projectNodes,
-      createdAt: db.serverDate()
-    };
+      // 计算预计完工日期（最后一个节点的结束时间）
+      const expectedEndDate = projectNodes[projectNodes.length - 1].endDate;
 
-    db.collection('projects').add({
-      data: projectData
-    }).then(() => {
-      wx.hideLoading();
-      wx.showToast({ title: '创建成功', icon: 'success' });
-      setTimeout(() => {
-        wx.navigateBack();
-      }, 1000);
+      const projectData = {
+        leadId: selectedLead._id,
+        customer: selectedLead.name,
+        phone: selectedLead.phone || '',
+        customerNo: selectedLead.customerNo || selectedLead._id,
+        address: selectedLead.address || '',
+        manager: managerName === '无' ? '' : managerName,
+        managerId: d.managerId,
+        designer: selectedLead.designer || '',
+        designerId: selectedLead.designerId || '',
+        sales: selectedLead.sales || '',
+        salesId: selectedLead.salesId || '',
+        signDate: selectedLead.signDate || '',
+        signer: selectedLead.signer || '',
+        startDate: d.startDate,
+        expectedEndDate: expectedEndDate,
+        status: status,
+        currentNode: currentNode,
+        health: health,
+        nodesData: projectNodes,
+        createdAt: db.serverDate()
+      };
+
+      db.collection('projects').add({
+        data: projectData
+      }).then(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '创建成功', icon: 'success' });
+        // 添加系统跟进记录
+        this.addSystemFollowUpToLead(`工地创建，开工日期：${projectData.startDate}，预计完工：${projectData.expectedEndDate}，项目经理：${projectData.manager || '未分配'}`);
+        setTimeout(() => {
+          wx.navigateBack();
+        }, 1000);
+      }).catch(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '创建失败', icon: 'none' });
+      });
     }).catch(() => {
       wx.hideLoading();
-      wx.showToast({ title: '创建失败', icon: 'none' });
+      wx.showToast({ title: '查询关联工地失败', icon: 'none' });
     });
+  },
+
+  addSystemFollowUpToLead(content) {
+    const db = wx.cloud.database();
+    const selectedLead = this.data.leads[this.data.leadIndex];
+    const followUp = {
+      leadId: selectedLead._id,
+      content: content,
+      type: 'system',
+      creator: wx.getStorageSync('userInfo')?.name || '系统',
+      createdAt: db.serverDate()
+    };
+    db.collection('followUps').add({ data: followUp }).catch(() => {});
   }
 });

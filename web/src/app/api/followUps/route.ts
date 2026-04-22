@@ -44,7 +44,7 @@ export async function POST(request: Request) {
       createdBy: createdBy || '未知',
       createdAt: { $date: Date.now() },
       displayTime: nowStr
-    });
+    }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 
     const addQuery = `db.collection("followUps").add({ data: ${docData} })`;
     const res = await tcbAdd(addQuery);

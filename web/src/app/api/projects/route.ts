@@ -27,7 +27,15 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // 初始化 8 大节点模板（带标准工期 N 天）
+    // Check if the lead already has a project
+    if (body.leadId) {
+      const existingProjects = await tcbQuery(`db.collection("projects").where({ leadId: "${body.leadId}" }).limit(1).get()`);
+      if (existingProjects && existingProjects.length > 0) {
+        return NextResponse.json({ error: '该客户已关联其他工地，无法重复创建' }, { status: 409 });
+      }
+    }
+
+    // 初始化8大节点模板（时长单位：天）
     const templateNodes = [
       { name: "开工", duration: 10, subNodes: [{name: "开工仪式", duration: 1}, {name: "现场交底", duration: 1}, {name: "成品保护", duration: 1}, {name: "墙体拆除", duration: 2}, {name: "垃圾清运", duration: 1}, {name: "设备定位(空调/新风)", duration: 1}, {name: "砌筑新建", duration: 2}, {name: "墙体批荡", duration: 1}] },
       { name: "水电", duration: 9, subNodes: [{name: "水电交底", duration: 1}, {name: "开槽布管", duration: 3}, {name: "排污下水", duration: 1}, {name: "线管敷设", duration: 2}, {name: "打压测试", duration: 1}, {name: "水电验收", duration: 1}] },
@@ -58,16 +66,38 @@ export async function POST(request: Request) {
 
     const docData = JSON.stringify({
       ...body,
-      status: "未开工", // 初始状态为未开工，等待项目经理裁剪并点击“正式开工”
+      status: "未开工", // 初始状态为未开工，等待项目经理裁剪并点击"正式开工"
       nodesData,
       createdAt: { $date: Date.now() },
       updatedAt: { $date: Date.now() }
-    });
+    }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
     
     const query = `db.collection("projects").add({ data: ${docData} })`;
     const res = await tcbAdd(query);
-    return NextResponse.json(res);
+    const newProjectId = res.id_list?.[0];
+
+    // BUG-24: 新建工地未自动添加跟进记录
+    if (body.leadId && newProjectId) {
+      try {
+        const now = new Date();
+        const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const followUpData = JSON.stringify({
+          leadId: body.leadId,
+          content: `创建了工地\n预计开工：${body.startDate || '未定'}\n预计完工：${nodesData[nodesData.length-1].endDate || '未定'}`,
+          method: '系统记录',
+          createdBy: body.manager || '系统',
+          createdAt: { $date: Date.now() },
+          displayTime: nowStr
+        }).replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+        await tcbAdd(`db.collection("followUps").add({ data: ${followUpData} })`);
+      } catch (e) {
+        console.error('Failed to create system followUp for new project', e);
+      }
+    }
+
+    return NextResponse.json({ ...res, _id: newProjectId });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

@@ -73,8 +73,13 @@
       </view>
     </view>
 
+    <view class="form-group" wx:if="{{formData.source === '其他'}}">
+      <view class="label">其他来源</view>
+      <input class="input-box" placeholder="请输入具体来源" placeholder-class="ph" value="{{customSource}}" bindinput="inputCustomSource" />
+    </view>
+
     <view class="form-group">
-      <view class="label">指派销售</view>
+      <view class="label">销售</view>
       <picker bindchange="onEmpChange" data-field="sales" data-list="salesList" data-index="salesIndex" value="{{salesIndex}}" range="{{salesList}}" range-key="name">
         <view class="picker-box">
           <text class="{{salesIndex === -1 ? 'ph' : ''}}">{{salesIndex !== -1 ? salesList[salesIndex].name : '请选择销售人员'}}</text>
@@ -84,10 +89,20 @@
     </view>
 
     <view class="form-group">
-      <view class="label">指派设计师</view>
+      <view class="label">设计师</view>
       <picker bindchange="onEmpChange" data-field="designer" data-list="designerList" data-index="designerIndex" value="{{designerIndex}}" range="{{designerList}}" range-key="name">
         <view class="picker-box">
           <text class="{{designerIndex === -1 ? 'ph' : ''}}">{{designerIndex !== -1 ? designerList[designerIndex].name : '请选择设计师'}}</text>
+          <view class="arrow-down"></view>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-group">
+      <view class="label">项目经理</view>
+      <picker bindchange="onEmpChange" data-field="manager" data-list="managerList" data-index="managerIndex" value="{{managerIndex}}" range="{{managerList}}" range-key="name">
+        <view class="picker-box">
+          <text class="{{managerIndex === -1 ? 'ph' : ''}}">{{managerIndex !== -1 ? managerList[managerIndex].name : '请选择项目经理'}}</text>
           <view class="arrow-down"></view>
         </view>
       </picker>

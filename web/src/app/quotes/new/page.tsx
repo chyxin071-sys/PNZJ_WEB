@@ -56,10 +56,24 @@ function NewQuoteContent() {
   const [materialsData, setMaterialsData] = useState<any[]>([]);
 
   useEffect(() => {
-    if (leadId) {
-      fetchLeadDetail(leadId);
-    }
-    fetchMaterials();
+    const init = async () => {
+      if (leadId) {
+        // 检查是否已有报价单，有则直接跳转，避免创建重复的
+        try {
+          const res = await fetch(`/api/quotes?leadId=${leadId}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              router.replace(`/quotes/${data[0]._id}`);
+              return;
+            }
+          }
+        } catch (e) {}
+        fetchLeadDetail(leadId);
+      }
+      fetchMaterials();
+    };
+    init();
   }, [leadId]);
 
   const fetchMaterials = async () => {
@@ -68,7 +82,7 @@ function NewQuoteContent() {
       if (res.ok) {
         const data = await res.json();
         // 过滤出上架的材料
-        const activeMaterials = data.filter((m: any) => m.status === 'active');
+        const activeMaterials = data.filter((m: any) => m.status === 'active').map((m: any) => ({ ...m, id: m._id }));
         setMaterialsData(activeMaterials);
       }
     } catch (e) {
@@ -177,11 +191,13 @@ function NewQuoteContent() {
         body: JSON.stringify(newQuote)
       });
       if (res.ok) {
-        const now = new Date();
-        const timeString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        setLastSavedTime(timeString);
-        alert("报价单保存成功！");
-        router.push('/quotes');
+        const data = await res.json();
+        const newId = data._id || data.id;
+        if (newId) {
+          router.replace(`/quotes/${newId}`);
+        } else {
+          router.push('/quotes?saved=1');
+        }
       } else {
         alert("保存失败");
       }

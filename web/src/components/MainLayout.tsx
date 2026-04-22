@@ -149,8 +149,8 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     {
       group: "",
       items: [
-        { name: "全局看板", href: "/", icon: LayoutDashboard, roles: ['admin', 'sales', 'designer', 'manager'] },
         { name: "团队待办", href: "/todos", icon: CheckSquare, roles: ['admin', 'sales', 'designer', 'manager'] },
+        { name: "全局看板", href: "/", icon: LayoutDashboard, roles: ['admin', 'sales', 'designer', 'manager'] },
         { name: "数据分析", href: "/analytics", icon: BarChart2, roles: ['admin'] },
       ]
     },
@@ -160,7 +160,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
         { name: "客户管理", href: "/leads", icon: Users, roles: ['admin', 'sales', 'designer', 'manager'] },
         { name: "报价管理", href: "/quotes", icon: FileSignature, roles: ['admin', 'sales', 'designer', 'manager'] },
         { name: "合同管理", href: "/contracts", icon: ScrollText, roles: ['admin', 'sales', 'designer', 'manager'] },
-        { name: "施工管理", href: "/projects", icon: Hammer, roles: ['admin', 'sales', 'designer', 'manager'] },
+        { name: "工地管理", href: "/projects", icon: Hammer, roles: ['admin', 'sales', 'designer', 'manager'] },
       ]
     },
     {
@@ -173,7 +173,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
     {
       group: "管理",
       items: [
-        { name: "组织架构", href: "/employees", icon: Building2, roles: ['admin'] },
+        { name: "组织架构", href: "/employees", icon: Building2, roles: ['admin', 'sales', 'designer', 'manager'] },
       ]
     },
   ];

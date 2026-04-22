@@ -1,5 +1,9 @@
 {
-  "navigationBarTitleText": "客户",
+  "navigationBarTitleText": "客户管理",
+  "navigationBarBackgroundColor": "#ffffff",
+  "navigationBarTextStyle": "black",
+  "backgroundColor": "#f8fafc",
+  "enablePullDownRefresh": true,
   "usingComponents": {
     "customer-info": "../../components/customer-info/index"
   }

@@ -62,6 +62,7 @@ Page({
     quoteId: null,
     hasProject: false,
     isAdmin: false,
+    isDesigner: false,
     isRelated: false,
     // 设计进度相关状态
     showStartDesignModal: false,
@@ -75,6 +76,13 @@ Page({
       this.setData({ leadId: options.id });
       this.loadLeadData(options.id);
     }
+    const userInfo = wx.getStorageSync('userInfo');
+    if (userInfo && userInfo.role === 'admin') {
+      this.setData({ isAdmin: true });
+    }
+    if (userInfo && userInfo.role === 'designer') {
+      this.setData({ isDesigner: true });
+    }
   },
 
   onShow() {
@@ -86,15 +94,24 @@ Page({
   loadLeadData(id) {
     wx.showNavigationBarLoading();
     const db = wx.cloud.database();
-    db.collection('leads').doc(id).get().then(res => {
+    
+    // 并行发起所有独立查询以提高加载速度
+    const leadPromise = db.collection('leads').doc(id).get();
+    const quotePromise = db.collection('quotes').where({ leadId: id }).orderBy('createdAt', 'desc').limit(1).get().catch(() => ({ data: [] }));
+    const projectPromise = db.collection('projects').where({ leadId: id }).limit(1).get().catch(() => ({ data: [] }));
+    const followUpsPromise = db.collection('followUps').where({ leadId: id }).orderBy('createdAt', 'desc').limit(100).get().catch(() => ({ data: [] }));
+
+    Promise.all([leadPromise, quotePromise, projectPromise, followUpsPromise]).then(([leadRes, quoteRes, projectRes, followRes]) => {
+      wx.hideNavigationBarLoading();
       const userInfo = wx.getStorageSync('userInfo');
       const myName = userInfo ? userInfo.name : '';
       const isAdmin = userInfo && userInfo.role === 'admin';
       
-      let lead = res.data;
-      const isRelated = isAdmin || lead.creatorName === myName || lead.sales === myName || lead.designer === myName || lead.signer === myName;
+      let lead = leadRes.data;
+      const isAssignedToMe = isAdmin || lead.creatorName === myName || lead.sales === myName || lead.designer === myName || lead.manager === myName || lead.signer === myName;
+      const isVisible = isAssignedToMe || lead.status === '已签单';
 
-      if (!isRelated) {
+      if (!isVisible) {
         lead._isMasked = true;
         lead.name = maskName(lead.name);
         lead.phone = maskPhone(lead.phone);
@@ -105,11 +122,48 @@ Page({
       this.setData({ 
         lead: lead,
         isAdmin,
-        isRelated
+        isRelated: isAssignedToMe,
+        isVisible,
+        ratingIndex: ['A', 'B', 'C', 'D'].indexOf(lead.rating) > -1 ? ['A', 'B', 'C', 'D'].indexOf(lead.rating) : 1,
+        statusIndex: ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'].indexOf(lead.status) > -1 ? ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'].indexOf(lead.status) : 0
       });
-      this.loadFollowUps(id);
-      this.checkQuoteStatus(id);
-      this.checkProjectStatus(id);
+
+      // 处理报价单
+      if (quoteRes.data && quoteRes.data.length > 0) {
+        this.setData({ quoteId: quoteRes.data[0]._id });
+      } else {
+        this.setData({ quoteId: null });
+      }
+
+      // 处理项目
+      if (projectRes.data && projectRes.data.length > 0) {
+        this.setData({ hasProject: true, projectId: projectRes.data[0]._id });
+      } else {
+        this.setData({ hasProject: false, projectId: null });
+      }
+
+      // 处理跟进记录（权限校验）
+      if (!isAdmin && !isAssignedToMe) {
+        this.setData({ followUps: [] });
+      } else {
+        const formattedList = followRes.data.map(item => {
+          if (item.createdAt) {
+            const d = new Date(item.createdAt);
+            if (!isNaN(d.getTime())) {
+              item.displayTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            } else {
+              item.displayTime = item.createdAt;
+            }
+          }
+          return item;
+        });
+        formattedList.sort((a, b) => {
+          const timeA = a && a.createdAt ? String(a.createdAt) : '';
+          const timeB = b && b.createdAt ? String(b.createdAt) : '';
+          return timeB.localeCompare(timeA);
+        });
+        this.setData({ followUps: formattedList });
+      }
     }).catch(err => {
       console.error('获取客户失败详情:', err);
       wx.hideNavigationBarLoading();
@@ -118,39 +172,18 @@ Page({
   },
 
   checkQuoteStatus(leadId) {
-    const db = wx.cloud.database();
-    db.collection('quotes').where({ leadId }).limit(1).get().then(res => {
-      if (res.data && res.data.length > 0) {
-        this.setData({ quoteId: res.data[0]._id });
-      } else {
-        this.setData({ quoteId: null });
-      }
-    }).catch(() => {});
+    // 兼容保留该空方法以防别处调用
   },
 
   checkProjectStatus(leadId) {
-    const db = wx.cloud.database();
-    db.collection('projects').where({ leadId }).limit(1).get().then(res => {
-      if (res.data && res.data.length > 0) {
-        this.setData({ hasProject: true, projectId: res.data[0]._id });
-      } else {
-        this.setData({ hasProject: false, projectId: null });
-      }
-    }).catch(() => {
-      this.setData({ hasProject: false, projectId: null });
-    });
+    // 兼容保留该空方法以防别处调用
   },
 
   loadFollowUps(leadId) {
-    if (!this.data.isAdmin && !this.data.isRelated) {
-      this.setData({ followUps: [] });
-      return;
-    }
+    // 兼容保留该空方法以防别处调用
+    if (!this.data.isAdmin && !this.data.isRelated) return;
     const db = wx.cloud.database();
-    db.collection('followUps').where({ leadId }).orderBy('createdAt', 'desc').get().then(res => {
-      wx.hideNavigationBarLoading();
-      
-      // 格式化时间显示
+    db.collection('followUps').where({ leadId }).orderBy('createdAt', 'desc').limit(100).get().then(res => {
       const formattedList = res.data.map(item => {
         if (item.createdAt) {
           const d = new Date(item.createdAt);
@@ -162,18 +195,13 @@ Page({
         }
         return item;
       });
-      
-      // 确保是倒序排列（最新的在最上面），使用严格校验
       formattedList.sort((a, b) => {
         const timeA = a && a.createdAt ? String(a.createdAt) : '';
         const timeB = b && b.createdAt ? String(b.createdAt) : '';
         return timeB.localeCompare(timeA);
       });
-      
       this.setData({ followUps: formattedList });
-    }).catch(err => {
-      wx.hideNavigationBarLoading();
-    });
+    }).catch(() => {});
   },
 
   switchTab(e) {
@@ -188,30 +216,45 @@ Page({
   },
 
   goToQuote() {
-    if (!this.data.isAdmin && !this.data.isRelated) {
+    if (!this.data.isVisible) {
       return wx.showToast({ title: '无权限查看', icon: 'none' });
     }
     if (this.data.quoteId) {
       wx.navigateTo({ url: `/pages/quoteDetail/index?id=${this.data.quoteId}` });
     } else {
+      if (!this.data.isAdmin && !this.data.isRelated) {
+        return wx.showToast({ title: '暂无报价单', icon: 'none' });
+      }
       wx.navigateTo({ url: `/pages/quoteDetail/index?leadId=${this.data.leadId}` });
     }
   },
 
   goToProjectFiles() {
+    if (!this.data.isVisible) {
+      return wx.showToast({ title: '无权限查看', icon: 'none' });
+    }
     wx.navigateTo({ url: `/pages/projectFiles/index?leadId=${this.data.leadId}` });
   },
 
   goToProject() {
+    if (!this.data.isVisible) {
+      return wx.showToast({ title: '无权限查看', icon: 'none' });
+    }
     // 检查是否有工地，如果有则跳详情，没有则跳列表（列表带有 filter）
     const db = wx.cloud.database();
     db.collection('projects').where({ leadId: this.data.leadId }).limit(1).get().then(res => {
       if (res.data && res.data.length > 0) {
         wx.navigateTo({ url: `/pages/projectDetail/index?id=${res.data[0]._id}` });
       } else {
+        if (!this.data.isAdmin && !this.data.isRelated) {
+          return wx.showToast({ title: '暂无工地', icon: 'none' });
+        }
         wx.navigateTo({ url: `/pages/projects/index?leadId=${this.data.leadId}` });
       }
     }).catch(() => {
+      if (!this.data.isAdmin && !this.data.isRelated) {
+        return wx.showToast({ title: '暂无工地', icon: 'none' });
+      }
       wx.navigateTo({ url: `/pages/projects/index?leadId=${this.data.leadId}` });
     });
   },
@@ -402,7 +445,7 @@ Page({
       // 签单通知 (全员)
       const db2 = wx.cloud.database();
       const lead = this.data.lead;
-      db2.collection('employees').limit(100).get().then(res => {
+      db2.collection('users').where({ isActive: true }).limit(100).get().then(res => {
         const users = res.data;
         users.forEach(u => {
           db2.collection('notifications').add({
@@ -448,6 +491,11 @@ Page({
 
   // ===================== 设计进度模块 =====================
   openStartDesignModal() {
+    const userInfo = wx.getStorageSync('userInfo');
+    const userRole = userInfo ? userInfo.role : '';
+    if (userRole !== 'designer' && userRole !== 'admin') {
+      return wx.showToast({ title: '仅设计师可开启设计工作流', icon: 'none' });
+    }
     // 默认的节点列表
     const defaultNodes = [
       { name: "平面布局", duration: 2 },
@@ -525,7 +573,11 @@ Page({
       });
       wx.hideLoading();
       wx.showToast({ title: '工作流已开启', icon: 'success' });
-      this.addSystemFollowUp(`开启了设计出图工作流，预计从 ${this.data.designStartDate} 开始`);
+      const nodesSummary = nodes.map(n => `· ${n.name}（${n.duration}天，预计 ${n.startDate} ~ ${n.endDate}）`).join('\n');
+      this.addSystemFollowUp(`开启了设计出图工作流，预计从 ${this.data.designStartDate} 开始\n\n阶段排期：\n${nodesSummary}`);
+
+      // 发送通知给关联设计师和所有管理员
+      this.notifyDesignStart();
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '操作失败', icon: 'none' });
@@ -533,6 +585,11 @@ Page({
   },
 
   openEditDesignModal() {
+    const userInfo = wx.getStorageSync('userInfo');
+    const userRole = userInfo ? userInfo.role : '';
+    if (userRole !== 'designer' && userRole !== 'admin') {
+      return wx.showToast({ title: '仅设计师可编辑设计排期', icon: 'none' });
+    }
     if (!this.data.lead || !this.data.lead.designNodes) return;
     
     let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
@@ -625,7 +682,8 @@ Page({
       });
       wx.hideLoading();
       wx.showToast({ title: '排期已更新', icon: 'success' });
-      this.addSystemFollowUp(`修改并重算了设计出图排期`);
+      const nodesSummary = recalculatedNodes.map(n => `· ${n.name}（${n.duration}天，预计 ${n.startDate} ~ ${n.endDate}）`).join('\n');
+      this.addSystemFollowUp(`修改并重算了设计出图排期\n\n最新排期：\n${nodesSummary}`);
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '保存失败', icon: 'none' });
@@ -633,6 +691,11 @@ Page({
   },
 
   completeDesignNode(e) {
+    const userInfo = wx.getStorageSync('userInfo');
+    const userRole = userInfo ? userInfo.role : '';
+    if (userRole !== 'designer' && userRole !== 'admin') {
+      return wx.showToast({ title: '仅设计师可完成设计节点', icon: 'none' });
+    }
     const idx = e.currentTarget.dataset.index;
     let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
     const nowStr = new Date().toISOString().split('T')[0];
@@ -658,7 +721,11 @@ Page({
       wx.showToast({ title: '节点已完成', icon: 'success' });
       
       // 联动1：系统跟进记录
-      this.addSystemFollowUp(`已完成设计出图节点：【${nodeName}】`);
+      const nextNode = idx + 1 < nodes.length ? nodes[idx + 1] : null;
+      let followContent = `已完成设计出图节点：【${nodeName}】（实际完成：${nowStr}）`;
+      if (nextNode) followContent += `\n下一阶段：【${nextNode.name}】，预计完成：${nextNode.endDate}`;
+      else followContent += '\n所有设计出图节点已全部完成 🎉';
+      this.addSystemFollowUp(followContent);
       
       // 联动2：消息通知
       this.notifyDesignComplete(nodeName);
@@ -693,6 +760,39 @@ Page({
           link: `/pages/leadDetail/index?id=${this.data.leadId}`
         }
       });
+    });
+  },
+
+  notifyDesignStart() {
+    const db = wx.cloud.database();
+    const lead = this.data.lead;
+    const userInfo = wx.getStorageSync('userInfo');
+    const operatorName = userInfo ? (userInfo.name || '未知') : '未知';
+    
+    const notifyUsers = new Set();
+    if (lead.designer && lead.designer !== operatorName) notifyUsers.add(lead.designer);
+    // 添加所有管理员
+    db.collection('users').where({ role: 'admin' }).get().then(res => {
+      res.data.forEach(u => {
+        if (u.name !== operatorName) notifyUsers.add(u.name);
+      });
+      // 发送通知
+      notifyUsers.forEach(u => {
+        if (!u) return;
+        db.collection('notifications').add({
+          data: {
+            type: 'lead',
+            title: '设计工作流已开启',
+            content: `${operatorName} 为客户【${lead.name}】开启了设计出图工作流，请及时跟进。`,
+            targetUser: u,
+            isRead: false,
+            createTime: db.serverDate(),
+            link: `/pages/leadDetail/index?id=${this.data.leadId}`
+          }
+        });
+      });
+    }).catch(err => {
+      console.error('发送设计开启通知失败', err);
     });
   }
 });
