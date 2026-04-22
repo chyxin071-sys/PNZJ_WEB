@@ -317,11 +317,26 @@ export default function ProjectDetailPage() {
     let nodes = [...project.nodesData];
     // 重算排期
     nodes = recalculateGantt(nodes, project.startDate || new Date().toISOString().split('T')[0]);
-    const patch = { nodesData: nodes, expectedEndDate: nodes[nodes.length-1]?.endDate || project.expectedEndDate };
+    const expectedEndDate = nodes[nodes.length-1]?.endDate || project.expectedEndDate;
+    const patch = { nodesData: nodes, expectedEndDate };
     if (await save(patch)) {
       setProject({ ...project, ...patch });
       setIsEditingNodes(false);
       alert('保存成功，工期已自动重算');
+      
+      if (project.leadId) {
+        const startStr = project.startDate || '未定';
+        await fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: project.leadId,
+            content: `修改并重算了工地排期\n预计开工：${startStr}\n预计完工：${expectedEndDate}`,
+            method: '系统记录',
+            createdBy: currentUser?.name || '系统'
+          })
+        });
+      }
     } else {
       alert('保存失败');
     }

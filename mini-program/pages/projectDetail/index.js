@@ -95,6 +95,10 @@ Page({
           'project.nodesData': newNodes,
           originalNodesList: []
         });
+
+        // 写入系统跟进记录
+        const startDateStr = this.data.project.startDate || '未定';
+        this.addSystemFollowUpToLead(`修改并重算了工地排期\n预计开工：${startDateStr}\n预计完工：${expectedEndDate}`);
       }).catch(() => {
         wx.hideLoading();
         wx.showToast({ title: '保存失败', icon: 'error' });
@@ -565,10 +569,21 @@ Page({
   },
 
   chooseMedia() {
+    const currentCount = this.data.uploadFiles.length;
+    const maxAllowed = 50; 
+    
+    if (currentCount >= maxAllowed) {
+      return wx.showToast({ title: `最多只能上传 ${maxAllowed} 个文件`, icon: 'none' });
+    }
+
+    const remainCount = maxAllowed - currentCount;
+    const countToChoose = remainCount > 20 ? 20 : remainCount;
+
     wx.chooseMedia({
-      count: 9,
+      count: countToChoose,
       mediaType: ['image', 'video'],
       sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
       success: (res) => {
         const tempFiles = res.tempFiles;
         const compressedPromises = tempFiles.map(file => {
@@ -605,6 +620,13 @@ Page({
         });
       }
     });
+  },
+
+  removeUploadPhoto(e) {
+    const idx = e.currentTarget.dataset.index;
+    const files = [...this.data.uploadFiles];
+    files.splice(idx, 1);
+    this.setData({ uploadFiles: files });
   },
 
   recalculateGantt(nodes, baseDate) {
