@@ -76,6 +76,9 @@ Page({
       this.setData({ leadId: options.id });
       this.loadLeadData(options.id);
     }
+    if (options.tab) {
+      this.setData({ activeTab: options.tab });
+    }
     const userInfo = wx.getStorageSync('userInfo');
     if (userInfo && userInfo.role === 'admin') {
       this.setData({ isAdmin: true });
@@ -573,8 +576,9 @@ Page({
       });
       wx.hideLoading();
       wx.showToast({ title: '工作流已开启', icon: 'success' });
-      const nodesSummary = nodes.map(n => `· ${n.name}（${n.duration}天，预计 ${n.startDate} ~ ${n.endDate}）`).join('\n');
-      this.addSystemFollowUp(`开启了设计出图工作流，预计从 ${this.data.designStartDate} 开始\n\n阶段排期：\n${nodesSummary}`);
+      const startNode = nodes[0];
+      const endNode = nodes[nodes.length - 1];
+      this.addSystemFollowUp(`开启设计出图工作流\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`);
 
       // 发送通知给关联设计师和所有管理员
       this.notifyDesignStart();

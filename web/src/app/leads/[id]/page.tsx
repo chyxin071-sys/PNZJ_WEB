@@ -597,11 +597,18 @@ export default function LeadDetailPage() {
       });
       setLead({ ...lead, designNodes: nodes, designStartDate });
       setShowStartDesignModal(false);
-      const nodesSummary = nodes.map((n: any) => `· ${n.name}（${n.duration}天，预计 ${n.startDate} ~ ${n.endDate}）`).join('\n');
+      
+      const startNode = nodes[0];
+      const endNode = nodes[nodes.length - 1];
       await fetch('/api/followUps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ leadId, content: `开启了设计出图工作流，预计从 ${designStartDate} 开始\n\n阶段排期：\n${nodesSummary}`, method: '系统记录', createdBy: currentUser?.name || '系统' })
+        body: JSON.stringify({ 
+          leadId, 
+          content: `开启设计出图工作流\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`, 
+          method: '系统记录', 
+          createdBy: currentUser?.name || '系统' 
+        })
       });
       // 关键：重新拉取跟进记录以更新页面
       fetchAllData();

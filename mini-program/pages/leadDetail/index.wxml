@@ -154,7 +154,6 @@ module.exports = { getStatusClass: getStatusClass };
       <view wx:else>
         <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30rpx;">
           <view class="section-title" style="margin-bottom: 0;">出图进度</view>
-          <view wx:if="{{isDesigner || isAdmin}}" bindtap="openEditDesignModal" style="font-size: 24rpx; color: var(--primary-600); background: #f1f5f9; padding: 10rpx 24rpx; border-radius: 30rpx; font-weight: bold;">编辑排期</view>
         </view>
         <!-- 节点列表 -->
         <view class="design-node" wx:for="{{lead.designNodes}}" wx:key="id">
@@ -225,7 +224,8 @@ module.exports = { getStatusClass: getStatusClass };
   <!-- 底部操作栏（如果不是管理员且与自己无关，则隐藏底部操作栏） -->
   <view class="bottom-action-bar" style="display: flex; gap: 20rpx;" wx:if="{{isAdmin || isRelated}}">
     <view class="btn-primary hover-scale" bindtap="addFollowUp" wx:if="{{activeTab === 'follow'}}" style="flex: 1; text-align: center;">添加跟进</view>
-    <view class="btn-primary hover-scale" bindtap="goToEdit" wx:else style="flex: 1; text-align: center;">编辑资料</view>
+    <view class="btn-primary hover-scale" bindtap="openEditDesignModal" wx:elif="{{activeTab === 'design' && (isDesigner || isAdmin)}}" style="flex: 1; text-align: center;">编辑排期</view>
+    <view class="btn-primary hover-scale" bindtap="goToEdit" wx:elif="{{activeTab === 'info'}}" style="flex: 1; text-align: center;">编辑资料</view>
   </view>
 
   <!-- 恭喜签单弹窗 -->

@@ -789,6 +789,15 @@ Page({
     }
   },
 
+  goToFollowUps() {
+    const leadId = this.data.project.leadId || this.data.project.customerNo;
+    if (leadId) {
+      wx.navigateTo({ url: `/pages/leadDetail/index?id=${leadId}&tab=follow` });
+    } else {
+      wx.showToast({ title: '缺失客户关联信息', icon: 'none' });
+    }
+  },
+
   // ==== 节点裁剪与开工 ====
   startProjectModal() {
     this.setData({ 
