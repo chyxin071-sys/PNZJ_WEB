@@ -19,6 +19,7 @@ Page({
     accessStatus: 'checking', // 'checking' | 'granted' | 'verify_phone' | 'apply' | 'pending' | 'rejected'
     applyForm: { name: '', relation: '', phone: '' },
     myOpenId: '',
+    projectAddress: '', // 验证页展示用
 
     // 签字相关
     showSignatureBoard: false,
@@ -39,9 +40,11 @@ Page({
     const userInfo = wx.getStorageSync('userInfo');
     const isEmployee = userInfo && userInfo.role && ['admin', 'manager', 'sales', 'designer', 'finance'].includes(userInfo.role);
 
-    if (options.id) {
+    const id = options.id;
+
+    if (id) {
       this.setData({
-        id: options.id,
+        id: id,
         majorIdx: options.majorIdx !== undefined ? parseInt(options.majorIdx) : null,
         subIdx: options.subIdx !== undefined ? parseInt(options.subIdx) : null,
         showMode: options.majorIdx !== undefined ? 'report' : 'timeline',
@@ -49,12 +52,10 @@ Page({
       });
 
       if (isEmployee) {
-        // 内部员工直接放行
         this.setData({ accessStatus: 'granted' });
-        this.loadProject(options.id);
+        this.loadProject(id);
       } else {
-        // 外部用户走访问控制
-        this.checkAccess(options.id);
+        this.checkAccess(id);
       }
     } else {
       this.setData({ loading: false });
@@ -62,8 +63,23 @@ Page({
     }
   },
 
+  onShow() {
+    // 待审核状态下返回时，重新检查是否已被审批
+    if (this.data.accessStatus === 'pending' && this.data.id) {
+      this.checkAccess(this.data.id);
+    }
+  },
+
   // ===== 访问控制 =====
   checkAccess(projectId) {
+    // 先拿工地地址用于验证页展示
+    const db = wx.cloud.database();
+    db.collection('projects').doc(projectId).get().then(r => {
+      if (r.data && r.data.address) {
+        this.setData({ projectAddress: r.data.address });
+      }
+    }).catch(() => {});
+
     wx.cloud.callFunction({ name: 'login' }).then(res => {
       const openid = res.result.openid;
       this.setData({ myOpenId: openid });
@@ -74,13 +90,20 @@ Page({
           this.setData({ accessStatus: 'granted' });
           this.loadProject(projectId);
         } else {
-          // 查是否有待审批记录
-          db.collection('shareAccess').where({ projectId, openid, status: 'pending' }).limit(1).get().then(r2 => {
-            if (r2.data.length > 0) {
-              this.setData({ accessStatus: 'pending', loading: false });
+          // 查是否有被拒绝的记录
+          db.collection('shareAccess').where({ projectId, openid, status: 'rejected' }).limit(1).get().then(r3 => {
+            if (r3.data.length > 0) {
+              this.setData({ accessStatus: 'rejected', loading: false });
             } else {
-              // 新用户，先尝试手机号验证
-              this.setData({ accessStatus: 'verify_phone', loading: false });
+              // 查是否有待审批记录
+              db.collection('shareAccess').where({ projectId, openid, status: 'pending' }).limit(1).get().then(r2 => {
+                if (r2.data.length > 0) {
+                  this.setData({ accessStatus: 'pending', loading: false });
+                } else {
+                  // 新用户，先尝试手机号验证
+                  this.setData({ accessStatus: 'verify_phone', loading: false });
+                }
+              });
             }
           });
         }
@@ -153,6 +176,17 @@ Page({
     this.setData({ accessStatus: 'apply' });
   },
 
+  reApply() {
+    this.setData({
+      accessStatus: 'apply',
+      applyForm: { name: '', relation: '', phone: '' }
+    });
+  },
+
+  backToVerify() {
+    this.setData({ accessStatus: 'verify_phone' });
+  },
+
   // 申请表单输入
   onApplyInput(e) {
     const field = e.currentTarget.dataset.field;
@@ -170,54 +204,93 @@ Page({
     const now = new Date();
     const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
-    db.collection('shareAccess').add({
-      data: {
-        projectId: this.data.id,
-        openid: this.data.myOpenId,
-        name: name.trim(),
-        relation: relation.trim(),
-        phone: phone.trim(),
-        status: 'pending',
-        createdAt: db.serverDate(),
-        displayTime: nowStr
-      }
-    }).then(() => {
-      // 通知工地关联员工
-      this._notifyStaff(name.trim(), relation.trim(), nowStr);
-      wx.hideLoading();
-      this.setData({ accessStatus: 'pending' });
-    }).catch(() => {
-      wx.hideLoading();
-      wx.showToast({ title: '提交失败，请重试', icon: 'none' });
-    });
+    // 确保有 openid 再提交
+    const doSubmit = (openid) => {
+      db.collection('shareAccess').add({
+        data: {
+          projectId: this.data.id,
+          openid: openid,
+          name: name.trim(),
+          relation: relation.trim(),
+          phone: phone.trim(),
+          status: 'pending',
+          createdAt: db.serverDate(),
+          displayTime: nowStr
+        }
+      }).then(() => {
+        this._notifyStaff(name.trim(), relation.trim(), nowStr);
+        wx.hideLoading();
+        this.setData({ accessStatus: 'pending' });
+      }).catch((err) => {
+        console.error('提交申请失败', err);
+        wx.hideLoading();
+        const errMsg = (err && err.errMsg) || (err && err.message) || JSON.stringify(err);
+        wx.showModal({ title: '提交失败', content: errMsg, showCancel: false });
+      });
+    };
+
+    if (this.data.myOpenId) {
+      doSubmit(this.data.myOpenId);
+    } else {
+      // openid 还没拿到，重新获取一次
+      wx.cloud.callFunction({ name: 'login' }).then(res => {
+        const openid = res.result.openid || '';
+        this.setData({ myOpenId: openid });
+        doSubmit(openid);
+      }).catch(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '提交失败，请重试', icon: 'none' });
+      });
+    }
   },
 
   _notifyStaff(applicantName, relation, nowStr) {
-    const p = this.data.project;
-    if (!p) return;
     const db = wx.cloud.database();
-    const address = (p.address || p.customer || '未知工地').substring(0, 20);
-    const thing2Val = `申请人：${applicantName} | 关系：${relation} | 工地：${address}`;
+    const projectId = this.data.id;
+    if (!projectId) return;
 
-    // 查工地关联员工 + 所有管理员
-    const staffNames = [p.sales, p.designer, p.manager].filter(Boolean);
-    db.collection('users').where({ role: db.command.in(['admin', 'manager', 'sales', 'designer']) }).limit(50).get().then(res => {
-      const targets = res.data.filter(u => u.role === 'admin' || staffNames.includes(u.name));
-      targets.forEach(u => {
-        if (!u._id) return;
-        wx.cloud.callFunction({
-          name: 'sendSubscribeMessage',
-          data: {
-            receiverUserId: u._id,
-            templateId: TEMPLATE_IDS.SHARE_ACCESS_REQUEST,
-            page: `/pages/shareAccessManage/index?projectId=${this.data.id}`,
+    const getProject = this.data.project
+      ? Promise.resolve(this.data.project)
+      : db.collection('projects').doc(projectId).get().then(r => r.data);
+
+    getProject.then(p => {
+      if (!p) return;
+      const address = (p.address || p.customer || '未知工地').substring(0, 20);
+      const notifyContent = `${applicantName}(${relation})申请查看工地进度：${address}`;
+
+      const staffNames = [p.sales, p.designer, p.manager].filter(Boolean);
+      db.collection('users').where({ role: db.command.in(['admin', 'manager', 'sales', 'designer']) }).limit(50).get().then(res => {
+        const targets = res.data.filter(u => u.role === 'admin' || staffNames.includes(u.name));
+        targets.forEach(u => {
+          if (!u._id) return;
+          // 写通知中心
+          db.collection('notifications').add({
             data: {
-              time1: { value: nowStr },
-              thing2: { value: thing2Val.substring(0, 20) }
+              userId: u._id,
+              type: 'share_access_request',
+              title: '有人申请查看工地进度',
+              content: notifyContent,
+              relatedId: projectId,
+              relatedType: 'project',
+              isRead: false,
+              createdAt: db.serverDate()
             }
-          }
-        }).catch(() => {});
-      });
+          }).catch(() => {});
+          // 发订阅消息
+          wx.cloud.callFunction({
+            name: 'sendSubscribeMessage',
+            data: {
+              receiverUserId: u._id,
+              templateId: TEMPLATE_IDS.SHARE_ACCESS_REQUEST,
+              page: `/pages/shareAccessManage/index?projectId=${projectId}`,
+              data: {
+                time1: { value: nowStr },
+                thing2: { value: notifyContent.substring(0, 20) }
+              }
+            }
+          }).catch(() => {});
+        });
+      }).catch(() => {});
     }).catch(() => {});
   },
 
@@ -243,13 +316,13 @@ Page({
   loadProject(id) {
     wx.showLoading({ title: '加载中...' });
     const db = wx.cloud.database();
-    
+
     db.collection('projects').doc(id).get().then(res => {
       const p = res.data;
       if (p) {
         const nodes = p.nodesData || [];
         let reportNode = null;
-        
+
         if (this.data.showMode === 'report' && this.data.majorIdx !== null && this.data.subIdx !== null) {
           if (nodes[this.data.majorIdx] && nodes[this.data.majorIdx].subNodes && nodes[this.data.majorIdx].subNodes[this.data.subIdx]) {
             reportNode = nodes[this.data.majorIdx].subNodes[this.data.subIdx];
@@ -257,35 +330,120 @@ Page({
           }
         }
 
-        // 获取该工地的材料清单（从对应的 lead 中获取）
+        // 默认只展开当前施工中的节点，其他折叠，减少渲染压力
+        const nodesWithExpand = nodes.map(node => ({
+          ...node,
+          expanded: node.status === 'current'
+        }));
+
+        // 先渲染页面，不等图片转换
+        this.setData({ project: p, nodesList: nodesWithExpand, reportNode, loading: false });
+        wx.hideLoading();
+
+        if (this.data.showMode === 'report' && reportNode) {
+          wx.setNavigationBarTitle({ title: `${reportNode.name} 验收报告` });
+          // 报告模式：只转换当前节点的图片
+          this._convertNodeImages(nodesWithExpand, this.data.majorIdx, this.data.subIdx);
+        } else {
+          // 时间轴模式：只转换有记录的节点图片（按需，不阻塞渲染）
+          this._convertAllNodeImages(nodesWithExpand);
+        }
+
+        // 获取该工地的材料清单
         if (p.leadId) {
           db.collection('leads').doc(p.leadId).get().then(leadRes => {
             const materials = leadRes.data.materialList || [];
-            this.setData({ 
-              materials: materials,
-              groupedMaterials: this.computeGroupedMaterials(materials)
-            });
-          }).catch(err => console.error('获取材料清单失败', err));
-        }
-
-        this.setData({
-          project: p,
-          nodesList: nodes,
-          reportNode: reportNode,
-          loading: false
-        });
-        
-        if (this.data.showMode === 'report' && reportNode) {
-          wx.setNavigationBarTitle({ title: `${reportNode.name} 验收报告` });
+            this.setData({ materials, groupedMaterials: this.computeGroupedMaterials(materials) });
+          }).catch(() => {});
         }
       } else {
         this.setData({ loading: false });
+        wx.hideLoading();
       }
-      wx.hideLoading();
     }).catch(err => {
       console.error('获取分享页面数据失败', err);
       this.setData({ loading: false });
       wx.hideLoading();
+    });
+  },
+
+  // 只转换单个子节点的图片（报告模式用）
+  _convertNodeImages(nodes, majorIdx, subIdx) {
+    const sub = nodes[majorIdx] && nodes[majorIdx].subNodes && nodes[majorIdx].subNodes[subIdx];
+    if (!sub) return;
+    const ids = [];
+    if (sub.acceptanceRecord && sub.acceptanceRecord.photos) {
+      sub.acceptanceRecord.photos.forEach(photo => {
+        const url = typeof photo === 'string' ? photo : photo.url;
+        if (url && url.indexOf('cloud://') === 0) ids.push(url);
+      });
+    }
+    if (sub.signature && sub.signature.url && sub.signature.url.indexOf('cloud://') === 0) {
+      ids.push(sub.signature.url);
+    }
+    if (ids.length === 0) return;
+    wx.cloud.getTempFileURL({
+      fileList: [...new Set(ids)],
+      success: (r) => {
+        const urlMap = {};
+        r.fileList.forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+        const newNodes = this.data.nodesList;
+        const s = newNodes[majorIdx].subNodes[subIdx];
+        if (s.acceptanceRecord && s.acceptanceRecord.photos) {
+          s.acceptanceRecord.photos = s.acceptanceRecord.photos.map(photo => {
+            if (typeof photo === 'string') return urlMap[photo] || photo;
+            return photo.url ? { ...photo, url: urlMap[photo.url] || photo.url } : photo;
+          });
+        }
+        if (s.signature && s.signature.url) {
+          s.signature = { ...s.signature, url: urlMap[s.signature.url] || s.signature.url };
+        }
+        this.setData({
+          nodesList: newNodes,
+          reportNode: newNodes[majorIdx].subNodes[subIdx]
+        });
+      }
+    });
+  },
+
+  // 转换所有节点图片（时间轴模式，后台静默执行）
+  _convertAllNodeImages(nodes) {
+    const ids = [];
+    nodes.forEach(node => {
+      (node.subNodes || []).forEach(sub => {
+        if (sub.acceptanceRecord && sub.acceptanceRecord.photos) {
+          sub.acceptanceRecord.photos.forEach(photo => {
+            const url = typeof photo === 'string' ? photo : photo.url;
+            if (url && url.indexOf('cloud://') === 0) ids.push(url);
+          });
+        }
+        if (sub.signature && sub.signature.url && sub.signature.url.indexOf('cloud://') === 0) {
+          ids.push(sub.signature.url);
+        }
+      });
+    });
+    if (ids.length === 0) return;
+    wx.cloud.getTempFileURL({
+      fileList: [...new Set(ids)],
+      success: (r) => {
+        const urlMap = {};
+        r.fileList.forEach(f => { if (f.tempFileURL) urlMap[f.fileID] = f.tempFileURL; });
+        const newNodes = this.data.nodesList;
+        newNodes.forEach(node => {
+          (node.subNodes || []).forEach(sub => {
+            if (sub.acceptanceRecord && sub.acceptanceRecord.photos) {
+              sub.acceptanceRecord.photos = sub.acceptanceRecord.photos.map(photo => {
+                if (typeof photo === 'string') return urlMap[photo] || photo;
+                return photo.url ? { ...photo, url: urlMap[photo.url] || photo.url } : photo;
+              });
+            }
+            if (sub.signature && sub.signature.url) {
+              sub.signature = { ...sub.signature, url: urlMap[sub.signature.url] || sub.signature.url };
+            }
+          });
+        });
+        this.setData({ nodesList: newNodes });
+      }
     });
   },
 
@@ -442,23 +600,37 @@ Page({
       canvas: this.signatureCanvas,
       success: (res) => {
         const tempPath = res.tempFilePath;
-        const cloudPath = `signature/${this.data.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.png`;
-        
-        wx.cloud.uploadFile({
-          cloudPath,
-          filePath: tempPath,
-          success: (uploadRes) => {
-            this.updateNodeAfterSignature(uploadRes.fileID);
+        // 压缩签字图片再上传，减小文件体积
+        wx.compressImage({
+          src: tempPath,
+          quality: 60,
+          success: (compRes) => {
+            this._uploadSignature(compRes.tempFilePath);
           },
-          fail: (err) => {
-            wx.hideLoading();
-            wx.showToast({ title: '上传签名失败', icon: 'error' });
+          fail: () => {
+            // 压缩失败则用原图
+            this._uploadSignature(tempPath);
           }
         });
       },
       fail: () => {
         wx.hideLoading();
         wx.showToast({ title: '生成图片失败', icon: 'error' });
+      }
+    });
+  },
+
+  _uploadSignature(filePath) {
+    const cloudPath = `signature/${this.data.id}/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+    wx.cloud.uploadFile({
+      cloudPath,
+      filePath,
+      success: (uploadRes) => {
+        this.updateNodeAfterSignature(uploadRes.fileID);
+      },
+      fail: () => {
+        wx.hideLoading();
+        wx.showToast({ title: '上传签名失败', icon: 'error' });
       }
     });
   },

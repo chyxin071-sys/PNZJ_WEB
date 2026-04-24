@@ -900,6 +900,10 @@ Page({
     }
   },
 
+  goToAccessManage() {
+    wx.navigateTo({ url: `/pages/shareAccessManage/index?projectId=${this.data.id}` });
+  },
+
   goToFollowUps() {
     const leadId = this.data.project.leadId || this.data.project.customerNo;
     if (leadId) {

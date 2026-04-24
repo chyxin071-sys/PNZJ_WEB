@@ -1,6 +1,7 @@
 export const TEMPLATE_IDS = {
   PROJECT_UPDATE: 'p6lxditVBaingWXD6RqGPmz-HR_eTNkXPbfPOH_Zeuc', // 项目进度更新通知
-  TODO_REMINDER: '4Q1FEem5Y-aOYcXN92aLg1kCfBuENtu0zedLmi6PSuA'    // 工地任务待处理提醒
+  TODO_REMINDER: '4Q1FEem5Y-aOYcXN92aLg1kCfBuENtu0zedLmi6PSuA',   // 工地任务待处理提醒
+  SHARE_ACCESS_REQUEST: 'p6lxditVBaingWXD6RqGPmz-HR_eTNkXPbfPOH_Zeuc' // 查看申请通知（复用进度更新模板）
 };
 
 export function requestSubscribe() {

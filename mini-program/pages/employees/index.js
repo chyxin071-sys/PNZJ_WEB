@@ -369,25 +369,33 @@ Page({
     db.collection('leads').where(_.or([
       { 'sales': oldName },
       { 'designer': oldName },
-      { 'manager': oldName }
+      { 'manager': oldName },
+      { 'creatorName': oldName }
     ])).get().then(res => {
       res.data.forEach(item => {
         let updateData = {};
         if (item.sales === oldName) updateData.sales = newName;
         if (item.designer === oldName) updateData.designer = newName;
         if (item.manager === oldName) updateData.manager = newName;
+        if (item.creatorName === oldName) updateData.creatorName = newName;
         db.collection('leads').doc(item._id).update({ data: updateData });
       });
     });
 
-    // 更新 projects 中的 manager
-    db.collection('projects').where({
-      manager: oldName
-    }).get().then(res => {
+    // 更新 projects 中的 manager, sales, designer, creatorName
+    db.collection('projects').where(_.or([
+      { manager: oldName },
+      { sales: oldName },
+      { designer: oldName },
+      { creatorName: oldName }
+    ])).get().then(res => {
       res.data.forEach(item => {
-        db.collection('projects').doc(item._id).update({
-          data: { manager: newName }
-        });
+        let updateData = {};
+        if (item.manager === oldName) updateData.manager = newName;
+        if (item.sales === oldName) updateData.sales = newName;
+        if (item.designer === oldName) updateData.designer = newName;
+        if (item.creatorName === oldName) updateData.creatorName = newName;
+        db.collection('projects').doc(item._id).update({ data: updateData });
       });
     });
 
@@ -441,7 +449,8 @@ Page({
     db.collection('leads').where(_.or([
       { 'sales': oldName },
       { 'designer': oldName },
-      { 'manager': oldName }
+      { 'manager': oldName },
+      { 'creatorName': oldName }
     ])).get().then(res => {
       const leads = res.data;
       const followUps = leads.map(lead => {
@@ -449,6 +458,7 @@ Page({
         if (lead.sales && lead.sales === oldName) role = '销售';
         else if (lead.designer && lead.designer === oldName) role = '设计师';
         else if (lead.manager && lead.manager === oldName) role = '项目经理';
+        else if (lead.creatorName && lead.creatorName === oldName) role = '创建人';
 
         return {
           leadId: lead._id,

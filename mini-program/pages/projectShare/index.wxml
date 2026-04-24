@@ -37,58 +37,83 @@
 </view>
 
 <!-- ====== 手机号验证 ====== -->
-<view wx:elif="{{accessStatus === 'verify_phone'}}" style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; padding: 60rpx;">
-  <image src="/assets/icons/LOGO2.png" style="width: 240rpx; height: 48rpx; margin-bottom: 60rpx;" mode="aspectFit"></image>
-  <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx;">查看工地进度</view>
-  <view style="font-size: 28rpx; color: #64748b; text-align: center; margin-bottom: 60rpx; line-height: 1.6;">请验证手机号，业主本人可直接查看</view>
-  <button open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 28rpx 0; margin: 0 0 24rpx; border: none;">
-    微信一键验证手机号
-  </button>
-  <view style="font-size: 26rpx; color: #94a3b8; text-align: center; line-height: 1.6;">非业主本人？点下方申请查看权限</view>
-  <view bindtap="skipToApply" style="margin-top: 16rpx; font-size: 28rpx; color: #4a403a; font-weight: bold; padding: 16rpx 40rpx;">申请查看</view>
+<view wx:elif="{{accessStatus === 'verify_phone'}}" style="height: 100vh; display: flex; flex-direction: column; background: #f8fafc; padding: 80rpx 60rpx; box-sizing: border-box; overflow: hidden;">
+  <!-- 中间内容区 -->
+  <view style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <!-- 工地地址 -->
+    <view style="font-size: 28rpx; color: #94a3b8; margin-bottom: 16rpx; text-align: center;">{{projectAddress || '品诺筑家'}}</view>
+    <view style="font-size: 48rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx; text-align: center; line-height: 1.3;">查看工地进度</view>
+    <view style="font-size: 28rpx; color: #64748b; text-align: center; margin-bottom: 80rpx; line-height: 1.6;">请验证手机号<br/>业主本人可直接查看</view>
+    <button open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 32rpx 0; margin: 0 0 32rpx; border: none; line-height: normal;">
+      微信一键验证手机号
+    </button>
+    <view bindtap="skipToApply" style="font-size: 28rpx; color: #4a403a; font-weight: bold; padding: 20rpx 40rpx;">非业主？申请查看</view>
+  </view>
+  <!-- 底部 Logo -->
+  <view style="display: flex; align-items: center; justify-content: center; padding-bottom: env(safe-area-inset-bottom);">
+    <image src="/assets/icons/LOGO2.png" style="width: 280rpx; height: 56rpx; opacity: 0.7;" mode="aspectFit"></image>
+  </view>
 </view>
 
 <!-- ====== 申请表单 ====== -->
-<view wx:elif="{{accessStatus === 'apply'}}" style="min-height: 100vh; background: #f8fafc; padding: 60rpx 40rpx;">
-  <image src="/assets/icons/LOGO2.png" style="width: 200rpx; height: 40rpx; margin-bottom: 48rpx; display: block;" mode="aspectFit"></image>
-  <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 12rpx;">申请查看工地进度</view>
-  <view style="font-size: 26rpx; color: #64748b; margin-bottom: 48rpx; line-height: 1.6;">填写信息后，工地负责人将审核您的申请</view>
-
-  <view style="background: #fff; border-radius: 20rpx; padding: 40rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);">
-    <view style="margin-bottom: 32rpx;">
-      <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">您的姓名 <text style="color: var(--rose-600);">*</text></view>
-      <input bindinput="onApplyInput" data-field="name" value="{{applyForm.name}}" placeholder="请输入您的真实姓名" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+<view wx:elif="{{accessStatus === 'apply'}}" style="height: 100vh; display: flex; flex-direction: column; background: #f8fafc; box-sizing: border-box; overflow: hidden;">
+  <!-- 顶部导航 -->
+  <view style="display: flex; align-items: center; padding: 24rpx 32rpx; padding-top: calc(24rpx + env(safe-area-inset-top));">
+    <view bindtap="backToVerify" style="display: flex; align-items: center; padding: 12rpx 0; color: #64748b; font-size: 28rpx;">
+      <text style="font-size: 36rpx; margin-right: 8rpx;">‹</text>返回
     </view>
-    <view style="margin-bottom: 32rpx;">
-      <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">与业主关系 <text style="color: var(--rose-600);">*</text></view>
-      <input bindinput="onApplyInput" data-field="relation" value="{{applyForm.relation}}" placeholder="如：家属、朋友、监理等" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
-    </view>
-    <view style="margin-bottom: 40rpx;">
-      <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">联系电话（选填）</view>
-      <input bindinput="onApplyInput" data-field="phone" value="{{applyForm.phone}}" placeholder="方便工作人员联系您" type="number" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
-    </view>
-    <button bindtap="submitApply" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 28rpx 0; margin: 0; border: none;">
-      提交申请
-    </button>
   </view>
+  <!-- 内容区可滚动 -->
+  <scroll-view scroll-y style="flex: 1; padding: 0 40rpx 40rpx; box-sizing: border-box;">
+    <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 12rpx;">申请查看工地进度</view>
+    <view style="font-size: 26rpx; color: #64748b; margin-bottom: 40rpx; line-height: 1.6;">填写信息后，工地负责人将审核您的申请</view>
+    <view style="background: #fff; border-radius: 20rpx; padding: 40rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);">
+      <view style="margin-bottom: 32rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">您的姓名 <text style="color: var(--rose-600);">*</text></view>
+        <input bindinput="onApplyInput" data-field="name" value="{{applyForm.name}}" placeholder="请输入您的真实姓名" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+      </view>
+      <view style="margin-bottom: 32rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">与业主关系 <text style="color: var(--rose-600);">*</text></view>
+        <input bindinput="onApplyInput" data-field="relation" value="{{applyForm.relation}}" placeholder="如：家属、朋友、监理等" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+      </view>
+      <view style="margin-bottom: 40rpx;">
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">联系电话（选填）</view>
+        <input bindinput="onApplyInput" data-field="phone" value="{{applyForm.phone}}" placeholder="方便工作人员联系您" type="number" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+      </view>
+      <button bindtap="submitApply" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 28rpx 0; margin: 0; border: none; line-height: normal;">
+        提交申请
+      </button>
+    </view>
+  </scroll-view>
 </view>
 
 <!-- ====== 待审核 ====== -->
-<view wx:elif="{{accessStatus === 'pending'}}" style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; padding: 60rpx;">
-  <view style="width: 120rpx; height: 120rpx; background: var(--amber-50); border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 40rpx;">
-    <text style="font-size: 64rpx;">⏳</text>
+<view wx:elif="{{accessStatus === 'pending'}}" style="height: 100vh; display: flex; flex-direction: column; background: #f8fafc; padding: 80rpx 60rpx; box-sizing: border-box; overflow: hidden;">
+  <view style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <view style="width: 120rpx; height: 120rpx; background: var(--amber-50); border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 40rpx;">
+      <text style="font-size: 64rpx;">⏳</text>
+    </view>
+    <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx;">申请已提交</view>
+    <view style="font-size: 28rpx; color: #64748b; text-align: center; line-height: 1.8;">工地负责人正在审核您的申请<br/>审核通过后即可查看工地进度</view>
   </view>
-  <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx;">申请已提交</view>
-  <view style="font-size: 28rpx; color: #64748b; text-align: center; line-height: 1.8;">工地负责人正在审核您的申请<br/>审核通过后即可查看工地进度</view>
+  <view style="display: flex; align-items: center; justify-content: center; padding-bottom: env(safe-area-inset-bottom);">
+    <image src="/assets/icons/LOGO2.png" style="width: 280rpx; height: 56rpx; opacity: 0.7;" mode="aspectFit"></image>
+  </view>
 </view>
 
 <!-- ====== 已拒绝 ====== -->
-<view wx:elif="{{accessStatus === 'rejected'}}" style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; padding: 60rpx;">
-  <view style="width: 120rpx; height: 120rpx; background: var(--rose-50); border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 40rpx;">
-    <text style="font-size: 64rpx; color: var(--rose-600);">✕</text>
+<view wx:elif="{{accessStatus === 'rejected'}}" style="height: 100vh; display: flex; flex-direction: column; background: #f8fafc; padding: 80rpx 60rpx; box-sizing: border-box; overflow: hidden;">
+  <view style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <view style="width: 120rpx; height: 120rpx; background: var(--rose-50); border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 40rpx;">
+      <text style="font-size: 64rpx; color: var(--rose-600);">✕</text>
+    </view>
+    <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx;">申请未通过</view>
+    <view style="font-size: 28rpx; color: #64748b; text-align: center; line-height: 1.8; margin-bottom: 60rpx;">如有疑问请联系工地负责人</view>
+    <button bindtap="reApply" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 32rpx 0; border: none; line-height: normal;">重新申请</button>
   </view>
-  <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx;">申请未通过</view>
-  <view style="font-size: 28rpx; color: #64748b; text-align: center; line-height: 1.8;">如有疑问请联系工地负责人</view>
+  <view style="display: flex; align-items: center; justify-content: center; padding-bottom: env(safe-area-inset-bottom);">
+    <image src="/assets/icons/LOGO2.png" style="width: 280rpx; height: 56rpx; opacity: 0.7;" mode="aspectFit"></image>
+  </view>
 </view>
 
 <!-- ====== 正常内容（已授权） ====== -->
@@ -185,8 +210,8 @@
     <!-- 顶部项目概览卡片 -->
     <view style="background: #fff; border-radius: 20rpx; padding: 32rpx; margin: 20rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04); position: relative;">
       <!-- 标题和健康状态 -->
-      <view style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0;">
-        <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; flex: 1; padding-right: 20rpx; line-height: 1.4;">{{project.address || '未知地址'}}</view>
+      <view style="display: flex; justify-content: center; align-items: flex-start; margin-bottom: 32rpx; text-align: center;">
+        <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; line-height: 1.4;">{{project.address || '未知地址'}}</view>
       </view>
 
       <!-- 核心数据网格 -->
@@ -418,8 +443,8 @@
   </block>
 </view>
 
-<!-- 错误状态 -->
-<view wx:if="{{!loading && !project}}" style="padding: 100rpx 0; text-align: center;">
+<!-- 错误状态：只在已授权但工地数据加载失败时显示 -->
+<view wx:if="{{accessStatus === 'granted' && !loading && !project}}" style="height: 100vh; display: flex; align-items: center; justify-content: center; background: #f8fafc;">
   <text style="font-size: 28rpx; color: #94a3b8;">未找到该工地信息或分享链接已失效</text>
 </view>
 

@@ -99,8 +99,8 @@ module.exports = { getStatusClass: getStatusClass };
     </view>
     
     <!-- 快捷操作区 (Web风格卡片) -->
-    <view class="action-cards mt-4 {{hasProject ? 'three-cards' : 'two-cards'}}">
-      <view class="action-card quote-card hover-scale" bindtap="goToQuote">     
+    <view class="action-cards mt-4 {{hasProject ? 'three-cards' : 'two-cards'}}" wx:if="{{isRelated}}">
+      <view class="action-card quote-card hover-scale" bindtap="goToQuote">
         <view class="ac-left">
           <view class="icon-doc"></view>
           <text>{{quoteId ? '查看报价单' : '生成报价单'}}</text>
@@ -126,8 +126,8 @@ module.exports = { getStatusClass: getStatusClass };
   <!-- 选项卡 -->
   <view class="tabs">
     <view class="tab {{activeTab === 'info' ? 'active' : ''}}" bindtap="switchTab" data-tab="info">详情信息</view>
-    <view class="tab {{activeTab === 'design' ? 'active' : ''}}" wx:if="{{isVisible}}" bindtap="switchTab" data-tab="design">设计进度</view>
-    <view class="tab {{activeTab === 'follow' ? 'active' : ''}}" wx:if="{{isVisible}}" bindtap="switchTab" data-tab="follow">
+    <view class="tab {{activeTab === 'design' ? 'active' : ''}}" wx:if="{{isRelated}}" bindtap="switchTab" data-tab="design">设计进度</view>
+    <view class="tab {{activeTab === 'follow' ? 'active' : ''}}" wx:if="{{isRelated}}" bindtap="switchTab" data-tab="follow">
       <view style="position: relative; display: inline-block;">
         跟进记录
         <view wx:if="{{hasUnreadFollowUp}}" class="badge-dot" style="top: 0rpx; right: -16rpx;"></view>
@@ -326,7 +326,7 @@ module.exports = { getStatusClass: getStatusClass };
   </view>
 
   <!-- 底部操作栏 -->
-  <view class="bottom-action-bar" style="display: flex; gap: 20rpx;" wx:if="{{isVisible}}">
+  <view class="bottom-action-bar" style="display: flex; gap: 20rpx;" wx:if="{{isRelated}}">
     <view class="btn-primary hover-scale" bindtap="addFollowUp" wx:if="{{activeTab === 'follow'}}" style="flex: 1; text-align: center;">添加跟进</view>
     <view class="btn-primary hover-scale" bindtap="openEditDesignModal" wx:elif="{{activeTab === 'design' && (isDesigner || isAdmin) && lead.designNodes && lead.designNodes.length > 0}}" style="flex: 1; text-align: center;">编辑排期</view>
     <view class="btn-primary hover-scale" bindtap="goToEdit" wx:elif="{{activeTab === 'info' && (isAdmin || isRelated)}}" style="flex: 1; text-align: center;">编辑资料</view>

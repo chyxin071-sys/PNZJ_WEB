@@ -1,4 +1,6 @@
 // pages/login/index.js
+import { requestSubscribe } from '../../utils/subscribe';
+
 Page({
   data: {
     username: '',
@@ -97,6 +99,9 @@ Page({
       name: 'bindOpenId',
       data: { userId: userInfo.id }
     }).catch(console.error);
+
+    // 登录时请求订阅消息授权
+    requestSubscribe().catch(() => {});
 
     setTimeout(() => {
       wx.switchTab({

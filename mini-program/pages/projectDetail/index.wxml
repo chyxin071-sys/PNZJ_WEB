@@ -4,18 +4,20 @@
 
   <!-- 顶部项目概览卡片 -->
   <view style="background: #fff; border-radius: 20rpx; padding: 32rpx; margin-bottom: 24rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04); position: relative;">
-    <!-- 标题和健康状态 -->
-    <view style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0;">
-      <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; flex: 1; padding-right: 20rpx; line-height: 1.4;">{{project.address || '未知地址'}}</view>
-      <view style="display: flex; flex-direction: column; align-items: flex-end; gap: 16rpx; flex-shrink: 0; min-width: 100rpx;">
-        <view style="width: 100%; text-align: center; font-size: 24rpx; font-weight: bold; padding: 4rpx 0; border-radius: 8rpx; color: {{project.health === '严重延期' ? 'var(--rose-600)' : (project.health === '预警' ? 'var(--amber-600)' : 'var(--emerald-600)')}}; background: {{project.health === '严重延期' ? 'var(--rose-50)' : (project.health === '预警' ? 'var(--amber-50)' : 'var(--emerald-50)')}}; margin-bottom: 0;">
-          {{project.health || '正常'}}
-        </view>
-        <button open-type="share" style="width: 100%; margin: 0; padding: 4rpx 0; font-size: 24rpx; font-weight: bold; border-radius: 8rpx; color: #64748b; background: #f1f5f9; line-height: normal; border: none; min-width: auto; min-height: auto;">
-          分享
-        </button>
+    <!-- 分享按钮 -->
+    <view style="position: absolute; right: 32rpx; top: 32rpx; display: flex; flex-direction: column; align-items: flex-end; gap: 16rpx; z-index: 10;">
+      <view style="width: 100%; text-align: center; font-size: 24rpx; font-weight: bold; padding: 4rpx 12rpx; border-radius: 8rpx; color: {{project.health === '严重延期' ? 'var(--rose-600)' : (project.health === '预警' ? 'var(--amber-600)' : 'var(--emerald-600)')}}; background: {{project.health === '严重延期' ? 'var(--rose-50)' : (project.health === '预警' ? 'var(--amber-50)' : 'var(--emerald-50)')}}; margin-bottom: 0;">
+        {{project.health || '正常'}}
       </view>
-</view>
+      <button open-type="share" style="width: 100%; margin: 0; padding: 4rpx 12rpx; font-size: 24rpx; font-weight: bold; border-radius: 8rpx; color: #64748b; background: #f1f5f9; line-height: normal; border: none; min-width: auto; min-height: auto;">
+        分享
+      </button>
+    </view>
+
+    <!-- 标题和健康状态 -->
+    <view style="display: flex; justify-content: center; align-items: flex-start; margin-bottom: 32rpx; text-align: center;">
+      <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; line-height: 1.4;">{{project.address || '未知地址'}}</view>
+    </view>
 
 <wxs module="ganttUtil">
   module.exports = {
@@ -114,6 +116,9 @@
         <text style="font-size: 26rpx; font-weight: 600; color: #334155;">跟进记录</text>
         <view wx:if="{{hasUnreadFollowUp}}" class="badge-dot" style="top: -6rpx; right: -16rpx;"></view>
       </view>
+    </view>
+    <view bindtap="goToAccessManage" wx:if="{{isAdmin || isRelated}}" style="flex: 1; background: #fff; padding: 28rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e8edf2;">
+      <text style="font-size: 26rpx; font-weight: 600; color: #334155;">查看申请</text>
     </view>
   </view>
 
