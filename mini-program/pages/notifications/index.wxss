@@ -186,6 +186,8 @@
 .avatar-bg-sales { background: #eff6ff; color: #1d4ed8; border-color: #dbeafe; }
 .avatar-bg-designer { background: var(--emerald-50); color: var(--emerald-600); border-color: var(--emerald-100); }
 .avatar-bg-manager { background: #fffbeb; color: var(--amber-600); border-color: var(--amber-50); }
+.avatar-bg-finance { background: #fff1f2; color: #be123c; border-color: #ffe4e6; }
+.avatar-bg-system { background: #fef2f2; color: #e11d48; border-color: #ffe4e6; }
 .avatar-bg-default { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
 
 .item-content {

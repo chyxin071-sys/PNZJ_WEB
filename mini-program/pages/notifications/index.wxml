@@ -30,7 +30,8 @@
             data-item="{{item}}"
           >
             <view class="item-icon">
-              <view class="avatar-circle avatar-bg-{{item.senderRole || 'default'}}" wx:if="{{item.senderName}}">{{item.senderName[0]}}</view>
+              <view class="avatar-circle avatar-bg-{{item.senderRole || 'default'}}" wx:if="{{item.senderName && item.senderName !== '系统'}}">{{item.senderName[0]}}</view>
+              <view class="avatar-circle avatar-bg-system" wx:elif="{{item.senderName === '系统' || !item.senderName}}">系</view>
               <view class="icon-circle {{item.type}}" wx:else></view>
             </view>
             <view class="item-content">
