@@ -158,7 +158,7 @@ Page({
         const leadId = projRes.data.leadId;
         if (!leadId) { 
           wx.hideLoading(); 
-          this.setData({ accessStatus: 'apply' }); 
+          wx.showModal({ title: '验证失败', content: '您的微信手机号与项目登记的手机号不一致', showCancel: false, confirmText: '去申请', success: () => { this.setData({ accessStatus: 'apply' }); } });
           return; 
         }
 
@@ -171,17 +171,17 @@ Page({
             this._grantAccess({ name: lead.name || '业主本人', relation: '业主本人', phone: phone.replace(/\D/g, '').slice(-11), autoApproved: true });
           } else {
             wx.hideLoading();
-            this.setData({ accessStatus: 'apply' });
+            wx.showModal({ title: '验证失败', content: '您的微信手机号与项目登记的手机号不一致', showCancel: false, confirmText: '去申请', success: () => { this.setData({ accessStatus: 'apply' }); } });
           }
         }).catch((err) => { 
           console.log('[手机验证] 查客户失败', err); 
           wx.hideLoading(); 
-          this.setData({ accessStatus: 'apply' }); 
+          wx.showModal({ title: '验证失败', content: '您的微信手机号与项目登记的手机号不一致', showCancel: false, confirmText: '去申请', success: () => { this.setData({ accessStatus: 'apply' }); } });
         });
       }).catch((err) => { 
         console.log('[手机验证] 查工地失败', err); 
         wx.hideLoading(); 
-        this.setData({ accessStatus: 'apply' }); 
+        wx.showModal({ title: '验证失败', content: '您的微信手机号与项目登记的手机号不一致', showCancel: false, confirmText: '去申请', success: () => { this.setData({ accessStatus: 'apply' }); } });
       });
     }).catch((err) => {
       console.log('[手机验证] 云函数调用失败', err);

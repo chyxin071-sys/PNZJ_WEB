@@ -11,7 +11,7 @@
           <view class="name">{{userInfo.name || '未登录'}}</view>
           <view class="icon-edit" bindtap="openEditName"></view>
         </view>
-        <view class="role-badge">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'designer' ? '设计师' : userInfo.role === 'sales' ? '销售' : userInfo.role === 'manager' ? '项目经理' : '员工'}}</view>
+        <view class="role-badge">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'designer' ? '设计师' : userInfo.role === 'sales' ? '销售' : userInfo.role === 'manager' ? '项目经理' : userInfo.role === 'finance' ? '财务' : '员工'}}</view>
       </view>
     </view>
   </view>

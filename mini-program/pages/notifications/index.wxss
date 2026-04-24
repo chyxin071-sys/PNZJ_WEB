@@ -76,6 +76,7 @@
 .bg-sales { background: #eff6ff; color: #3b82f6; }
 .bg-designer { background: var(--emerald-100); color: var(--emerald-600); }
 .bg-manager { background: #ffedd5; color: #f97316; }
+.bg-finance { background: #ffe4e6; color: #e11d48; }
 .bg-default { background: #f1f5f9; color: #64748b; }
 
 .list-container {
