@@ -513,6 +513,8 @@ Page({
                 type: 'todo',
                 title: '收到新的待办任务',
                 content: `${operatorName} 给你指派了新的待办任务：【${updateData.title}】。`,
+                senderName: operatorName,
+                senderRole: userInfo.role || 'default',
                 targetUser: assignee.name,
                 isRead: false,
                 createTime: db.serverDate(),
