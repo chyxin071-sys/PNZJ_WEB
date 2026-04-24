@@ -118,36 +118,46 @@ Page({
   // 手机号验证
   onGetPhoneNumber(e) {
     if (e.detail.errno !== 0 || !e.detail.code) {
-      // 用户拒绝授权，直接进申请流程
+      console.log('[手机验证] 用户拒绝授权或无code', e.detail);
       this.setData({ accessStatus: 'apply' });
       return;
     }
     wx.showLoading({ title: '验证中...' });
     const db = wx.cloud.database();
-    // 用 code 换手机号（需要云函数解密，这里用云调用）
     wx.cloud.callFunction({
       name: 'getPhoneNumber',
       data: { code: e.detail.code }
     }).then(res => {
       const phone = res.result && res.result.phone;
-      if (!phone) { wx.hideLoading(); this.setData({ accessStatus: 'apply' }); return; }
-      // 查 leads 里是否有这个手机号且关联这个工地
+      console.log('[手机验证] 云函数返回', res.result, '手机号:', phone);
+      if (!phone) {
+        wx.hideLoading();
+        wx.showModal({ title: '验证失败', content: '获取手机号失败：' + JSON.stringify(res.result), showCancel: false });
+        this.setData({ accessStatus: 'apply' });
+        return;
+      }
       db.collection('projects').doc(this.data.id).get().then(projRes => {
         const leadId = projRes.data.leadId;
+        console.log('[手机验证] 工地 leadId:', leadId);
         if (!leadId) { wx.hideLoading(); this.setData({ accessStatus: 'apply' }); return; }
         db.collection('leads').doc(leadId).get().then(leadRes => {
           const lead = leadRes.data;
+          console.log('[手机验证] 客户手机号:', lead.phone, '微信手机号:', phone);
           const matched = lead.phone && (lead.phone.replace(/\s/g,'') === phone.replace(/\s/g,''));
           wx.hideLoading();
           if (matched) {
-            // 手机号匹配，自动写入已通过记录
             this._grantAccess({ name: lead.name || '业主本人', relation: '业主本人', phone, autoApproved: true });
           } else {
             this.setData({ accessStatus: 'apply' });
           }
-        }).catch(() => { wx.hideLoading(); this.setData({ accessStatus: 'apply' }); });
-      }).catch(() => { wx.hideLoading(); this.setData({ accessStatus: 'apply' }); });
-    }).catch(() => { wx.hideLoading(); this.setData({ accessStatus: 'apply' }); });
+        }).catch((err) => { console.log('[手机验证] 查客户失败', err); wx.hideLoading(); this.setData({ accessStatus: 'apply' }); });
+      }).catch((err) => { console.log('[手机验证] 查工地失败', err); wx.hideLoading(); this.setData({ accessStatus: 'apply' }); });
+    }).catch((err) => {
+      console.log('[手机验证] 云函数调用失败', err);
+      wx.hideLoading();
+      wx.showModal({ title: '验证失败', content: err.errMsg || JSON.stringify(err), showCancel: false });
+      this.setData({ accessStatus: 'apply' });
+    });
   },
 
   _grantAccess(info) {
