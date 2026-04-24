@@ -15,7 +15,7 @@
 .icon-hammer::before { content: ''; position: absolute; top: -6rpx; left: -8rpx; width: 22rpx; height: 10rpx; background: #f97316; border-radius: 4rpx; box-sizing: border-box; }
 
 /* 列表�?*/
-.title-wrap { display: flex; align-items: baseline; gap: 16rpx; flex: 1; }
+.list-container { flex: 1; padding: 20rpx 32rpx; width: 100%; box-sizing: border-box; }
 .title { font-size: 32rpx; font-weight: bold; color: var(--primary-900); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 
 .status-badge { padding: 4rpx 16rpx; border-radius: 8rpx; font-size: 24rpx; font-weight: 500; white-space: nowrap; }
