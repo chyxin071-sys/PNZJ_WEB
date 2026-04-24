@@ -183,8 +183,8 @@
 }
 
 .share-btn {
-  background: var(--indigo-50) !important;
-  color: var(--indigo-600) !important;
+  background: #f1f5f9 !important;
+  color: #475569 !important;
 }
 
 .share-btn::after {
