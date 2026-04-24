@@ -100,94 +100,47 @@ Page({
                 if (r2.data.length > 0) {
                   this.setData({ accessStatus: 'pending', loading: false });
                 } else {
-                  // 新用户，先尝试手机号验证
-                  this.setData({ accessStatus: 'verify_phone', loading: false });
+                  // 新用户，直接显示申请表单
+                  this.setData({ accessStatus: 'apply', loading: false });
                 }
               });
             }
           });
         }
       }).catch(() => {
-        this.setData({ accessStatus: 'verify_phone', loading: false });
+        this.setData({ accessStatus: 'apply', loading: false });
       });
     }).catch(() => {
-      this.setData({ accessStatus: 'verify_phone', loading: false });
+      this.setData({ accessStatus: 'apply', loading: false });
     });
   },
 
-  // 手机号验证
+  // 手机号验证获取
   onGetPhoneNumber(e) {
     if (e.detail.errno !== 0 || !e.detail.code) {
       console.log('[手机验证] 用户拒绝授权或无code', e.detail);
-      this.setData({ accessStatus: 'apply' });
+      wx.showToast({ title: '已取消获取', icon: 'none' });
       return;
     }
-    wx.showLoading({ title: '验证中...' });
+    wx.showLoading({ title: '获取中...' });
     const db = wx.cloud.database();
     wx.cloud.callFunction({
       name: 'getPhoneNumber',
       data: { code: e.detail.code }
     }).then(res => {
+      wx.hideLoading();
       const phone = res.result && res.result.phone;
       console.log('[手机验证] 云函数返回', res.result, '手机号:', phone);
-      if (!phone) {
-        wx.hideLoading();
-        wx.showModal({ title: '验证失败', content: '获取手机号失败：' + JSON.stringify(res.result), showCancel: false });
-        this.setData({ accessStatus: 'apply' });
-        return;
+      if (phone) {
+        this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
+        wx.showToast({ title: '获取成功', icon: 'success' });
+      } else {
+        wx.showToast({ title: '获取失败', icon: 'error' });
       }
-      db.collection('projects').doc(this.data.id).get().then(projRes => {
-        const projPhone = projRes.data.phone || '';
-        const projCustomer = projRes.data.customer || '业主本人';
-        console.log('[手机验证] 工地预留手机号:', projPhone, '微信手机号:', phone);
-
-        // 如果工地记录上本身就有手机号，直接匹配
-        const checkMatch = (dbPhone) => {
-          const dbClean = dbPhone ? dbPhone.replace(/\D/g, '').slice(-11) : '';
-          const wxClean = phone ? phone.replace(/\D/g, '').slice(-11) : '';
-          return dbClean && wxClean && (dbClean === wxClean);
-        };
-
-        if (checkMatch(projPhone)) {
-          wx.hideLoading();
-          this._grantAccess({ name: projCustomer, relation: '业主本人', phone: phone.replace(/\D/g, '').slice(-11), autoApproved: true });
-          return;
-        }
-
-        // 如果工地没存，尝试去查客户表
-        const leadId = projRes.data.leadId;
-        if (!leadId) { 
-          wx.hideLoading(); 
-          wx.showModal({ title: '验证失败', content: '您的微信手机号与项目登记的手机号不一致', showCancel: false, confirmText: '去申请', success: () => { this.setData({ accessStatus: 'apply' }); } });
-          return; 
-        }
-
-        db.collection('leads').doc(leadId).get().then(leadRes => {
-          const lead = leadRes.data;
-          console.log('[手机验证] 客户表手机号:', lead.phone, '微信手机号:', phone);
-          
-          if (checkMatch(lead.phone)) {
-            wx.hideLoading();
-            this._grantAccess({ name: lead.name || '业主本人', relation: '业主本人', phone: phone.replace(/\D/g, '').slice(-11), autoApproved: true });
-          } else {
-            wx.hideLoading();
-            wx.showModal({ title: '验证失败', content: '您的微信手机号与项目登记的手机号不一致', showCancel: false, confirmText: '去申请', success: () => { this.setData({ accessStatus: 'apply' }); } });
-          }
-        }).catch((err) => { 
-          console.log('[手机验证] 查客户失败', err); 
-          wx.hideLoading(); 
-          wx.showModal({ title: '验证失败', content: '您的微信手机号与项目登记的手机号不一致', showCancel: false, confirmText: '去申请', success: () => { this.setData({ accessStatus: 'apply' }); } });
-        });
-      }).catch((err) => { 
-        console.log('[手机验证] 查工地失败', err); 
-        wx.hideLoading(); 
-        wx.showModal({ title: '验证失败', content: '您的微信手机号与项目登记的手机号不一致', showCancel: false, confirmText: '去申请', success: () => { this.setData({ accessStatus: 'apply' }); } });
-      });
     }).catch((err) => {
       console.log('[手机验证] 云函数调用失败', err);
       wx.hideLoading();
-      wx.showModal({ title: '验证失败', content: err.errMsg || JSON.stringify(err), showCancel: false });
-      this.setData({ accessStatus: 'apply' });
+      wx.showToast({ title: '获取失败', icon: 'error' });
     });
   },
 

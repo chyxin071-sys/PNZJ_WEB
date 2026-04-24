@@ -36,36 +36,14 @@
   </view>
 </view>
 
-<!-- ====== 手机号验证 ====== -->
-<view wx:elif="{{accessStatus === 'verify_phone'}}" style="height: 100vh; display: flex; flex-direction: column; background: #f8fafc; padding: 80rpx 60rpx; box-sizing: border-box; overflow: hidden;">
-  <!-- 中间内容区 -->
-  <view style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-    <!-- 工地地址 -->
-    <view style="font-size: 28rpx; color: #94a3b8; margin-bottom: 16rpx; text-align: center;">{{projectAddress || '品诺筑家'}}</view>
-    <view style="font-size: 48rpx; font-weight: bold; color: #1e293b; margin-bottom: 80rpx; text-align: center; line-height: 1.3;">查看工地进度</view>
-    <button open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 32rpx 0; margin: 0 0 32rpx; border: none; line-height: normal;">
-      微信一键验证手机号
-    </button>
-    <view bindtap="skipToApply" style="font-size: 28rpx; color: #4a403a; font-weight: bold; padding: 20rpx 40rpx;">非业主？申请查看</view>
-  </view>
-  <!-- 底部 Logo -->
-  <view style="display: flex; align-items: center; justify-content: center; padding-bottom: env(safe-area-inset-bottom);">
-    <image src="/assets/icons/LOGO2.png" style="width: 280rpx; height: 56rpx; opacity: 0.7;" mode="aspectFit"></image>
-  </view>
-</view>
-
 <!-- ====== 申请表单 ====== -->
 <view wx:elif="{{accessStatus === 'apply'}}" style="height: 100vh; display: flex; flex-direction: column; background: #f8fafc; box-sizing: border-box; overflow: hidden;">
-  <!-- 顶部导航 -->
-  <view style="display: flex; align-items: center; padding: 24rpx 32rpx; padding-top: calc(24rpx + env(safe-area-inset-top));">
-    <view bindtap="backToVerify" style="display: flex; align-items: center; padding: 12rpx 0; color: #64748b; font-size: 28rpx;">
-      <text style="font-size: 36rpx; margin-right: 8rpx;">‹</text>返回
-    </view>
-  </view>
   <!-- 内容区可滚动 -->
-  <scroll-view scroll-y style="flex: 1; padding: 0 40rpx 40rpx; box-sizing: border-box;">
-    <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 12rpx;">申请查看工地进度</view>
-    <view style="font-size: 26rpx; color: #64748b; margin-bottom: 40rpx; line-height: 1.6;">填写信息后，工地负责人将审核您的申请</view>
+  <scroll-view scroll-y style="flex: 1; padding: 40rpx; padding-top: calc(80rpx + env(safe-area-inset-top)); box-sizing: border-box;">
+    <!-- 工地地址 -->
+    <view style="font-size: 28rpx; color: #94a3b8; margin-bottom: 16rpx; text-align: center;">{{projectAddress || '品诺筑家'}}</view>
+    <view style="font-size: 48rpx; font-weight: bold; color: #1e293b; margin-bottom: 80rpx; text-align: center; line-height: 1.3;">申请查看工地进度</view>
+    
     <view style="background: #fff; border-radius: 20rpx; padding: 40rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);">
       <view style="margin-bottom: 32rpx;">
         <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">您的姓名 <text style="color: var(--rose-600);">*</text></view>
@@ -73,11 +51,14 @@
       </view>
       <view style="margin-bottom: 32rpx;">
         <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">与业主关系 <text style="color: var(--rose-600);">*</text></view>
-        <input bindinput="onApplyInput" data-field="relation" value="{{applyForm.relation}}" placeholder="如：家属、朋友、监理等" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+        <input bindinput="onApplyInput" data-field="relation" value="{{applyForm.relation}}" placeholder="如：业主本人、家属、朋友等" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
       </view>
       <view style="margin-bottom: 40rpx;">
-        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">联系电话（选填）</view>
-        <input bindinput="onApplyInput" data-field="phone" value="{{applyForm.phone}}" placeholder="方便工作人员联系您" type="number" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+        <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">联系电话 <text style="color: var(--rose-600);">*</text></view>
+        <view style="display: flex; align-items: center; background: #f8fafc; border-radius: 12rpx; border: 1rpx solid #e2e8f0; overflow: hidden;">
+          <input bindinput="onApplyInput" data-field="phone" value="{{applyForm.phone}}" placeholder="请输入联系电话" type="number" style="flex: 1; padding: 24rpx; font-size: 30rpx; color: #1e293b; background: transparent; border: none;" />
+          <button open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber" style="margin: 0; padding: 0 32rpx; height: 96rpx; background: transparent; color: var(--primary-900); font-size: 28rpx; font-weight: bold; border: none; display: flex; align-items: center; justify-content: center; border-left: 1rpx solid #e2e8f0; border-radius: 0; width: auto; line-height: normal;">一键获取</button>
+        </view>
       </view>
       <button bindtap="submitApply" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 28rpx 0; margin: 0; border: none; line-height: normal;">
         提交申请
