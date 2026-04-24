@@ -136,15 +136,61 @@ Page({
       name: 'getPhoneNumber',
       data: { code: e.detail.code }
     }).then(res => {
-      wx.hideLoading();
       const phone = res.result && res.result.phone;
       console.log('[手机验证] 云函数返回', res.result, '手机号:', phone);
-      if (phone) {
-        this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
-        wx.showToast({ title: '获取成功', icon: 'success' });
-      } else {
+      
+      if (!phone) {
+        wx.hideLoading();
         wx.showToast({ title: '获取失败', icon: 'error' });
+        return;
       }
+
+      // 获取到手机号后，尝试直接匹配
+      db.collection('projects').doc(this.data.id).get().then(projRes => {
+        const projPhone = projRes.data.phone || '';
+        const projCustomer = projRes.data.customer || '业主本人';
+        
+        const checkMatch = (dbPhone) => {
+          const dbClean = dbPhone ? dbPhone.replace(/\D/g, '').slice(-11) : '';
+          const wxClean = phone ? phone.replace(/\D/g, '').slice(-11) : '';
+          return dbClean && wxClean && (dbClean === wxClean);
+        };
+
+        if (checkMatch(projPhone)) {
+          wx.hideLoading();
+          this._grantAccess({ name: projCustomer, relation: '业主本人', phone: phone.replace(/\D/g, '').slice(-11), autoApproved: true });
+          return;
+        }
+
+        const leadId = projRes.data.leadId;
+        if (!leadId) { 
+          wx.hideLoading(); 
+          this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
+          wx.showToast({ title: '手机号已获取', icon: 'success' });
+          return; 
+        }
+
+        db.collection('leads').doc(leadId).get().then(leadRes => {
+          const lead = leadRes.data;
+          if (checkMatch(lead.phone)) {
+            wx.hideLoading();
+            this._grantAccess({ name: lead.name || '业主本人', relation: '业主本人', phone: phone.replace(/\D/g, '').slice(-11), autoApproved: true });
+          } else {
+            wx.hideLoading();
+            this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
+            wx.showToast({ title: '手机号已获取', icon: 'success' });
+          }
+        }).catch(() => { 
+          wx.hideLoading(); 
+          this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
+          wx.showToast({ title: '手机号已获取', icon: 'success' });
+        });
+      }).catch(() => { 
+        wx.hideLoading(); 
+        this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
+        wx.showToast({ title: '手机号已获取', icon: 'success' });
+      });
+
     }).catch((err) => {
       console.log('[手机验证] 云函数调用失败', err);
       wx.hideLoading();
