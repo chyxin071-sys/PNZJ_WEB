@@ -229,6 +229,10 @@ Page({
         }
 
         // 计算已耗天数 (开工后才算)
+        let daysElapsed = 0;
+        if (dynamicStatus !== '未开工' && p.startDate) {
+          daysElapsed = Math.ceil((now.getTime() - new Date(p.startDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24));
+        }
         
         return {
           ...p,
