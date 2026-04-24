@@ -27,7 +27,7 @@
       </view>
       <view class="search-wrap">
         <icon type="search" size="16" color="#b5a49a" />
-        <input placeholder="搜索员工姓名/手机号..." placeholder-class="ph" bindinput="onSearch" />
+        <input placeholder="搜索员工姓名/账号/手机号..." placeholder-class="ph" bindinput="onSearch" />
       </view>
     </view>
 

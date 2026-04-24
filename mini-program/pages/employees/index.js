@@ -101,7 +101,8 @@ Page({
       filtered = filtered.filter(emp => {
         const nameMatch = emp.name ? String(emp.name).toLowerCase().includes(q) : false;
         const phoneMatch = emp.phone ? String(emp.phone).includes(q) : false;
-        return nameMatch || phoneMatch;
+        const accountMatch = emp.account ? String(emp.account).toLowerCase().includes(q) : false;
+        return nameMatch || phoneMatch || accountMatch;
       });
     }
 
