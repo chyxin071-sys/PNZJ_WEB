@@ -169,17 +169,20 @@
 }
 
 .health-badge, .share-btn {
-  min-width: 96rpx !important;
+  width: 104rpx !important;
   height: 48rpx !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 0 12rpx !important;
+  padding: 0 !important;
   box-sizing: border-box !important;
-  font-size: 24rpx !important;
+  font-size: 22rpx !important;
   font-weight: bold !important;
   border-radius: 8rpx !important;
   margin-bottom: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+  line-height: 1 !important;
 }
 
 .share-btn {
