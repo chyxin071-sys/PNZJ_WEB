@@ -549,11 +549,14 @@ Page({
     if (!todo) return;
     
     const newStatus = todo.status === 'completed' ? 'pending' : 'completed';
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    const newCompletedAt = newStatus === 'completed' ? nowStr : null;
     
     // 乐观更新本地
     const newAllTodos = this.data.allTodos.map(t => {
       if (t._id === id) {
-        return { ...t, status: newStatus };
+        return { ...t, status: newStatus, completedAt: newCompletedAt };
       }
       return t;
     });
@@ -562,8 +565,12 @@ Page({
     
     // 更新云端
     const db = wx.cloud.database();
+    const _ = db.command;
     db.collection('todos').doc(id).update({
-      data: { status: newStatus }
+      data: { 
+        status: newStatus,
+        completedAt: newStatus === 'completed' ? nowStr : _.remove()
+      }
     }).then(() => {
       wx.showToast({ title: '已更新', icon: 'success', duration: 800 });
       

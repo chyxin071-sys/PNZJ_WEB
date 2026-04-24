@@ -1,0 +1,24 @@
+var formatImageUrl = function(url) {
+  if (!url) return '';
+  
+  // 如果是本地临时文件或包含 data:image，或微信云存储路径，直接返回
+  if (url.indexOf('http://tmp/') === 0 || url.indexOf('wxfile://') === 0 || url.indexOf('data:image') === 0 || url.indexOf('cloud://') === 0) {
+    return url;
+  }
+  
+  // 如果已经包含 imageMogr2 处理参数，则不重复追加
+  if (url.indexOf('imageMogr2') !== -1) {
+    return url;
+  }
+  
+  var param = 'imageMogr2/thumbnail/600x/interlace/1';
+  if (url.indexOf('?') !== -1) {
+    return url + '&' + param;
+  } else {
+    return url + '?' + param;
+  }
+}
+
+module.exports = {
+  formatImageUrl: formatImageUrl
+};

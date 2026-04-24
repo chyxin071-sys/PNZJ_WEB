@@ -47,6 +47,8 @@
 .btn-cancel { flex: 1; height: 96rpx; background: #f5f4f2; color: #4a403a; border-radius: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; }
 .btn-save { flex: 2; height: 96rpx; background: #4a403a; color: #fff; border-radius: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74, 64, 58, 0.2); }
 .btn-delete { flex: 1; height: 96rpx; background: var(--rose-100); color: var(--rose-600); border-radius: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; }
+.btn-complete { flex: 2; height: 96rpx; background: var(--emerald-600); color: #fff; border-radius: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(16, 185, 129, 0.2); }
+.btn-reopen { flex: 2; height: 96rpx; background: #f59e0b; color: #fff; border-radius: 48rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(245, 158, 11, 0.2); }
 
 /* 全局点击动效 */
 .hover-scale { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }

@@ -1,5 +1,5 @@
 <!--pages/projectShare/index.wxml-->
-<wxs src="../../utils/format.wxs" module="format" />
+<wxs src="./format.wxs" module="format" />
 <wxs module="ganttUtil">
   module.exports = {
     getDelayDays: function(actualEndDate, expectedEndDate) {

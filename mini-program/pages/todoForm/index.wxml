@@ -82,13 +82,22 @@
       </view>
     </view>
     
+    <!-- 完成日期 (仅查看模式) -->
+    <view class="form-group" wx:if="{{mode === 'view' && formData.status === 'completed' && formData.completedAt}}">
+      <view class="label">完成日期</view>
+      <view class="view-text" style="color: var(--emerald-600); font-weight: bold;">
+        <text>{{formData.completedAt}}</text>
+      </view>
+    </view>
+    
     <view class="bottom-padding"></view>
   </scroll-view>
 
   <!-- 底部固定按钮区 -->
   <view class="bottom-bar" wx:if="{{mode === 'view' && (isAdmin || isRelated)}}">
     <view class="btn-delete hover-scale" bindtap="deleteTodo">删除</view>
-    <view class="btn-save hover-scale" bindtap="enterEditMode">编辑</view>
+    <view class="btn-cancel hover-scale" bindtap="enterEditMode">编辑</view>
+    <view class="{{formData.status === 'completed' ? 'btn-reopen' : 'btn-complete'}} hover-scale" bindtap="toggleTodoStatus">{{formData.status === 'completed' ? '重新打开' : '完成待办'}}</view>
   </view>
   <view class="bottom-bar" wx:elif="{{mode !== 'view'}}">
     <view class="btn-cancel hover-scale" bindtap="{{mode === 'edit' ? 'cancelEdit' : 'goBack'}}">取消</view>

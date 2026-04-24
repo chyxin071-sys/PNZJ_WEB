@@ -28,9 +28,6 @@
     "backgroundTextStyle": "light",
     "pageOrientation": "portrait"
   },
-  "globalStyle": {
-    "disableScroll": false
-  },
   "lazyCodeLoading": "requiredComponents",
   "tabBar": {
     "custom": true,
