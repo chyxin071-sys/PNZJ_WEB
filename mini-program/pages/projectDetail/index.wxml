@@ -14,7 +14,7 @@
 
     <!-- 标题（项目地址） -->
     <view style="display: flex; justify-content: flex-start; align-items: flex-start; margin-bottom: 32rpx; text-align: left;">
-      <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; line-height: 1.4; padding-right: 80rpx;">{{project.address || '未知地址'}}</view>
+      <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; line-height: 1.4; padding-right: 120rpx;">{{project.address || '未知地址'}}</view>
     </view>
 
 <wxs module="ganttUtil">
@@ -109,7 +109,7 @@
     </view>
     
     <!-- 以下入口仅相关人员可见 -->
-    <block wx:if="{{isAdmin || isRelated}}">
+    <block>
       <view bindtap="goToFiles" style="flex: 1; background: #fff; padding: 28rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e8edf2;">
         <text style="font-size: 26rpx; font-weight: 600; color: #334155;">项目资料</text>
       </view>
@@ -126,8 +126,7 @@
   </view>
 
   <!-- 施工动态看板 -->
-  <!-- 只有管理员或者相关人员才能看到整个施工动态版块 -->
-  <view wx:if="{{isAdmin || isRelated}}" style="background: #fff; border-radius: 20rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.03); overflow: hidden; margin-bottom: 60rpx;">
+  <view style="background: #fff; border-radius: 20rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.03); overflow: hidden; margin-bottom: 60rpx;">
     <!-- 头部栏 -->
     <view style="padding: 24rpx 32rpx; background: rgba(248,250,252,0.8); border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
       <view style="font-size: 30rpx; font-weight: bold; color: #1e293b; display: flex; align-items: center;">
@@ -135,12 +134,14 @@
         施工动态
       </view>
       <view style="display: flex; gap: 16rpx; align-items: center;">
-        <view wx:if="{{isEditingNodes}}" bindtap="cancelEditNodes" style="font-size: 24rpx; color: #64748b; background: #f8fafc; padding: 10rpx 24rpx; border-radius: 30rpx; border: 1rpx solid #e2e8f0;">
-          取消修改
-        </view>
-        <view bindtap="toggleEditNodes" style="font-size: 24rpx; color: {{isEditingNodes ? '#fff' : 'var(--primary-600)'}}; font-weight: bold; background: {{isEditingNodes ? 'var(--primary-900)' : '#f1f5f9'}}; padding: 10rpx 24rpx; border-radius: 30rpx;">
-          {{isEditingNodes ? '保存编辑' : '编辑节点'}}
-        </view>
+        <block wx:if="{{isAdmin || isRelated}}">
+          <view wx:if="{{isEditingNodes}}" bindtap="cancelEditNodes" style="font-size: 24rpx; color: #64748b; background: #f8fafc; padding: 10rpx 24rpx; border-radius: 30rpx; border: 1rpx solid #e2e8f0;">
+            取消修改
+          </view>
+          <view bindtap="toggleEditNodes" style="font-size: 24rpx; color: {{isEditingNodes ? '#fff' : 'var(--primary-600)'}}; font-weight: bold; background: {{isEditingNodes ? 'var(--primary-900)' : '#f1f5f9'}}; padding: 10rpx 24rpx; border-radius: 30rpx;">
+            {{isEditingNodes ? '保存编辑' : '编辑节点'}}
+          </view>
+        </block>
       </view>
     </view>
     
@@ -291,7 +292,7 @@
       </view>
       
       <!-- 添加大节点按钮 -->
-      <view wx:if="{{isEditingNodes}}" bindtap="addMajorNode" style="margin-top: 40rpx; background: #fff; border: 2rpx dashed var(--primary-400); border-radius: 16rpx; padding: 24rpx; display: flex; justify-content: center; align-items: center; color: var(--primary-600); font-size: 28rpx;">
+      <view wx:if="{{isEditingNodes && (isAdmin || isRelated)}}" bindtap="addMajorNode" style="margin-top: 40rpx; background: #fff; border: 2rpx dashed var(--primary-400); border-radius: 16rpx; padding: 24rpx; display: flex; justify-content: center; align-items: center; color: var(--primary-600); font-size: 28rpx;">
         <text style="font-weight: bold; margin-right: 12rpx; font-size: 36rpx; line-height: 1;">+</text> 添加大节点
       </view>
     </view>
@@ -327,7 +328,7 @@
   </view>
 
   <!-- 子工序详情浮层 -->
-  <view wx:if="{{showSubNodePopup && (isAdmin || isRelated)}}" catchtouchmove="preventTouchMove" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200; display: flex; align-items: flex-end; justify-content: center;">
+  <view wx:if="{{showSubNodePopup}}" catchtouchmove="preventTouchMove" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200; display: flex; align-items: flex-end; justify-content: center;">
     <view bindtap="closeSubNodePopup" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);"></view>
     <view style="position: relative; z-index: 1; width: 100%; height: 85vh; background: #fff; border-radius: 32rpx 32rpx 0 0; box-sizing: border-box; display: flex; flex-direction: column;">
       
@@ -431,7 +432,7 @@
       </scroll-view>
 
       <!-- 底部固定区域：操作按钮组 -->
-      <view style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; flex-direction: column; gap: 16rpx; padding: 24rpx 40rpx calc(24rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #f1f5f9; z-index: 10;">
+      <view wx:if="{{isAdmin || isRelated}}" style="position: absolute; bottom: 0; left: 0; right: 0; display: flex; flex-direction: column; gap: 16rpx; padding: 24rpx 40rpx calc(24rpx + env(safe-area-inset-bottom)); background: #fff; border-top: 1rpx solid #f1f5f9; z-index: 10;">
         <view wx:if="{{popupSub.status === 'awaiting_signature'}}" style="text-align: center; font-size: 24rpx; color: var(--rose-600); margin-bottom: 8rpx;">
           * 请点击下方按钮分享到群内，提醒客户签字确认
         </view>
