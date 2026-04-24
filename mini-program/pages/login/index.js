@@ -5,7 +5,12 @@ Page({
   data: {
     username: '',
     password: '',
+    showPassword: false,
     logoError: false
+  },
+
+  togglePassword() {
+    this.setData({ showPassword: !this.data.showPassword });
   },
 
   onLoad() {
