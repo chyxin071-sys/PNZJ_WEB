@@ -268,7 +268,10 @@ Page({
       const address = (p.address || p.customer || '未知工地').substring(0, 20);
       const notifyContent = `${applicantName}(${relation})申请查看工地进度：${address}`;
 
-      const staffNames = [p.sales, p.designer, p.manager].filter(Boolean);
+      const staffNames = [];
+      if (p.sales) p.sales.split(',').map(s=>s.trim()).filter(Boolean).forEach(s => staffNames.push(s));
+      if (p.designer) p.designer.split(',').map(s=>s.trim()).filter(Boolean).forEach(s => staffNames.push(s));
+      if (p.manager) p.manager.split(',').map(s=>s.trim()).filter(Boolean).forEach(s => staffNames.push(s));
       db.collection('users').where({ role: db.command.in(['admin', 'manager', 'sales', 'designer']) }).limit(50).get().then(res => {
         const targets = res.data.filter(u => u.role === 'admin' || staffNames.includes(u.name));
         targets.forEach(u => {
@@ -277,13 +280,15 @@ Page({
           db.collection('notifications').add({
             data: {
               userId: u._id,
+              targetUser: u.name,
               type: 'share_access_request',
               title: '有人申请查看工地进度',
               content: notifyContent,
               relatedId: projectId,
               relatedType: 'project',
+              link: `/pages/shareAccessManage/index?projectId=${projectId}`,
               isRead: false,
-              createdAt: db.serverDate()
+              createTime: db.serverDate()
             }
           }).catch(() => {});
           // 发订阅消息
@@ -784,9 +789,9 @@ Page({
 
     // 通知相关人员
     const notifyUsers = new Set();
-    if (project.manager) notifyUsers.add(project.manager);
-    if (project.sales) notifyUsers.add(project.sales);
-    if (project.designer) notifyUsers.add(project.designer);
+    if (project.manager) project.manager.split(',').map(s=>s.trim()).filter(Boolean).forEach(u => notifyUsers.add(u));
+    if (project.sales) project.sales.split(',').map(s=>s.trim()).filter(Boolean).forEach(u => notifyUsers.add(u));
+    if (project.designer) project.designer.split(',').map(s=>s.trim()).filter(Boolean).forEach(u => notifyUsers.add(u));
 
     const notificationContent = `客户已签字确认【${subNode.name}】工序${subNode.signature.feedback ? '，并留下了反馈意见' : ''}。`;
 

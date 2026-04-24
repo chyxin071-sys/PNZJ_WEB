@@ -80,32 +80,26 @@
 
     <view class="form-group">
       <view class="label">销售</view>
-      <picker bindchange="onEmpChange" data-field="sales" data-list="salesList" data-index="salesIndex" value="{{salesIndex}}" range="{{salesList}}" range-key="name">
-        <view class="picker-box">
-          <text class="{{salesIndex === -1 ? 'ph' : ''}}">{{salesIndex !== -1 ? salesList[salesIndex].name : '请选择销售人员'}}</text>
-          <view class="arrow-down"></view>
-        </view>
-      </picker>
+      <view class="picker-box" bindtap="openMultiSelect" data-field="sales">
+        <text class="{{!formData.sales ? 'ph' : ''}}">{{formData.sales || '请选择销售人员 (可多选)'}}</text>
+        <view class="arrow-down"></view>
+      </view>
     </view>
 
     <view class="form-group">
       <view class="label">设计师</view>
-      <picker bindchange="onEmpChange" data-field="designer" data-list="designerList" data-index="designerIndex" value="{{designerIndex}}" range="{{designerList}}" range-key="name">
-        <view class="picker-box">
-          <text class="{{designerIndex === -1 ? 'ph' : ''}}">{{designerIndex !== -1 ? designerList[designerIndex].name : '请选择设计师'}}</text>
-          <view class="arrow-down"></view>
-        </view>
-      </picker>
+      <view class="picker-box" bindtap="openMultiSelect" data-field="designer">
+        <text class="{{!formData.designer ? 'ph' : ''}}">{{formData.designer || '请选择设计师 (可多选)'}}</text>
+        <view class="arrow-down"></view>
+      </view>
     </view>
 
     <view class="form-group">
       <view class="label">项目经理</view>
-      <picker bindchange="onEmpChange" data-field="manager" data-list="managerList" data-index="managerIndex" value="{{managerIndex}}" range="{{managerList}}" range-key="name">
-        <view class="picker-box">
-          <text class="{{managerIndex === -1 ? 'ph' : ''}}">{{managerIndex !== -1 ? managerList[managerIndex].name : '请选择项目经理'}}</text>
-          <view class="arrow-down"></view>
-        </view>
-      </picker>
+      <view class="picker-box" bindtap="openMultiSelect" data-field="manager">
+        <text class="{{!formData.manager ? 'ph' : ''}}">{{formData.manager || '请选择项目经理 (可多选)'}}</text>
+        <view class="arrow-down"></view>
+      </view>
     </view>
 
     <view class="bottom-padding"></view>
@@ -152,5 +146,24 @@
     </view>
     <view class="btn-save hover-scale" bindtap="closeSuccessAndBack" style="margin-top: 60rpx; width: 80%; background: linear-gradient(135deg, var(--amber-600), var(--rose-600)); border-radius: 40rpx;">返回线索列表</view>
   </view>
+
+  <!-- 多选弹窗 -->
+  <view class="modal-mask" wx:if="{{showMultiSelect}}" bindtap="closeMultiSelect"></view>
+  <view class="multi-select-modal" wx:if="{{showMultiSelect}}">
+    <view class="ms-header">
+      <view class="ms-cancel" bindtap="closeMultiSelect">取消</view>
+      <view class="ms-title">选择人员 (可多选)</view>
+      <view class="ms-confirm" bindtap="confirmMultiSelect">确定</view>
+    </view>
+    <scroll-view scroll-y class="ms-list">
+      <view class="ms-item" wx:for="{{currentMultiList}}" wx:key="name" bindtap="toggleMultiSelect" data-index="{{index}}">
+        <view class="ms-name">{{item.name}}</view>
+        <view class="checkbox {{item.checked ? 'checked' : ''}}">
+          <view wx:if="{{item.checked}}" class="checkmark"></view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
 </view>
 

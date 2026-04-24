@@ -321,7 +321,7 @@ Page({
 
       // 按照创建时间倒序，并进行数据脱敏
       const list = res.data.map(l => {
-        const isRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.manager === myName || l.signer === myName;
+        const isRelated = isAdmin || l.creatorName === myName || (l.sales && l.sales.includes(myName)) || (l.designer && l.designer.includes(myName)) || (l.manager && l.manager.includes(myName)) || l.signer === myName;
         const isVisible = isRelated || l.status === '已签单';
 
         if (!isVisible) {
@@ -490,7 +490,7 @@ Page({
         .map(e => e.name);
       
       filtered = filtered.filter(l => 
-        selectedNames.includes(l.sales) || selectedNames.includes(l.designer)
+        selectedNames.some(name => (l.sales && l.sales.includes(name)) || (l.designer && l.designer.includes(name)))
       );
     }
 
@@ -498,7 +498,8 @@ Page({
     if (this.data.filterScope === '与我相关') {
       const userInfo = wx.getStorageSync('userInfo');
       if (userInfo) {
-        filtered = filtered.filter(l => l.sales === userInfo.name || l.designer === userInfo.name);
+        const myName = userInfo.name;
+        filtered = filtered.filter(l => (l.sales && l.sales.includes(myName)) || (l.designer && l.designer.includes(myName)));
       }
     }
 

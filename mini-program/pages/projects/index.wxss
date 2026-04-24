@@ -165,6 +165,19 @@
 .label { display: block; font-size: 28rpx; font-weight: bold; color: var(--primary-900); margin-bottom: 16rpx; }
 .input, .picker-view { background: #f8fafc; border-radius: 16rpx; padding: 0 24rpx; height: 88rpx; border: 2rpx solid #e2e8f0; font-size: 30rpx; color: var(--primary-900); display: flex; align-items: center; justify-content: space-between; }
 .arrow-down { width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 10rpx solid #94a3b8; }
+
+/* 多选弹窗 */
+.multi-select-modal { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 32rpx 32rpx 0 0; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; max-height: 80vh; }
+.ms-header { display: flex; justify-content: space-between; align-items: center; padding: 32rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; }
+.ms-cancel { font-size: 30rpx; color: #94a3b8; padding: 10rpx; margin-left: -10rpx; }
+.ms-title { font-size: 32rpx; font-weight: bold; color: #1e293b; }
+.ms-confirm { font-size: 30rpx; font-weight: bold; color: var(--primary-600); padding: 10rpx; margin-right: -10rpx; }
+.ms-list { flex: 1; padding: 0 40rpx; box-sizing: border-box; }
+.ms-item { display: flex; justify-content: space-between; align-items: center; padding: 32rpx 0; border-bottom: 1rpx solid #f8fafc; }
+.ms-name { font-size: 30rpx; color: #334155; font-weight: 500; }
+.checkbox { width: 40rpx; height: 40rpx; border-radius: 8rpx; border: 2rpx solid #cbd5e1; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.checkbox.checked { background: var(--primary-600); border-color: var(--primary-600); }
+.checkmark { width: 12rpx; height: 20rpx; border: solid #fff; border-width: 0 4rpx 4rpx 0; transform: rotate(45deg); margin-top: -4rpx; }
 .btn-save { background: var(--primary-900); color: #fff; text-align: center; padding: 24rpx 0; border-radius: 16rpx; font-size: 32rpx; font-weight: bold; margin-top: 48rpx; }
 
 

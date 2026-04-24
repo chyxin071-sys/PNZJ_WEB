@@ -172,7 +172,7 @@ Page({
       const isAdmin = userInfo && userInfo.role === 'admin';
       
       let lead = leadRes.data;
-      const isAssignedToMe = isAdmin || lead.creatorName === myName || lead.sales === myName || lead.designer === myName || lead.manager === myName || lead.signer === myName;
+      const isAssignedToMe = isAdmin || lead.creatorName === myName || (lead.sales && lead.sales.includes(myName)) || (lead.designer && lead.designer.includes(myName)) || (lead.manager && lead.manager.includes(myName)) || lead.signer === myName;
       const isVisible = isAssignedToMe || lead.status === '已签单';
 
       // 格式化创建时间

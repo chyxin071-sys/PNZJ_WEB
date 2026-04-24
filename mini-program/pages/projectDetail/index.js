@@ -403,7 +403,7 @@ Page({
       const userInfo = wx.getStorageSync('userInfo');
       const myName = userInfo ? userInfo.name : '';
       const isAdmin = userInfo && userInfo.role === 'admin';
-      const isRelated = isAdmin || p.manager === myName || p.sales === myName || p.designer === myName || p.creatorName === myName;
+      const isRelated = isAdmin || (p.manager && p.manager.includes(myName)) || (p.sales && p.sales.includes(myName)) || (p.designer && p.designer.includes(myName)) || p.creatorName === myName;
 
       p._isMasked = false;
       p._isRelated = isRelated;

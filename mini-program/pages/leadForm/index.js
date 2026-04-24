@@ -31,9 +31,16 @@ Page({
     salesList: [],
     designerList: [],
     managerList: [],
-    salesIndex: -1,
-    designerIndex: -1,
-    managerIndex: -1
+
+    showSignModal: false,
+    signDate: '',
+    isSigningNow: false,
+    showSuccessModal: false,
+
+    // 多选弹窗状态
+    showMultiSelect: false,
+    multiSelectField: '', // 'sales' | 'designer' | 'manager'
+    currentMultiList: [] // [{ name: '...', checked: true/false }]
   },
 
   onLoad(options) {
@@ -59,30 +66,21 @@ Page({
         let formDataSales = '';
         let formDataDesigner = '';
         let formDataManager = '';
-        let sIdx = -1;
-        let dIdx = -1;
-        let mIdx = -1;
 
         if (options.defaultSales) {
           formDataSales = options.defaultSales;
-          sIdx = sales.findIndex(s => s.name === options.defaultSales);
         }
         if (options.defaultDesigner) {
           formDataDesigner = options.defaultDesigner;
-          dIdx = designers.findIndex(d => d.name === options.defaultDesigner);
         }
         if (options.defaultManager) {
           formDataManager = options.defaultManager;
-          mIdx = managers.findIndex(m => m.name === options.defaultManager);
         }
 
         this.setData({
           'formData.sales': formDataSales,
           'formData.designer': formDataDesigner,
-          'formData.manager': formDataManager,
-          salesIndex: sIdx,
-          designerIndex: dIdx,
-          managerIndex: mIdx
+          'formData.manager': formDataManager
         });
         wx.hideLoading();
       }
@@ -101,10 +99,6 @@ Page({
       wx.hideLoading();
       const lead = res.data;
       if (lead) {
-        const salesIdx = this.data.salesList.findIndex(s => s.name === lead.sales);
-        const designerIdx = this.data.designerList.findIndex(d => d.name === lead.designer);
-        const managerIdx = this.data.managerList.findIndex(m => m.name === lead.manager);
-        
         const leadSource = lead.source || '自然进店';
         const isStandardSource = this.data.sourceOptions.includes(leadSource);
 
@@ -126,10 +120,7 @@ Page({
             manager: lead.manager || ''
           },
           customSource: isStandardSource ? '' : leadSource,
-          originalStatus: lead.status || '待跟进',
-          salesIndex: salesIdx,
-          designerIndex: designerIdx,
-          managerIndex: managerIdx
+          originalStatus: lead.status || '待跟进'
         });
       }
     }).catch(() => {
@@ -154,17 +145,51 @@ Page({
     });
   },
 
-  onEmpChange(e) {
-    const field = e.currentTarget.dataset.field; // sales or designer
-    const listName = e.currentTarget.dataset.list; // salesList or designerList
-    const indexName = e.currentTarget.dataset.index;
+  openMultiSelect(e) {
+    const field = e.currentTarget.dataset.field;
+    const listMap = {
+      sales: this.data.salesList,
+      designer: this.data.designerList,
+      manager: this.data.managerList
+    };
     
-    const idx = e.detail.value;
-    const emp = this.data[listName][idx];
-    
+    const sourceList = listMap[field] || [];
+    const currentVal = this.data.formData[field] || '';
+    const selectedSet = new Set(currentVal.split(',').map(s => s.trim()).filter(Boolean));
+
+    const currentMultiList = sourceList.map(item => ({
+      name: item.name,
+      checked: selectedSet.has(item.name)
+    }));
+
     this.setData({
-      [indexName]: idx,
-      [`formData.${field}`]: emp.name
+      showMultiSelect: true,
+      multiSelectField: field,
+      currentMultiList
+    });
+  },
+
+  closeMultiSelect() {
+    this.setData({ showMultiSelect: false });
+  },
+
+  toggleMultiSelect(e) {
+    const index = e.currentTarget.dataset.index;
+    const list = this.data.currentMultiList;
+    list[index].checked = !list[index].checked;
+    this.setData({ currentMultiList: list });
+  },
+
+  confirmMultiSelect() {
+    const field = this.data.multiSelectField;
+    const selectedNames = this.data.currentMultiList
+      .filter(item => item.checked)
+      .map(item => item.name)
+      .join(', ');
+      
+    this.setData({
+      [`formData.${field}`]: selectedNames,
+      showMultiSelect: false
     });
   },
 
@@ -320,71 +345,90 @@ Page({
           }
 
           const notifyUsers = new Set();
-          if (d.sales && d.sales !== operatorName) notifyUsers.add(d.sales);
-          if (d.designer && d.designer !== operatorName) notifyUsers.add(d.designer);
+          
+          const addUsers = (str) => {
+            if (str) {
+              str.split(',').map(s => s.trim()).filter(Boolean).forEach(u => {
+                if (u !== operatorName) notifyUsers.add(u);
+              });
+            }
+          };
+          addUsers(d.sales);
+          addUsers(d.designer);
 
           // 精准通知：分配了新销售
-          if (d.sales && d.sales !== this.data.oldSales) {
-          db.collection('notifications').add({
-            data: {
-              type: 'lead', title: '你有一条新线索',
-              content: `客户【${d.name}】已分配给你跟进。`,
-              targetUser: d.sales, isRead: false, createTime: db.serverDate(),
-              link: `/pages/leadDetail/index?id=${this.data.id}`
-            }
-          });
+          const newSales = d.sales ? d.sales.split(',').map(s => s.trim()).filter(Boolean) : [];
+          const oldSalesList = this.data.oldSales ? this.data.oldSales.split(',').map(s => s.trim()).filter(Boolean) : [];
+          const addedSales = newSales.filter(s => !oldSalesList.includes(s));
           
-          db.collection('users').where({ name: d.sales }).get().then(res => {
-            if (res.data && res.data.length > 0) {
-              wx.cloud.callFunction({
-                name: 'sendSubscribeMessage',
-                data: {
-                  receiverUserId: res.data[0]._id,
-                  templateId: TEMPLATE_IDS.PROJECT_UPDATE,
-                  page: `/pages/leadDetail/index?id=${this.data.id}`,
+          addedSales.forEach(saleName => {
+            if (saleName === operatorName) return;
+            db.collection('notifications').add({
+              data: {
+                type: 'lead', title: '你有一条新线索',
+                content: `客户【${d.name}】已分配给你跟进。`,
+                targetUser: saleName, isRead: false, createTime: db.serverDate(),
+                link: `/pages/leadDetail/index?id=${this.data.id}`
+              }
+            });
+            
+            db.collection('users').where({ name: saleName }).get().then(res => {
+              if (res.data && res.data.length > 0) {
+                wx.cloud.callFunction({
+                  name: 'sendSubscribeMessage',
                   data: {
-                    thing1: { value: d.name.substring(0, 20) },
-                    time2: { value: nowStr },
-                    thing4: { value: operatorName.substring(0, 20) },
-                    thing6: { value: '请及时联系跟进' },
-                    thing7: { value: '已分配给你跟进' }
+                    receiverUserId: res.data[0]._id,
+                    templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+                    page: `/pages/leadDetail/index?id=${this.data.id}`,
+                    data: {
+                      thing1: { value: d.name.substring(0, 20) },
+                      time2: { value: nowStr },
+                      thing4: { value: operatorName.substring(0, 20) },
+                      thing6: { value: '请及时联系跟进' },
+                      thing7: { value: '已分配给你跟进' }
+                    }
                   }
-                }
-              }).catch(console.error);
-            }
-          });
-        }
-        // 精准通知：分配了新设计师
-        if (d.designer && d.designer !== this.data.oldDesigner) {
-          db.collection('notifications').add({
-            data: {
-              type: 'lead', title: '你有一条新设计任务',
-              content: `客户【${d.name}】已分配给你跟进方案。`,
-              targetUser: d.designer, isRead: false, createTime: db.serverDate(),
-              link: `/pages/leadDetail/index?id=${this.data.id}`
-            }
+                }).catch(console.error);
+              }
+            });
           });
 
-          db.collection('users').where({ name: d.designer }).get().then(res => {
-            if (res.data && res.data.length > 0) {
-              wx.cloud.callFunction({
-                name: 'sendSubscribeMessage',
-                data: {
-                  receiverUserId: res.data[0]._id,
-                  templateId: TEMPLATE_IDS.PROJECT_UPDATE,
-                  page: `/pages/leadDetail/index?id=${this.data.id}`,
+          // 精准通知：分配了新设计师
+          const newDesigners = d.designer ? d.designer.split(',').map(s => s.trim()).filter(Boolean) : [];
+          const oldDesignersList = this.data.oldDesigner ? this.data.oldDesigner.split(',').map(s => s.trim()).filter(Boolean) : [];
+          const addedDesigners = newDesigners.filter(d => !oldDesignersList.includes(d));
+
+          addedDesigners.forEach(designerName => {
+            if (designerName === operatorName) return;
+            db.collection('notifications').add({
+              data: {
+                type: 'lead', title: '你有一条新设计任务',
+                content: `客户【${d.name}】已分配给你跟进方案。`,
+                targetUser: designerName, isRead: false, createTime: db.serverDate(),
+                link: `/pages/leadDetail/index?id=${this.data.id}`
+              }
+            });
+
+            db.collection('users').where({ name: designerName }).get().then(res => {
+              if (res.data && res.data.length > 0) {
+                wx.cloud.callFunction({
+                  name: 'sendSubscribeMessage',
                   data: {
-                    thing1: { value: d.name.substring(0, 20) },
-                    time2: { value: nowStr },
-                    thing4: { value: operatorName.substring(0, 20) },
-                    thing6: { value: '请及时出具设计方案' },
-                    thing7: { value: '已分配给你跟进方案' }
+                    receiverUserId: res.data[0]._id,
+                    templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+                    page: `/pages/leadDetail/index?id=${this.data.id}`,
+                    data: {
+                      thing1: { value: d.name.substring(0, 20) },
+                      time2: { value: nowStr },
+                      thing4: { value: operatorName.substring(0, 20) },
+                      thing6: { value: '请及时出具设计方案' },
+                      thing7: { value: '已分配给你跟进方案' }
+                    }
                   }
-                }
-              }).catch(console.error);
-            }
+                }).catch(console.error);
+              }
+            });
           });
-          }
 
           if (userInfo.role !== 'admin') {
             db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
@@ -430,9 +474,15 @@ Page({
 
           // 发送红点通知给相关人
           const sysNotifyUsers = new Set();
-          if (d.sales) sysNotifyUsers.add(d.sales);
-          if (d.designer) sysNotifyUsers.add(d.designer);
-          if (d.manager) sysNotifyUsers.add(d.manager);
+          
+          const addSysUsers = (str) => {
+            if (str) {
+              str.split(',').map(s => s.trim()).filter(Boolean).forEach(u => sysNotifyUsers.add(u));
+            }
+          };
+          addSysUsers(d.sales);
+          addSysUsers(d.designer);
+          addSysUsers(d.manager);
           if (d.creatorName) sysNotifyUsers.add(d.creatorName);
 
           db.collection('users').where({ role: 'admin' }).get().then(adminRes => {

@@ -257,12 +257,10 @@
 
           <view class="form-group">
             <text class="label">项目经理 <text style="color:red">*</text></text>
-            <picker bindchange="onManagerChange" range="{{managers}}" range-key="name" value="{{managerIndex}}">
-              <view class="picker-view" style="height: 88rpx; border: 2rpx solid #e2e8f0; border-radius: 16rpx; padding: 0 24rpx; display: flex; align-items: center; justify-content: space-between;">
-                <text>{{managers[managerIndex].name || '请选择项目经理'}}</text>
-                <view class="arrow-down" style="width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 10rpx solid #94a3b8;"></view>
-              </view>
-            </picker>
+            <view class="picker-view" bindtap="openMultiSelect" data-field="manager" style="height: 88rpx; border: 2rpx solid #e2e8f0; border-radius: 16rpx; padding: 0 24rpx; display: flex; align-items: center; justify-content: space-between;">
+              <text class="{{!newProject.manager ? 'text-placeholder' : ''}}">{{newProject.manager || '请选择项目经理 (可多选)'}}</text>
+              <view class="arrow-down" style="width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 10rpx solid #94a3b8;"></view>
+            </view>
           </view>
           
           <view class="form-group">
@@ -289,5 +287,23 @@
       </scroll-view>
     </view>
   </block>
+
+  <!-- 多选弹窗 -->
+  <view class="modal-mask" wx:if="{{showMultiSelect}}" bindtap="closeMultiSelect"></view>
+  <view class="multi-select-modal" wx:if="{{showMultiSelect}}">
+    <view class="ms-header">
+      <view class="ms-cancel" bindtap="closeMultiSelect">取消</view>
+      <view class="ms-title">选择项目经理 (可多选)</view>
+      <view class="ms-confirm" bindtap="confirmMultiSelect">确定</view>
+    </view>
+    <scroll-view scroll-y class="ms-list">
+      <view class="ms-item" wx:for="{{currentMultiList}}" wx:key="name" bindtap="toggleMultiSelect" data-index="{{index}}">
+        <view class="ms-name">{{item.name}}</view>
+        <view class="checkbox {{item.checked ? 'checked' : ''}}">
+          <view wx:if="{{item.checked}}" class="checkmark"></view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
 
 </view>

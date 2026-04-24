@@ -47,7 +47,12 @@ Page({
     newProject: {
       managerId: '',
       startDate: ''
-    }
+    },
+    
+    // 多选弹窗状态
+    showMultiSelect: false,
+    multiSelectField: '', 
+    currentMultiList: []
   },
   onLoad(options) {
     if (options && options.leadId) {
@@ -306,8 +311,9 @@ Page({
     if (this.data.filterScope === '与我相关') {
       const userInfo = wx.getStorageSync('userInfo');
       if (userInfo && userInfo.name) {
+        const myName = userInfo.name;
         filtered = filtered.filter(p => {
-          return p.manager === userInfo.name || p.sales === userInfo.name || p.designer === userInfo.name || p.creatorName === userInfo.name;
+          return (p.manager && p.manager.includes(myName)) || (p.sales && p.sales.includes(myName)) || (p.designer && p.designer.includes(myName)) || p.creatorName === myName;
         });
       }
     }
@@ -363,7 +369,7 @@ Page({
         .map(e => e.name);
       
       filtered = filtered.filter(p => {
-        return selectedNames.includes(p.manager) || selectedNames.includes(p.designer);
+        return selectedNames.some(name => (p.manager && p.manager.includes(name)) || (p.designer && p.designer.includes(name)));
       });
     }
 
@@ -624,15 +630,61 @@ Page({
   },
 
   onLeadChange(e) {
-    this.setData({ leadIndex: parseInt(e.detail.value) });
+    const idx = e.detail.value;
+    const lead = this.data.leads[idx];
+    this.setData({
+      leadIndex: idx,
+      'newProject.leadId': lead._id,
+      'newProject.customer': lead.name,
+      'newProject.customerNo': lead.customerNo || lead.id,
+      'newProject.address': lead.address || '',
+      'newProject.phone': lead.phone || '',
+      'newProject.area': lead.area || '',
+      'newProject.sales': lead.sales || '',
+      'newProject.designer': lead.designer || '',
+      'newProject.manager': lead.manager || ''
+    });
   },
 
-  onManagerChange(e) {
-    const idx = parseInt(e.detail.value);
-    const managers = this.data.managers;
+  openMultiSelect(e) {
+    const field = e.currentTarget.dataset.field; // e.g. 'manager'
+    const sourceList = this.data.managers || [];
+    const currentVal = this.data.newProject[field] || '';
+    const selectedSet = new Set(currentVal.split(',').map(s => s.trim()).filter(Boolean));
+
+    const currentMultiList = sourceList.map(item => ({
+      name: item.name,
+      checked: selectedSet.has(item.name)
+    }));
+
     this.setData({
-      managerIndex: idx,
-      'newProject.managerId': managers[idx].id
+      showMultiSelect: true,
+      multiSelectField: field,
+      currentMultiList
+    });
+  },
+
+  closeMultiSelect() {
+    this.setData({ showMultiSelect: false });
+  },
+
+  toggleMultiSelect(e) {
+    const index = e.currentTarget.dataset.index;
+    const list = this.data.currentMultiList;
+    list[index].checked = !list[index].checked;
+    this.setData({ currentMultiList: list });
+  },
+
+  confirmMultiSelect() {
+    const field = this.data.multiSelectField;
+    const selectedNames = this.data.currentMultiList
+      .filter(item => item.checked)
+      .map(item => item.name)
+      .join(', ');
+      
+    this.setData({
+      [`newProject.${field}`]: selectedNames,
+      showMultiSelect: false
     });
   },
 
@@ -687,7 +739,7 @@ Page({
     }
 
     const db = wx.cloud.database();
-    const managerName = this.data.managers[this.data.managerIndex].name;
+    const managerName = d.manager || '';
     const selectedLead = this.data.leads[this.data.leadIndex];
 
     db.collection('projects').where({ leadId: selectedLead._id }).limit(1).get().then(res => {
@@ -705,12 +757,9 @@ Page({
         phone: selectedLead.phone || '',
         customerNo: selectedLead.customerNo || selectedLead._id,
         address: selectedLead.address || '',
-        manager: managerName === '无' ? '' : managerName,
-        managerId: d.managerId,
+        manager: managerName,
         designer: selectedLead.designer || '',
-        designerId: selectedLead.designerId || '',
         sales: selectedLead.sales || '',
-        salesId: selectedLead.salesId || '',
         signDate: selectedLead.signDate || '',
         signer: selectedLead.signer || '',
         startDate: d.startDate,
@@ -725,9 +774,8 @@ Page({
       db.collection('projects').add({
         data: projectData
       }).then(() => {
-        const managerToUpdate = managerName === '无' ? '' : managerName;
         db.collection('leads').doc(selectedLead._id).update({
-          data: { manager: managerToUpdate }
+          data: { manager: managerName }
         }).catch(err => console.error('更新客户项目经理失败', err));
 
         this.addSystemFollowUpToLead(selectedLead._id, `工地创建，开工日期：${projectData.startDate}，预计完工：${projectData.expectedEndDate}，项目经理：${projectData.manager || '未分配'}`);

@@ -364,19 +364,23 @@ Page({
     const db = wx.cloud.database();
     const _ = db.command;
 
+    const replaceName = (str) => {
+      if (!str) return str;
+      return str.split(',').map(s => s.trim() === oldName ? newName : s.trim()).join(', ');
+    };
+
     // 更新 leads 中的 sales, designer, manager
-    // Note: 小程序端 db.command 无法在 update 中使用 then 这种条件判断，需通过拉取后循环更新
     db.collection('leads').where(_.or([
-      { 'sales': oldName },
-      { 'designer': oldName },
-      { 'manager': oldName },
+      { 'sales': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
+      { 'designer': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
+      { 'manager': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
       { 'creatorName': oldName }
     ])).get().then(res => {
       res.data.forEach(item => {
         let updateData = {};
-        if (item.sales === oldName) updateData.sales = newName;
-        if (item.designer === oldName) updateData.designer = newName;
-        if (item.manager === oldName) updateData.manager = newName;
+        if (item.sales && item.sales.includes(oldName)) updateData.sales = replaceName(item.sales);
+        if (item.designer && item.designer.includes(oldName)) updateData.designer = replaceName(item.designer);
+        if (item.manager && item.manager.includes(oldName)) updateData.manager = replaceName(item.manager);
         if (item.creatorName === oldName) updateData.creatorName = newName;
         db.collection('leads').doc(item._id).update({ data: updateData });
       });
@@ -384,16 +388,16 @@ Page({
 
     // 更新 projects 中的 manager, sales, designer, creatorName
     db.collection('projects').where(_.or([
-      { manager: oldName },
-      { sales: oldName },
-      { designer: oldName },
+      { 'manager': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
+      { 'sales': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
+      { 'designer': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
       { creatorName: oldName }
     ])).get().then(res => {
       res.data.forEach(item => {
         let updateData = {};
-        if (item.manager === oldName) updateData.manager = newName;
-        if (item.sales === oldName) updateData.sales = newName;
-        if (item.designer === oldName) updateData.designer = newName;
+        if (item.manager && item.manager.includes(oldName)) updateData.manager = replaceName(item.manager);
+        if (item.sales && item.sales.includes(oldName)) updateData.sales = replaceName(item.sales);
+        if (item.designer && item.designer.includes(oldName)) updateData.designer = replaceName(item.designer);
         if (item.creatorName === oldName) updateData.creatorName = newName;
         db.collection('projects').doc(item._id).update({ data: updateData });
       });
@@ -447,17 +451,17 @@ Page({
 
     // 查询受影响的leads
     db.collection('leads').where(_.or([
-      { 'sales': oldName },
-      { 'designer': oldName },
-      { 'manager': oldName },
+      { 'sales': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
+      { 'designer': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
+      { 'manager': db.RegExp({ regexp: '(^|,\\s*)' + oldName + '(\\s*,|$)' }) },
       { 'creatorName': oldName }
     ])).get().then(res => {
       const leads = res.data;
       const followUps = leads.map(lead => {
         let role = '';
-        if (lead.sales && lead.sales === oldName) role = '销售';
-        else if (lead.designer && lead.designer === oldName) role = '设计师';
-        else if (lead.manager && lead.manager === oldName) role = '项目经理';
+        if (lead.sales && lead.sales.includes(oldName)) role = '销售';
+        else if (lead.designer && lead.designer.includes(oldName)) role = '设计师';
+        else if (lead.manager && lead.manager.includes(oldName)) role = '项目经理';
         else if (lead.creatorName && lead.creatorName === oldName) role = '创建人';
 
         return {
