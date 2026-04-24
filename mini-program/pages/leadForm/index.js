@@ -50,9 +50,9 @@ Page({
     // 获取员工列表
     db.collection('users').get().then(res => {
       const emps = res.data;
-      const sales = emps.filter(e => e.role === 'sales' || e.role === 'admin').sort((a, b) => (a.role === 'admin' ? 1 : -1) - (b.role === 'admin' ? 1 : -1));
-      const designers = emps.filter(e => e.role === 'designer' || e.role === 'admin').sort((a, b) => (a.role === 'admin' ? 1 : -1) - (b.role === 'admin' ? 1 : -1));
-      const managers = emps.filter(e => e.role === 'manager' || e.role === 'admin').sort((a, b) => (a.role === 'admin' ? 1 : -1) - (b.role === 'admin' ? 1 : -1));
+      const sales = emps.filter(e => e.role === 'sales');
+      const designers = emps.filter(e => e.role === 'designer');
+      const managers = emps.filter(e => e.role === 'manager');
       
       this.setData({ salesList: sales, designerList: designers, managerList: managers });
 

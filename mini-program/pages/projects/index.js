@@ -603,7 +603,7 @@ Page({
   loadEmployees() {
     const db = wx.cloud.database();
     db.collection('users').get().then(res => {
-      const managers = [{ id: '', name: '无' }];
+      const managers = [];
       res.data.forEach(u => {
         if (u.role === 'manager') managers.push({ id: u._id, name: u.name });
       });
