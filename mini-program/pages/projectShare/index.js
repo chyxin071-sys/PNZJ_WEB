@@ -117,11 +117,19 @@ Page({
 
   // 手机号验证获取
   onGetPhoneNumber(e) {
-    if (e.detail.errno !== 0 || !e.detail.code) {
-      console.log('[手机验证] 用户拒绝授权或无code', e.detail);
+    // 兼容微信新老版本的基础错误判断
+    if (e.detail.errMsg && e.detail.errMsg.indexOf('deny') !== -1) {
+      console.log('[手机验证] 用户拒绝授权', e.detail);
       wx.showToast({ title: '已取消获取', icon: 'none' });
       return;
     }
+    
+    if (!e.detail.code) {
+      console.log('[手机验证] 获取code失败', e.detail);
+      wx.showModal({ title: '提示', content: '微信未返回授权码，请尝试手动输入手机号。详细错误：' + (e.detail.errMsg || '无'), showCancel: false });
+      return;
+    }
+
     wx.showLoading({ title: '获取中...' });
     const db = wx.cloud.database();
     wx.cloud.callFunction({
