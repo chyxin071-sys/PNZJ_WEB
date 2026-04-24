@@ -137,21 +137,52 @@ Page({
         return;
       }
       db.collection('projects').doc(this.data.id).get().then(projRes => {
+        const projPhone = projRes.data.phone || '';
+        const projCustomer = projRes.data.customer || '业主本人';
+        console.log('[手机验证] 工地预留手机号:', projPhone, '微信手机号:', phone);
+
+        // 如果工地记录上本身就有手机号，直接匹配
+        const checkMatch = (dbPhone) => {
+          const dbClean = dbPhone ? dbPhone.replace(/\D/g, '').slice(-11) : '';
+          const wxClean = phone ? phone.replace(/\D/g, '').slice(-11) : '';
+          return dbClean && wxClean && (dbClean === wxClean);
+        };
+
+        if (checkMatch(projPhone)) {
+          wx.hideLoading();
+          this._grantAccess({ name: projCustomer, relation: '业主本人', phone: phone.replace(/\D/g, '').slice(-11), autoApproved: true });
+          return;
+        }
+
+        // 如果工地没存，尝试去查客户表
         const leadId = projRes.data.leadId;
-        console.log('[手机验证] 工地 leadId:', leadId);
-        if (!leadId) { wx.hideLoading(); this.setData({ accessStatus: 'apply' }); return; }
+        if (!leadId) { 
+          wx.hideLoading(); 
+          this.setData({ accessStatus: 'apply' }); 
+          return; 
+        }
+
         db.collection('leads').doc(leadId).get().then(leadRes => {
           const lead = leadRes.data;
-          console.log('[手机验证] 客户手机号:', lead.phone, '微信手机号:', phone);
-          const matched = lead.phone && (lead.phone.replace(/\s/g,'') === phone.replace(/\s/g,''));
-          wx.hideLoading();
-          if (matched) {
-            this._grantAccess({ name: lead.name || '业主本人', relation: '业主本人', phone, autoApproved: true });
+          console.log('[手机验证] 客户表手机号:', lead.phone, '微信手机号:', phone);
+          
+          if (checkMatch(lead.phone)) {
+            wx.hideLoading();
+            this._grantAccess({ name: lead.name || '业主本人', relation: '业主本人', phone: phone.replace(/\D/g, '').slice(-11), autoApproved: true });
           } else {
+            wx.hideLoading();
             this.setData({ accessStatus: 'apply' });
           }
-        }).catch((err) => { console.log('[手机验证] 查客户失败', err); wx.hideLoading(); this.setData({ accessStatus: 'apply' }); });
-      }).catch((err) => { console.log('[手机验证] 查工地失败', err); wx.hideLoading(); this.setData({ accessStatus: 'apply' }); });
+        }).catch((err) => { 
+          console.log('[手机验证] 查客户失败', err); 
+          wx.hideLoading(); 
+          this.setData({ accessStatus: 'apply' }); 
+        });
+      }).catch((err) => { 
+        console.log('[手机验证] 查工地失败', err); 
+        wx.hideLoading(); 
+        this.setData({ accessStatus: 'apply' }); 
+      });
     }).catch((err) => {
       console.log('[手机验证] 云函数调用失败', err);
       wx.hideLoading();
