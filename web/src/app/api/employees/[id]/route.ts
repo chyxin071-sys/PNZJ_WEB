@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { tcbQuery, tcbUpdate, tcbDelete } from '@/lib/wechat-tcb';
+import bcrypt from 'bcryptjs';
 
 // 启用/停用员工，或修改基本信息
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -32,7 +33,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (body.account) updateData.account = body.account;
     if (body.department) updateData.department = body.department;
     if (body.joinDate) updateData.joinDate = body.joinDate;
-    if (body.password) updateData.passwordPlain = body.password; // Admin reset password
+
+    // Admin reset password - 同时更新明文和哈希
+    if (body.password) {
+      updateData.passwordPlain = body.password;
+      const salt = await bcrypt.genSalt(10);
+      const hash = await bcrypt.hash(body.password, salt);
+      updateData.passwordHash = hash;
+    }
 
     const docData = JSON.stringify({
       ...updateData,

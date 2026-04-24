@@ -38,16 +38,16 @@
       <text>修改密码</text>
       <view class="btn-close" bindtap="closePasswordModal">取消</view>
     </view>
-    <view class="modal-body" style="padding-bottom: 40rpx;">
-      <view class="input-wrap" style="margin-bottom: 20rpx; position: relative;">
+    <view class="modal-body">
+      <view class="input-wrap" style="margin-bottom: 24rpx; position: relative;">
         <input class="input" type="{{showOldPwd ? 'text' : 'password'}}" placeholder="请输入原密码" value="{{oldPassword}}" bindinput="onPasswordInput" data-field="oldPassword" style="padding-right: 60rpx;" />
         <view class="icon-eye {{showOldPwd ? 'open' : 'closed'}}" bindtap="togglePwdVisibility" data-field="showOldPwd"></view>
       </view>
-      <view class="input-wrap" style="position: relative;">
+      <view class="input-wrap" style="margin-bottom: 24rpx; position: relative;">
         <input class="input" type="{{showNewPwd ? 'text' : 'password'}}" placeholder="请输入新密码" value="{{newPassword}}" bindinput="onPasswordInput" data-field="newPassword" style="padding-right: 60rpx;" />
         <view class="icon-eye {{showNewPwd ? 'open' : 'closed'}}" bindtap="togglePwdVisibility" data-field="showNewPwd"></view>
       </view>
-      <view class="btn-save hover-scale" bindtap="savePassword" style="margin-top: 30rpx; margin-bottom: 0;">确认修改</view>
+      <view class="btn-save hover-scale" bindtap="savePassword" style="margin-top: 10rpx;">确认修改</view>
     </view>
   </view>
 

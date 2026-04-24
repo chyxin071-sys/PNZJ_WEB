@@ -512,9 +512,9 @@ Page({
       }
     }).catch(() => {});
     
-    // 更新 lead lastFollowUp
+    // 更新 lead lastFollowUp 和 lastFollowUpAt
     db.collection('leads').doc(this.data.quote.leadId).update({
-      data: { lastFollowUp: nowStr }
+      data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
     }).catch(() => {});
 
     // 通知相关人员

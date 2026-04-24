@@ -36,11 +36,28 @@ Page({
     filterStartDateStart: '',
     filterStartDateEnd: '',
     
-    leadIdFilter: '' // 仅显示特定客户的工地
+    leadIdFilter: '', // 仅显示特定客户的工地
+
+    // 新建工地所需数据
+    showAddModal: false,
+    leads: [],
+    leadIndex: -1,
+    managers: [{ id: '', name: '无' }],
+    managerIndex: 0,
+    newProject: {
+      managerId: '',
+      startDate: ''
+    }
   },
   onLoad(options) {
     if (options && options.leadId) {
       this.setData({ leadIdFilter: options.leadId });
+    }
+    if (options && options.action === 'create') {
+      // 延迟一点等待组件和权限加载
+      setTimeout(() => {
+        this.createProject();
+      }, 500);
     }
     // 恢复筛选状态
     const app = getApp();
@@ -77,7 +94,9 @@ Page({
     
     // 权限控制：仅管理员和项目经理可新建
     this.setData({
-      canCreate: userInfo.role === 'admin' || userInfo.role === 'manager'
+      canCreate: userInfo.role === 'admin' || userInfo.role === 'manager',
+      isAdmin: userInfo.role === 'admin',
+      currentUserName: userInfo.name || ''
     });
     
     const d = new Date();
@@ -293,7 +312,7 @@ Page({
       }
     }
 
-    // 时间范围过滤 (右上角)
+    // 时间范围过滤 (右上角) - 只筛选已开工的工地
     if (this.data.timeFilterIndex > 0) {
       const now = new Date();
       const filterMs = {
@@ -304,9 +323,11 @@ Page({
       const limitMs = filterMs[this.data.timeFilterIndex];
 
       filtered = filtered.filter(p => {
-        if (!p.startDate) return true;
-        const diff = now.getTime() - new Date(p.startDate.replace(/-/g, '/')).getTime();
-        return Math.abs(diff) <= limitMs;
+        if (!p.startDate) return false; // 没有开工时间的排除
+        const startTime = new Date(p.startDate.replace(/-/g, '/')).getTime();
+        const diff = now.getTime() - startTime;
+        // 只保留已开工且在时间范围内的工地（diff >= 0 表示已开工）
+        return diff >= 0 && diff <= limitMs;
       });
     }
 
@@ -354,6 +375,14 @@ Page({
       filtered = filtered.filter(p => p.status === this.data.activeTab);
     }
 
+    // 按开工时间倒序排序（最近的在上面）
+    filtered.sort((a, b) => {
+      if (!a.startDate && !b.startDate) return 0;
+      if (!a.startDate) return 1; // 没有开工时间的排后面
+      if (!b.startDate) return -1;
+      return new Date(b.startDate.replace(/-/g, '/')).getTime() - new Date(a.startDate.replace(/-/g, '/')).getTime();
+    });
+
     this.setData({ projects: filtered });
   },
   switchTab(e) {
@@ -394,9 +423,13 @@ Page({
   },
   openAdvancedFilter() {
     this.setData({ showFilterModal: true });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: true });
   },
   closeFilterModal() {
     this.setData({ showFilterModal: false });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: false });
   },
   toggleEmployee(e) {
     const id = e.currentTarget.dataset.id;
@@ -467,8 +500,305 @@ Page({
   },
 
   // ===================== 新建工地逻辑 =====================
+  // 辅助函数：格式化日期为 YYYY-MM-DD
+  formatDate(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  },
+
+  // 辅助函数：跳过周末计算结束日期
+  calculateEndDate(startDateStr, durationDays) {
+    if (!startDateStr || durationDays <= 0) return startDateStr;
+    let current = new Date(startDateStr.replace(/-/g, '/'));
+    let added = 0;
+    while (added < durationDays - 1) {
+      current.setDate(current.getDate() + 1);
+      const day = current.getDay();
+      if (day !== 0 && day !== 6) {
+        added++;
+      }
+    }
+    return this.formatDate(current);
+  },
+
+  // 辅助函数：获取下一个工作日
+  getNextWorkingDay(date) {
+    let next = new Date(date);
+    next.setDate(next.getDate() + 1);
+    while (next.getDay() === 0 || next.getDay() === 6) {
+      next.setDate(next.getDate() + 1);
+    }
+    return next;
+  },
+
+  // 辅助函数：生成完整的甘特图排期数据
+  generateGanttNodes(templateNodes, baseStartDateStr) {
+    let currentStartStr = baseStartDateStr;
+    
+    return templateNodes.map((node, index) => {
+      let nodeStartDate = currentStartStr;
+      let nodeEndDate = currentStartStr;
+      
+      const subNodes = node.subNodes.map((sub, subIndex) => {
+        const subStart = currentStartStr;
+        const subEnd = this.calculateEndDate(subStart, Number(sub.duration) || 0);
+        
+        if ((Number(sub.duration) || 0) > 0) {
+          currentStartStr = this.formatDate(this.getNextWorkingDay(new Date(subEnd.replace(/-/g, '/'))));
+        }
+        
+        nodeEndDate = subEnd;
+        
+        const isFirstNode = index === 0 && subIndex === 0;
+        
+        return {
+          name: sub.name,
+          duration: sub.duration,
+          status: "pending", // 稍后会在外部统一处理状态
+          startDate: subStart,
+          endDate: subEnd,
+          records: []
+        };
+      });
+      
+      return {
+        name: node.name,
+        duration: node.duration,
+        subNodes: subNodes,
+        status: index === 0 ? 'current' : 'pending',
+        startDate: subNodes.length > 0 ? subNodes[0].startDate : nodeStartDate,
+        endDate: nodeEndDate,
+        expanded: index === 0,
+        records: [],
+        delayRecords: []
+      };
+    });
+  },
+
+  loadSignedLeads() {
+    const db = wx.cloud.database();
+    db.collection('leads').where({
+      status: '已签单'
+    }).get().then(res => {
+      const leads = res.data.map(l => ({
+        ...l,
+        pickerLabel: `${l.name} (${l.address || '无地址'})`
+      }));
+      let leadIndex = -1;
+      if (this.data.leadIdFilter) {
+        leadIndex = leads.findIndex(l => l._id === this.data.leadIdFilter);
+      }
+      this.setData({ leads, leadIndex });
+    });
+  },
+
+  loadEmployees() {
+    const db = wx.cloud.database();
+    db.collection('users').get().then(res => {
+      const managers = [{ id: '', name: '无' }];
+      res.data.forEach(u => {
+        if (u.role === 'manager') managers.push({ id: u._id, name: u.name });
+      });
+      this.setData({ managers });
+    });
+  },
+
   createProject() {
-    wx.navigateTo({ url: '/pages/projectForm/index' });
+    this.loadSignedLeads();
+    this.loadEmployees();
+    this.setData({
+      showAddModal: true,
+      managerIndex: 0,
+      newProject: { managerId: '', startDate: '' }
+    });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: true });
+  },
+
+  closeAddModal() {
+    this.setData({ showAddModal: false });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: false });
+  },
+
+  onLeadChange(e) {
+    this.setData({ leadIndex: parseInt(e.detail.value) });
+  },
+
+  onManagerChange(e) {
+    const idx = parseInt(e.detail.value);
+    const managers = this.data.managers;
+    this.setData({
+      managerIndex: idx,
+      'newProject.managerId': managers[idx].id
+    });
+  },
+
+  onStartDateChange(e) {
+    this.setData({ 'newProject.startDate': e.detail.value });
+  },
+
+  saveProject() {
+    const d = this.data.newProject;
+    if (this.data.leadIndex === -1) return wx.showToast({ title: '请选择关联客户', icon: 'none' });
+    if (this.data.managerIndex === 0) return wx.showToast({ title: '请选择项目经理', icon: 'none' });
+    if (!d.startDate) return wx.showToast({ title: '请选择开工时间', icon: 'none' });
+    
+    wx.showLoading({ title: '保存中' });
+    
+    // 自动计算状态逻辑
+    let status = '未开工';
+    const now = new Date();
+    const startDate = new Date(d.startDate.replace(/-/g, '/'));
+    now.setHours(0,0,0,0);
+    startDate.setHours(0,0,0,0);
+
+    if (now.getTime() >= startDate.getTime()) {
+      status = '施工中';
+    }
+    
+    const health = '正常';
+    const currentNode = 1;
+
+    // 自动生成8大节点的排期模板
+    const templateNodes = [
+      { name: "开工", duration: 10, subNodes: [{name: "开工仪式", duration: 1}, {name: "现场交底", duration: 1}, {name: "成品保护", duration: 1}, {name: "墙体拆除", duration: 2}, {name: "垃圾清运", duration: 1}, {name: "设备定位(空调/新风)", duration: 1}, {name: "砌筑新建", duration: 2}, {name: "墙体批荡", duration: 1}] },
+      { name: "水电", duration: 9, subNodes: [{name: "水电交底", duration: 1}, {name: "开槽布管", duration: 3}, {name: "排污下水", duration: 1}, {name: "线管敷设", duration: 2}, {name: "打压测试", duration: 1}, {name: "水电验收", duration: 1}] },
+      { name: "木工", duration: 10, subNodes: [{name: "木工交底", duration: 1}, {name: "吊顶龙骨", duration: 3}, {name: "石膏板封样", duration: 2}, {name: "背景墙打底", duration: 2}, {name: "隔墙制作", duration: 1}, {name: "木工验收", duration: 1}] },
+      { name: "瓦工", duration: 16, subNodes: [{name: "瓦工交底", duration: 1}, {name: "下水管包管", duration: 1}, {name: "防水涂刷", duration: 2}, {name: "闭水试验", duration: 2}, {name: "地面找平", duration: 2}, {name: "瓷砖铺贴", duration: 6}, {name: "瓷砖美缝", duration: 1}, {name: "瓦工验收", duration: 1}] },
+      { name: "墙面", duration: 14, subNodes: [{name: "墙面交底", duration: 1}, {name: "基层找平", duration: 2}, {name: "挂网防裂", duration: 1}, {name: "腻子批刮", duration: 4}, {name: "乳胶漆涂刷", duration: 5}, {name: "墙面验收", duration: 1}] },
+      { name: "定制", duration: 12, subNodes: [{name: "复尺测量", duration: 1}, {name: "厨卫吊顶", duration: 1}, {name: "木地板铺装", duration: 2}, {name: "木门安装", duration: 1}, {name: "柜体安装", duration: 4}, {name: "台面安装", duration: 1}, {name: "五金挂件", duration: 2}] },
+      { name: "软装", duration: 6, subNodes: [{name: "窗帘壁纸", duration: 1}, {name: "灯具安装", duration: 1}, {name: "开关面板", duration: 1}, {name: "卫浴安装", duration: 1}, {name: "大家电进场", duration: 1}, {name: "家具进场", duration: 1}] },
+      { name: "交付", duration: 4, subNodes: [{name: "拓荒保洁", duration: 1}, {name: "室内空气治理", duration: 1}, {name: "竣工验收", duration: 1}, {name: "钥匙移交/合影留念", duration: 1}] }
+    ];
+
+    let projectNodes = this.generateGanttNodes(templateNodes, d.startDate);
+    if (status === '施工中') {
+      projectNodes[0].status = 'current';
+      projectNodes[0].actualStartDate = d.startDate;
+      if (projectNodes[0].subNodes && projectNodes[0].subNodes.length > 0) {
+        projectNodes[0].subNodes[0].status = 'current';
+        projectNodes[0].subNodes[0].actualStartDate = d.startDate;
+      }
+    } else {
+      projectNodes[0].status = 'pending';
+    }
+
+    const db = wx.cloud.database();
+    const managerName = this.data.managers[this.data.managerIndex].name;
+    const selectedLead = this.data.leads[this.data.leadIndex];
+
+    db.collection('projects').where({ leadId: selectedLead._id }).limit(1).get().then(res => {
+      if (res.data && res.data.length > 0) {
+        wx.hideLoading();
+        wx.showToast({ title: '该客户已关联其他工地', icon: 'none' });
+        return;
+      }
+
+      const expectedEndDate = projectNodes[projectNodes.length - 1].endDate;
+
+      const projectData = {
+        leadId: selectedLead._id,
+        customer: selectedLead.name,
+        phone: selectedLead.phone || '',
+        customerNo: selectedLead.customerNo || selectedLead._id,
+        address: selectedLead.address || '',
+        manager: managerName === '无' ? '' : managerName,
+        managerId: d.managerId,
+        designer: selectedLead.designer || '',
+        designerId: selectedLead.designerId || '',
+        sales: selectedLead.sales || '',
+        salesId: selectedLead.salesId || '',
+        signDate: selectedLead.signDate || '',
+        signer: selectedLead.signer || '',
+        startDate: d.startDate,
+        expectedEndDate: expectedEndDate,
+        status: status,
+        currentNode: currentNode,
+        health: health,
+        nodesData: projectNodes,
+        createdAt: db.serverDate()
+      };
+
+      db.collection('projects').add({
+        data: projectData
+      }).then(() => {
+        const managerToUpdate = managerName === '无' ? '' : managerName;
+        db.collection('leads').doc(selectedLead._id).update({
+          data: { manager: managerToUpdate }
+        }).catch(err => console.error('更新客户项目经理失败', err));
+
+        this.addSystemFollowUpToLead(selectedLead._id, `工地创建，开工日期：${projectData.startDate}，预计完工：${projectData.expectedEndDate}，项目经理：${projectData.manager || '未分配'}`);
+        
+        wx.hideLoading();
+        wx.showToast({ title: '创建成功', icon: 'success' });
+        this.closeAddModal();
+        this.fetchData();
+      }).catch(() => {
+        wx.hideLoading();
+        wx.showToast({ title: '创建失败', icon: 'none' });
+      });
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '查询关联工地失败', icon: 'none' });
+    });
+  },
+
+  addSystemFollowUpToLead(leadId, content) {
+    const db = wx.cloud.database();
+    const userInfo = wx.getStorageSync('userInfo') || {};
+    const operatorName = userInfo.name || '系统';
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+    const followUp = {
+      leadId: leadId,
+      content: content,
+      method: '系统记录',
+      type: 'system',
+      createdBy: operatorName,
+      createdAt: db.serverDate(),
+      displayTime: nowStr,
+      timestamp: db.serverDate()
+    };
+    db.collection('followUps').add({ data: followUp }).catch(() => {});
+
+    db.collection('leads').doc(leadId).update({
+      data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+    }).catch(() => {});
+
+    // 给相关人发送未读通知，确保产生红点
+    db.collection('leads').doc(leadId).get().then(res => {
+      const lead = res.data;
+      const notifyUsers = new Set();
+      if (lead.sales) notifyUsers.add(lead.sales);
+      if (lead.designer) notifyUsers.add(lead.designer);
+      if (lead.manager) notifyUsers.add(lead.manager);
+      if (lead.creatorName) notifyUsers.add(lead.creatorName);
+
+      db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+        adminRes.data.forEach(u => {
+          notifyUsers.add(u.name);
+        });
+
+        notifyUsers.forEach(u => {
+          if (!u) return;
+          db.collection('notifications').add({
+            data: {
+              type: 'lead',
+              title: '系统通知',
+              content: `【系统自动记录】${content.substring(0, 30)}...`,
+              targetUser: u,
+              isRead: false,
+              createTime: db.serverDate(),
+              link: `/pages/leadDetail/index?id=${leadId}`
+            }
+          }).catch(() => {});
+        });
+      });
+    }).catch(() => {});
   },
 
   goToDetail(e) {
@@ -476,6 +806,53 @@ Page({
     if (id) {
       wx.navigateTo({ url: `/pages/projectDetail/index?id=${id}` });
     }
+  },
+
+  deleteProject(e) {
+    const id = e.currentTarget.dataset.id;
+    if (!id) return;
+    
+    // 获取当前用户信息
+    const userInfo = wx.getStorageSync('userInfo');
+    if (!userInfo) {
+      wx.showToast({ title: '无删除权限', icon: 'none' });
+      return;
+    }
+
+    // 查找该项目
+    const project = this.data.projects.find(p => p._id === id);
+    if (!project) return;
+
+    // 权限校验：仅允许管理员或该项目的项目经理删除
+    const isAdmin = userInfo.role === 'admin';
+    const userName = userInfo.name;
+    const isManager = userName && project.manager === userName;
+
+    if (!isAdmin && !isManager) {
+      wx.showToast({ title: '仅限项目经理或管理员删除', icon: 'none' });
+      return;
+    }
+
+    wx.showModal({
+      title: '警告',
+      content: '确定要永久删除该工地记录吗？此操作不可恢复！',
+      confirmColor: '#e11d48',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中...' });
+          const db = wx.cloud.database();
+          db.collection('projects').doc(id).remove().then(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '删除成功', icon: 'success' });
+            this.fetchData(); // 重新拉取数据
+          }).catch((err) => {
+            wx.hideLoading();
+            console.error('删除工地失败', err);
+            wx.showToast({ title: '删除失败', icon: 'error' });
+          });
+        }
+      }
+    });
   },
 
   showComingSoon(e) {

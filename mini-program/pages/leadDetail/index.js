@@ -1,4 +1,5 @@
 import { maskName, maskPhone, maskAddress } from '../../utils/format.js';
+import { requestSubscribe, TEMPLATE_IDS } from '../../utils/subscribe.js';
 
 function getNextWorkingDay(date) {
   let d = new Date(date);
@@ -37,13 +38,13 @@ function recalculateDesignGantt(nodes, startDateStr) {
       node._displayDate = (node.actualEndDate || node.endDate).substring(5);
       continue;
     }
-    
+
     // 如果用户手动指定了此节点的开始时间，且该时间晚于顺延的时间，则以此时间为准
     let startToUse = currentStart;
     if (node.manualStartDate) {
       startToUse = node.manualStartDate;
     }
-    
+
     node.startDate = startToUse;
     // 增加短日期用于显示 (去掉年份)
     node._displayDate = startToUse ? startToUse.substring(5) : '';
@@ -51,6 +52,36 @@ function recalculateDesignGantt(nodes, startDateStr) {
     currentStart = formatDate(getNextWorkingDay(new Date(node.endDate.replace(/-/g, '/'))));
   }
   return nodes;
+}
+
+// 统一的时间解析函数，兼容三种格式
+function parseCreatedAtTime(createdAt) {
+  if (!createdAt) return 0;
+
+  // 格式1: { $date: 毫秒数 } - Web端写入
+  if (typeof createdAt === 'object' && createdAt.$date) {
+    const timestamp = typeof createdAt.$date === 'number' ? createdAt.$date : Number(createdAt.$date);
+    if (!isNaN(timestamp)) return timestamp;
+  }
+
+  // 格式2: 纯数字时间戳 - 小程序 db.serverDate() 写入后读出
+  if (typeof createdAt === 'number') {
+    return createdAt;
+  }
+
+  // 格式3: 字符串格式 - 手动写入或 displayTime
+  if (typeof createdAt === 'string') {
+    const d = new Date(createdAt.replace(/-/g, '/'));
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // 格式4: Date 对象
+  if (createdAt instanceof Date) {
+    return createdAt.getTime();
+  }
+
+  // 无法解析，返回0
+  return 0;
 }
 
 Page({
@@ -91,7 +122,27 @@ Page({
   onShow() {
     if (this.data.leadId) {
       this.loadLeadData(this.data.leadId);
+      this.checkUnreadNotifications();
     }
+  },
+
+  checkUnreadNotifications() {
+    if (!this.data.leadId) return;
+    const db = wx.cloud.database();
+    db.collection('leads').doc(this.data.leadId).get().then(res => {
+      const lastFollowUpAt = res.data.lastFollowUpAt || 0;
+      const lastReadAt = wx.getStorageSync('followup_read_' + this.data.leadId) || 0;
+      const hasUnread = lastFollowUpAt > lastReadAt;
+      this.setData({ hasUnreadFollowUp: hasUnread });
+      if (this.data.activeTab === 'follow' && hasUnread) {
+        this.markNotificationsAsRead();
+      }
+    }).catch(err => console.error('获取未读状态失败', err));
+  },
+
+  markNotificationsAsRead() {
+    wx.setStorageSync('followup_read_' + this.data.leadId, Date.now());
+    this.setData({ hasUnreadFollowUp: false });
   },
 
   loadLeadData(id) {
@@ -102,7 +153,17 @@ Page({
     const leadPromise = db.collection('leads').doc(id).get();
     const quotePromise = db.collection('quotes').where({ leadId: id }).orderBy('createdAt', 'desc').limit(1).get().catch(() => ({ data: [] }));
     const projectPromise = db.collection('projects').where({ leadId: id }).limit(1).get().catch(() => ({ data: [] }));
-    const followUpsPromise = db.collection('followUps').where({ leadId: id }).orderBy('createdAt', 'desc').limit(100).get().catch(() => ({ data: [] }));
+    const followUpsPromise = db.collection('followUps').where({ leadId: id }).count().then(res => {
+      const total = res.total;
+      const MAX_LIMIT = 20;
+      const batchTimes = Math.ceil(total / MAX_LIMIT);
+      const tasks = [];
+      for (let i = 0; i < batchTimes; i++) {
+        tasks.push(db.collection('followUps').where({ leadId: id }).orderBy('createdAt', 'desc').skip(i * MAX_LIMIT).limit(MAX_LIMIT).get());
+      }
+      if (tasks.length === 0) return Promise.resolve({ data: [] });
+      return Promise.all(tasks).then(resArr => ({ data: resArr.reduce((acc, cur) => acc.concat(cur.data), []) }));
+    }).catch(() => ({ data: [] }));
 
     Promise.all([leadPromise, quotePromise, projectPromise, followUpsPromise]).then(([leadRes, quoteRes, projectRes, followRes]) => {
       wx.hideNavigationBarLoading();
@@ -113,6 +174,17 @@ Page({
       let lead = leadRes.data;
       const isAssignedToMe = isAdmin || lead.creatorName === myName || lead.sales === myName || lead.designer === myName || lead.manager === myName || lead.signer === myName;
       const isVisible = isAssignedToMe || lead.status === '已签单';
+
+      // 格式化创建时间
+      if (lead.createdAt) {
+        const timestamp = parseCreatedAtTime(lead.createdAt);
+        if (timestamp > 0) {
+          const d = new Date(timestamp);
+          lead.createdAt = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+      } else {
+        lead.createdAt = '未知';
+      }
 
       if (!isVisible) {
         lead._isMasked = true;
@@ -150,20 +222,22 @@ Page({
         this.setData({ followUps: [] });
       } else {
         const formattedList = followRes.data.map(item => {
-          if (item.createdAt) {
-            const d = new Date(item.createdAt);
-            if (!isNaN(d.getTime())) {
-              item.displayTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-            } else {
-              item.displayTime = item.createdAt;
-            }
+          // 使用统一的时间解析函数
+          const timestamp = parseCreatedAtTime(item.createdAt);
+          if (timestamp > 0) {
+            const d = new Date(timestamp);
+            item.displayTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            item._sortTimestamp = timestamp; // 用于排序的时间戳
+          } else {
+            item.displayTime = item.createdAt || '';
+            item._sortTimestamp = 0;
           }
           return item;
         });
+
+        // 使用时间戳排序，确保准确性
         formattedList.sort((a, b) => {
-          const timeA = a && a.createdAt ? String(a.createdAt) : '';
-          const timeB = b && b.createdAt ? String(b.createdAt) : '';
-          return timeB.localeCompare(timeA);
+          return (b._sortTimestamp || 0) - (a._sortTimestamp || 0);
         });
         this.setData({ followUps: formattedList });
       }
@@ -186,22 +260,39 @@ Page({
     // 兼容保留该空方法以防别处调用
     if (!this.data.isAdmin && !this.data.isRelated) return;
     const db = wx.cloud.database();
-    db.collection('followUps').where({ leadId }).orderBy('createdAt', 'desc').limit(100).get().then(res => {
-      const formattedList = res.data.map(item => {
-        if (item.createdAt) {
-          const d = new Date(item.createdAt);
-          if (!isNaN(d.getTime())) {
-            item.displayTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-          } else {
-            item.displayTime = item.createdAt;
-          }
+    db.collection('followUps').where({ leadId }).count().then(res => {
+      const total = res.total;
+      const MAX_LIMIT = 20;
+      const batchTimes = Math.ceil(total / MAX_LIMIT);
+      const tasks = [];
+      for (let i = 0; i < batchTimes; i++) {
+        tasks.push(db.collection('followUps').where({ leadId }).orderBy('createdAt', 'desc').skip(i * MAX_LIMIT).limit(MAX_LIMIT).get());
+      }
+      if (tasks.length === 0) return Promise.resolve([]);
+      return Promise.all(tasks);
+    }).then(resArr => {
+      if (resArr.length === 0) {
+        this.setData({ followUps: [] });
+        return;
+      }
+      const allData = resArr.reduce((acc, cur) => acc.concat(cur.data), []);
+      const formattedList = allData.map(item => {
+        // 使用统一的时间解析函数
+        const timestamp = parseCreatedAtTime(item.createdAt);
+        if (timestamp > 0) {
+          const d = new Date(timestamp);
+          item.displayTime = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+          item._sortTimestamp = timestamp;
+        } else {
+          item.displayTime = item.createdAt || '';
+          item._sortTimestamp = 0;
         }
         return item;
       });
+
+      // 使用时间戳排序
       formattedList.sort((a, b) => {
-        const timeA = a && a.createdAt ? String(a.createdAt) : '';
-        const timeB = b && b.createdAt ? String(b.createdAt) : '';
-        return timeB.localeCompare(timeA);
+        return (b._sortTimestamp || 0) - (a._sortTimestamp || 0);
       });
       this.setData({ followUps: formattedList });
     }).catch(() => {});
@@ -210,6 +301,10 @@ Page({
   switchTab(e) {
     const tab = e.currentTarget.dataset.tab;
     this.setData({ activeTab: tab });
+    
+    if (tab === 'follow') {
+      this.markNotificationsAsRead();
+    }
   },
 
   callPhone() {
@@ -252,13 +347,14 @@ Page({
         if (!this.data.isAdmin && !this.data.isRelated) {
           return wx.showToast({ title: '暂无工地', icon: 'none' });
         }
-        wx.navigateTo({ url: `/pages/projects/index?leadId=${this.data.leadId}` });
+        // 如果没有工地，跳转到工地列表并带有创建指令，自动弹出新建浮窗
+        wx.navigateTo({ url: `/pages/projects/index?leadId=${this.data.leadId}&action=create` });
       }
     }).catch(() => {
       if (!this.data.isAdmin && !this.data.isRelated) {
         return wx.showToast({ title: '暂无工地', icon: 'none' });
       }
-      wx.navigateTo({ url: `/pages/projects/index?leadId=${this.data.leadId}` });
+      wx.navigateTo({ url: `/pages/projects/index?leadId=${this.data.leadId}&action=create` });
     });
   },
 
@@ -311,7 +407,7 @@ Page({
     this.updateLeadField('rating', newRating);
   },
 
-  onStatusChange(e) {
+  async onStatusChange(e) {
     if (!this.data.isAdmin && !this.data.isRelated) {
       return wx.showToast({ title: '无修改权限', icon: 'none' });
     }
@@ -319,13 +415,19 @@ Page({
     const newStatus = statuses[e.detail.value];
     if (newStatus === this.data.lead.status) return;
 
+    // 静默请求订阅授权
+    await requestSubscribe();
+
     if (newStatus === '已签单') {
       const userInfo = wx.getStorageSync('userInfo');
       const today = new Date();
       const yyyy = today.getFullYear();
       const mm = String(today.getMonth() + 1).padStart(2, '0');
       const dd = String(today.getDate()).padStart(2, '0');
-      const signDate = `${yyyy}-${mm}-${dd}`;
+      const hh = String(today.getHours()).padStart(2, '0');
+      const min = String(today.getMinutes()).padStart(2, '0');
+      const signDay = `${yyyy}-${mm}-${dd}`;
+      const signTime = `${hh}:${min}`;
       
       const db = wx.cloud.database();
       db.collection('users').get().then(res => {
@@ -341,25 +443,27 @@ Page({
         
         this.setData({
           showSignModal: true,
-          signDate: signDate,
+          signDay: signDay,
+          signTime: signTime,
           signersList: signersList,
           signerIndex: signerIndex,
           signer: signersList.length > 0 ? signersList[signerIndex] : currentUserName
         });
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-          this.getTabBar().setData({ hidden: true });
+          this.getTabBar().setData({ showMask: true });
         }
       }).catch(err => {
         // Fallback
         this.setData({
           showSignModal: true,
-          signDate: signDate,
+          signDay: signDay,
+          signTime: signTime,
           signersList: [userInfo ? userInfo.name : '未知'],
           signerIndex: 0,
           signer: userInfo ? userInfo.name : '未知'
         });
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-          this.getTabBar().setData({ hidden: true });
+          this.getTabBar().setData({ showMask: true });
         }
       });
 
@@ -393,7 +497,14 @@ Page({
       }
     }).then(() => {
       this.loadFollowUps(this.data.leadId);
-      
+
+      // 更新客户的 lastFollowUp 和 lastFollowUpAt 字段
+      db.collection('leads').doc(this.data.leadId).update({
+        data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+      }).catch(err => {
+        console.error('更新lastFollowUp失败', err);
+      });
+
       // 发送系统记录通知
       const lead = this.data.lead;
       if (lead) {
@@ -402,7 +513,7 @@ Page({
         if (lead.designer && lead.designer !== operatorName) notifyUsers.add(lead.designer);
         if (lead.manager && lead.manager !== operatorName) notifyUsers.add(lead.manager);
         if (lead.creatorName && lead.creatorName !== operatorName) notifyUsers.add(lead.creatorName);
-        
+
         notifyUsers.forEach(u => {
           if (!u) return;
           db.collection('notifications').add({
@@ -417,26 +528,34 @@ Page({
             }
           });
         });
-        
+
         if (operatorName !== 'admin' && !this.data.isAdmin) {
-          db.collection('notifications').add({
-            data: {
-              type: 'lead',
-              title: '客户进度更新',
-              content: `系统更新了客户【${lead.name}】的记录：${content.substring(0, 30)}...`,
-              targetUser: 'admin',
-              isRead: false,
-              createTime: db.serverDate(),
-              link: `/pages/leadDetail/index?id=${this.data.leadId}`
-            }
+          db.collection('users').where({ role: 'admin' }).get().then(res => {
+            res.data.forEach(u => {
+              db.collection('notifications').add({
+                data: {
+                  type: 'lead',
+                  title: '客户进度更新',
+                  content: `系统更新了客户【${lead.name}】的记录：${content.substring(0, 30)}...`,
+                  targetUser: u.name,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/leadDetail/index?id=${this.data.leadId}`
+                }
+              });
+            });
           });
         }
       }
     });
   },
 
-  onSignDateChange(e) {
-    this.setData({ signDate: e.detail.value });
+  onSignDayChange(e) {
+    this.setData({ signDay: e.detail.value });
+  },
+
+  onSignTimeChange(e) {
+    this.setData({ signTime: e.detail.value });
   },
 
   onSignerChange(e) {
@@ -450,19 +569,19 @@ Page({
 
   closeSignModal() {
     this.setData({ showSignModal: false });
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ hidden: false });
-    }
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: false });
   },
 
   confirmSign() {
-    const { signDate, signer } = this.data;
-    if (!signDate || !signer) {
-      return wx.showToast({ title: '请填写签单时间和签单人', icon: 'none' });
+    const { signDay, signTime, signer } = this.data;
+    if (!signDay || !signTime || !signer) {
+      return wx.showToast({ title: '请填写完整的签单时间和签单人', icon: 'none' });
     }
+    const signDate = `${signDay} ${signTime}`;
 
     if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ hidden: false });
+      this.getTabBar().setData({ showMask: false });
     }
     wx.showLoading({ title: '正在处理...' });
     const db = wx.cloud.database();
@@ -489,6 +608,8 @@ Page({
       const lead = this.data.lead;
       db2.collection('users').where({ isActive: true }).limit(100).get().then(res => {
         const users = res.data;
+        const nowStr = new Date().toISOString().split('T')[0];
+        
         users.forEach(u => {
           db2.collection('notifications').add({
             data: {
@@ -498,6 +619,23 @@ Page({
               link: `/pages/leadDetail/index?id=${this.data.leadId}`
             }
           });
+
+          // 微信订阅消息
+          wx.cloud.callFunction({
+            name: 'sendSubscribeMessage',
+            data: {
+              receiverUserId: u._id,
+              templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+              page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+              data: {
+                thing1: { value: (lead.name || '未知客户').substring(0, 20) },
+                time2: { value: nowStr },
+                thing4: { value: (signer || '系统').substring(0, 20) },
+                thing6: { value: '好消息！客户已成功签单' },
+                thing7: { value: '大家再接再厉！' }
+              }
+            }
+          }).catch(console.error);
         });
       }).catch(err => {
         console.error('发送签单通知失败', err);
@@ -591,11 +729,14 @@ Page({
     this.setData({ showStartDesignModal: false });
   },
 
-  confirmStartDesign() {
+  async confirmStartDesign() {
     if (!this.data.designStartDate) return wx.showToast({ title: '请选择日期', icon: 'none' });
-    
+
     let nodes = this.data.editDesignNodes;
     if (nodes.length === 0) return wx.showToast({ title: '请至少保留一个节点', icon: 'none' });
+
+    // 静默请求订阅授权
+    await requestSubscribe();
 
     // 确保第一个节点是 current
     nodes.forEach(n => n.status = 'pending');
@@ -659,12 +800,26 @@ Page({
   onEditNodeDur(e) {
     const idx = e.currentTarget.dataset.index;
     let nodes = this.data.editDesignNodes;
-    nodes[idx].duration = parseInt(e.detail.value) || 1;
-    
+    const val = e.detail.value;
+
+    // 允许暂时为空，方便用户删除后重新输入
+    if (val === '') {
+      nodes[idx].duration = '';
+      this.setData({ editDesignNodes: nodes });
+      return;
+    }
+
+    const numVal = parseInt(val);
+    if (isNaN(numVal) || numVal < 1) {
+      nodes[idx].duration = 1;
+    } else {
+      nodes[idx].duration = numVal;
+    }
+
     // 重算排期
     const startDateToUse = this.data.lead && this.data.lead.designStartDate ? this.data.lead.designStartDate : this.data.designStartDate;
     nodes = recalculateDesignGantt(nodes, startDateToUse);
-    
+
     this.setData({ editDesignNodes: nodes });
   },
 
@@ -727,56 +882,162 @@ Page({
       wx.showToast({ title: '排期已更新', icon: 'success' });
       const startNode = recalculatedNodes[0];
       const endNode = recalculatedNodes[recalculatedNodes.length - 1];
-      this.addSystemFollowUp(`修改并重算了设计出图排期\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`);
+      this.addSystemFollowUp(`调整了设计出图排期\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`);
+
+      // 增加通知：排期被修改时通知其他相关人员
+      const userInfo = wx.getStorageSync('userInfo');
+      const operatorName = userInfo ? (userInfo.name || '未知') : '未知';
+      const notifyUsers = new Set();
+      if (this.data.lead.sales && this.data.lead.sales !== operatorName) notifyUsers.add(this.data.lead.sales);
+      if (this.data.lead.creatorName && this.data.lead.creatorName !== operatorName) notifyUsers.add(this.data.lead.creatorName);
+
+      db.collection('users').where({ role: 'admin' }).get().then(res => {
+        res.data.forEach(u => {
+          if (u.name !== operatorName) notifyUsers.add(u.name);
+        });
+        notifyUsers.forEach(u => {
+          if (!u) return;
+          db.collection('notifications').add({
+            data: {
+              type: 'lead',
+              title: '设计排期更新',
+              content: `${operatorName} 调整了客户【${this.data.lead.name}】的设计出图排期。`,
+              targetUser: u,
+              isRead: false,
+              createTime: db.serverDate(),
+              link: `/pages/leadDetail/index?id=${this.data.leadId}`
+            }
+          });
+        });
+      });
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '保存失败', icon: 'none' });
     });
   },
 
-  completeDesignNode(e) {
+  async openFillDelayReason(e) {
+    const idx = e.currentTarget.dataset.index;
+    const existingReason = this.data.lead.designNodes[idx].delayReason || '';
+    this.setData({
+      showDesignCompleteModal: true,
+      designCompleteIdx: idx,
+      designDelayReason: existingReason
+    });
+  },
+
+  async completeDesignNode(e) {
     const userInfo = wx.getStorageSync('userInfo');
     const userRole = userInfo ? userInfo.role : '';
     if (userRole !== 'designer' && userRole !== 'admin') {
       return wx.showToast({ title: '仅设计师可完成设计节点', icon: 'none' });
     }
+
+    // 静默请求订阅授权
+    await requestSubscribe();
+
     const idx = e.currentTarget.dataset.index;
-    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
     const nowStr = new Date().toISOString().split('T')[0];
-    
-    nodes[idx].status = 'completed';
-    nodes[idx].actualEndDate = nowStr;
+
+    // 弹窗让用户选择实际完成日期
+    this.setData({
+      showDesignCompleteDateModal: true,
+      designCompleteIdx: idx,
+      designCompleteDate: nowStr
+    });
+  },
+
+  onDesignCompleteDateChange(e) {
+    this.setData({ designCompleteDate: e.detail.value });
+  },
+
+  closeDesignCompleteDateModal() {
+    this.setData({ showDesignCompleteDateModal: false });
+  },
+
+  confirmDesignCompleteWithDate() {
+    const idx = this.data.designCompleteIdx;
+    const actualEndDate = this.data.designCompleteDate;
+    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
     const nodeName = nodes[idx].name;
+
+    nodes[idx].status = 'completed';
+    nodes[idx].actualEndDate = actualEndDate;
+
+    // 设置实际开始时间（如果还没有）
+    if (!nodes[idx].actualStartDate) {
+      nodes[idx].actualStartDate = nodes[idx].startDate;
+    }
 
     if (idx + 1 < nodes.length) {
       nodes[idx + 1].status = 'current';
-      nodes[idx + 1].startDate = nowStr;
+      nodes[idx + 1].startDate = actualEndDate;
+      nodes[idx + 1].actualStartDate = actualEndDate;
     }
 
-    nodes = recalculateDesignGantt(nodes, this.data.lead.designStartDate || nowStr);
+    nodes = recalculateDesignGantt(nodes, this.data.lead.designStartDate || actualEndDate);
 
     wx.showLoading({ title: '处理中...' });
     const db = wx.cloud.database();
     db.collection('leads').doc(this.data.leadId).update({
       data: { designNodes: nodes }
     }).then(() => {
-      this.setData({ 'lead.designNodes': nodes });
+      this.setData({
+        'lead.designNodes': nodes,
+        showDesignCompleteDateModal: false
+      });
       wx.hideLoading();
       wx.showToast({ title: '节点已完成', icon: 'success' });
-      
+
       // 联动1：系统跟进记录
       const nextNode = idx + 1 < nodes.length ? nodes[idx + 1] : null;
-      let followContent = `已完成设计出图节点：【${nodeName}】（实际完成：${nowStr}）`;
+      let followContent = `已完成设计出图节点：【${nodeName}】（实际完成：${actualEndDate}）`;
       if (nextNode) followContent += `\n下一阶段：【${nextNode.name}】，预计完成：${nextNode.endDate}`;
       else followContent += '\n所有设计出图节点已全部完成 🎉';
       this.addSystemFollowUp(followContent);
-      
+
       // 联动2：消息通知
       this.notifyDesignComplete(nodeName);
-      
+
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '操作失败', icon: 'none' });
+    });
+  },
+
+  onDesignDelayReasonInput(e) {
+    this.setData({ designDelayReason: e.detail.value });
+  },
+
+  closeDesignCompleteModal() {
+    this.setData({ showDesignCompleteModal: false });
+  },
+
+  confirmDesignComplete() {
+    const reason = this.data.designDelayReason.trim();
+    if (!reason) {
+      return wx.showToast({ title: '请输入逾期原因', icon: 'none' });
+    }
+    
+    const idx = this.data.designCompleteIdx;
+    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
+    
+    nodes[idx].delayReason = reason;
+
+    wx.showLoading({ title: '保存中...' });
+    const db = wx.cloud.database();
+    db.collection('leads').doc(this.data.leadId).update({
+      data: { designNodes: nodes }
+    }).then(() => {
+      this.setData({
+        'lead.designNodes': nodes,
+        showDesignCompleteModal: false
+      });
+      wx.hideLoading();
+      wx.showToast({ title: '已补充逾期原因', icon: 'success' });
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '保存失败', icon: 'none' });
     });
   },
 
@@ -789,20 +1050,24 @@ Page({
     const notifyUsers = new Set();
     if (lead.sales && lead.sales !== operatorName) notifyUsers.add(lead.sales);
     if (lead.creatorName && lead.creatorName !== operatorName) notifyUsers.add(lead.creatorName);
-    if (!this.data.isAdmin) notifyUsers.add('admin');
 
-    notifyUsers.forEach(u => {
-      if (!u) return;
-      db.collection('notifications').add({
-        data: {
-          type: 'lead',
-          title: '设计进度更新',
-          content: `${operatorName} 已完成客户【${lead.name}】的【${nodeName}】出图工作。`,
-          targetUser: u,
-          isRead: false,
-          createTime: db.serverDate(),
-          link: `/pages/leadDetail/index?id=${this.data.leadId}`
-        }
+    db.collection('users').where({ role: 'admin' }).get().then(res => {
+      res.data.forEach(u => {
+        if (u.name !== operatorName) notifyUsers.add(u.name);
+      });
+      notifyUsers.forEach(u => {
+        if (!u) return;
+        db.collection('notifications').add({
+          data: {
+            type: 'lead',
+            title: '设计进度更新',
+            content: `${operatorName} 已完成客户【${lead.name}】的【${nodeName}】出图工作。`,
+            targetUser: u,
+            isRead: false,
+            createTime: db.serverDate(),
+            link: `/pages/leadDetail/index?id=${this.data.leadId}`
+          }
+        });
       });
     });
   },

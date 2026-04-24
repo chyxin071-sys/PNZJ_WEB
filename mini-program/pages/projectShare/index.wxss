@@ -1,0 +1,83 @@
+@import "../projectDetail/index.wxss";
+
+.page-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f8fafc;
+}
+
+/* 时间轴样式 */
+.timeline {
+  position: relative;
+  padding-left: 20rpx;
+}
+
+.timeline-item {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 40rpx;
+}
+
+.timeline-item:last-child .timeline-line {
+  display: none;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 18rpx;
+  top: 40rpx;
+  bottom: -40rpx;
+  width: 4rpx;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.timeline-icon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  position: relative;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.icon-completed {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: var(--emerald-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-current {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: var(--amber-600);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 6rpx var(--amber-50);
+}
+
+.icon-pending {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timeline-content {
+  flex: 1;
+}

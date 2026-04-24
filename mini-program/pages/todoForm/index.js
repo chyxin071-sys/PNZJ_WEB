@@ -139,7 +139,13 @@ Page({
           if (todo.relatedTo.type === 'lead') {
             db.collection('leads').doc(todo.relatedTo.id).get().then(lRes => {
               const l = lRes.data;
-              const isLeadRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.signer === myName;
+              const isLeadRelated = isAdmin ||
+                l.creatorName === myName ||
+                l.sales === myName ||
+                l.designer === myName ||
+                l.manager === myName ||
+                l.signer === myName ||
+                l.status === '已签单';
               this.setData({
                 'formData._displayRelatedName': isLeadRelated ? l.name : maskName(l.name)
               });
@@ -148,6 +154,25 @@ Page({
             });
           } else {
             relatedName = todo.relatedTo.name;
+          }
+        }
+
+        let formattedCreatedAt = '';
+        if (todo.createdAt) {
+          let timeVal = todo.createdAt;
+          if (typeof todo.createdAt === 'object' && todo.createdAt.$date) {
+            timeVal = typeof todo.createdAt.$date === 'number' ? todo.createdAt.$date : Number(todo.createdAt.$date);
+          }
+          const dateObj = new Date(timeVal);
+          if (!isNaN(dateObj.getTime())) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            const h = String(dateObj.getHours()).padStart(2, '0');
+            const min = String(dateObj.getMinutes()).padStart(2, '0');
+            formattedCreatedAt = `${y}-${m}-${d} ${h}:${min}`;
+          } else {
+            formattedCreatedAt = String(todo.createdAt);
           }
         }
 
@@ -162,6 +187,7 @@ Page({
             dueDate: todo.dueDate || '',
             assignees: assignees,
             description: todo.description || '',
+            createdAt: formattedCreatedAt,
             _displayRelatedName: relatedName
           },
           employees: emps,
@@ -269,10 +295,13 @@ Page({
 
       let relatedOps = [];
       if (typeVal === 'lead') {
-        const filteredLeads = isAdmin ? res.data : res.data.filter(l => 
-          l.sales === myName || 
-          l.designer === myName || 
+        // 统一逻辑：非admin可以看到"与自己相关的客户 + 已签单客户"
+        const filteredLeads = isAdmin ? res.data : res.data.filter(l =>
+          l.sales === myName ||
+          l.designer === myName ||
           l.manager === myName ||
+          l.creatorName === myName ||
+          l.signer === myName ||
           l.status === '已签单'
         );
         relatedOps = filteredLeads.map(l => {
@@ -484,16 +513,20 @@ Page({
         
         // 抄送给管理员
         if (userInfo.role !== 'admin') {
-          db.collection('notifications').add({
-            data: {
-              type: 'todo',
-              title: '新建了待办任务',
-              content: `${operatorName} 创建了待办任务：【${updateData.title}】。`,
-              targetUser: 'admin',
-              isRead: false,
-              createTime: db.serverDate(),
-              link: `/pages/todoForm/index?id=${newTodoId}`
-            }
+          db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+            adminRes.data.forEach(u => {
+              db.collection('notifications').add({
+                data: {
+                  type: 'todo',
+                  title: '新建了待办任务',
+                  content: `${operatorName} 创建了待办任务：【${updateData.title}】。`,
+                  targetUser: u.name,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/todoForm/index?id=${newTodoId}`
+                }
+              });
+            });
           });
         }
 

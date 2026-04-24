@@ -1,3 +1,10 @@
+.badge-dot {
+  position: absolute;
+  width: 14rpx;
+  height: 14rpx;
+  background: var(--rose-600);
+  border-radius: 50%;
+}
 .page-container {
   padding: 20rpx;
   background: #f5f4f2;

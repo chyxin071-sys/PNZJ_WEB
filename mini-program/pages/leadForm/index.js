@@ -243,53 +243,88 @@ Page({
     }
 
     if (this.data.isEdit) {
-      // 这是修改客户的情况
-      db.collection('leads').doc(this.data.id).update({
-        data: updateData
-      }).then(() => {
-        // --- 触发通知逻辑：线索已更新 ---
-        const userInfo = wx.getStorageSync('userInfo');
-        const operatorName = userInfo.name || '未知人员';
-        
-        // --- 同步更新关联的报价单和工地数据 ---
-        const syncData = {
-          customer: d.name,
-          phone: d.phone,
-          address: d.address,
-          sales: d.sales,
-          designer: d.designer,
-          manager: d.manager,
-          area: d.area,
-          budget: d.budget,
-          requirementType: d.requirementType
-        };
-        
-        // 微信小程序云开发不支持直接通过 where update 更新多条记录的 API 调用（除非通过云函数）
-        // 在客户端直接调用需要循环，或者尽量通过云函数。这里为了快速实现，我们先查询再循环更新
-        db.collection('quotes').where({ leadId: this.data.id }).get().then(res => {
-          res.data.forEach(q => {
-            db.collection('quotes').doc(q._id).update({ data: syncData });
-          });
-        });
-        
-        db.collection('projects').where({ leadId: this.data.id }).get().then(res => {
-          res.data.forEach(p => {
-            db.collection('projects').doc(p._id).update({ 
-              data: {
-                address: d.address,
-                sales: d.sales,
-                designer: d.designer
-              } 
+      // 获取旧客户数据用于对比姓名是否变化
+      db.collection('leads').doc(this.data.id).get().then(oldRes => {
+        const oldLead = oldRes.data;
+        const oldName = oldLead ? oldLead.name : '';
+
+        // 这是修改客户的情况
+        db.collection('leads').doc(this.data.id).update({
+          data: updateData
+        }).then(() => {
+          // --- 触发通知逻辑：线索已更新 ---
+          const userInfo = wx.getStorageSync('userInfo');
+          const operatorName = userInfo.name || '未知人员';
+
+          // --- 同步更新关联的报价单和工地数据 ---
+          const syncData = {
+            customer: d.name,
+            phone: d.phone,
+            address: d.address,
+            sales: d.sales,
+            designer: d.designer,
+            manager: d.manager,
+            area: d.area,
+            budget: d.budget,
+            requirementType: d.requirementType
+          };
+
+          // 微信小程序云开发不支持直接通过 where update 更新多条记录的 API 调用（除非通过云函数）
+          // 在客户端直接调用需要循环，或者尽量通过云函数。这里为了快速实现，我们先查询再循环更新
+          db.collection('quotes').where({ leadId: this.data.id }).get().then(res => {
+            res.data.forEach(q => {
+              db.collection('quotes').doc(q._id).update({ data: syncData });
             });
           });
-        });
 
-        const notifyUsers = new Set();
-        if (d.sales && d.sales !== operatorName) notifyUsers.add(d.sales);
-        if (d.designer && d.designer !== operatorName) notifyUsers.add(d.designer);
+          db.collection('projects').where({ leadId: this.data.id }).get().then(res => {
+            res.data.forEach(p => {
+              db.collection('projects').doc(p._id).update({
+                data: {
+                  customer: d.name,
+                  address: d.address,
+                  sales: d.sales,
+                  designer: d.designer,
+                  manager: d.manager
+                }
+              });
+            });
+          });
 
-        // 精准通知：分配了新销售
-        if (d.sales && d.sales !== this.data.oldSales) {
+          // --- 如果客户姓名发生变化，同步更新所有关联记录 ---
+          if (oldName && d.name && oldName !== d.name) {
+            const newName = d.name;
+
+            // 1. 同步待办中的关联客户名称
+            db.collection('todos').where({ 'relatedTo.id': this.data.id }).get().then(res => {
+              res.data.forEach(todo => {
+                if (todo.relatedTo && todo.relatedTo.type === 'lead') {
+                  db.collection('todos').doc(todo._id).update({
+                    data: { 'relatedTo.name': newName }
+                  });
+                }
+              });
+            }).catch(err => console.error('同步待办客户名称失败', err));
+
+            // 2. 同步通知中的客户名称（替换内容中的客户姓名）
+            db.collection('notifications').where({ link: `/pages/leadDetail/index?id=${this.data.id}` }).get().then(res => {
+              res.data.forEach(notif => {
+                if (notif.content && notif.content.includes(oldName)) {
+                  const newContent = notif.content.replace(new RegExp(oldName, 'g'), newName);
+                  db.collection('notifications').doc(notif._id).update({
+                    data: { content: newContent }
+                  });
+                }
+              });
+            }).catch(err => console.error('同步通知客户名称失败', err));
+          }
+
+          const notifyUsers = new Set();
+          if (d.sales && d.sales !== operatorName) notifyUsers.add(d.sales);
+          if (d.designer && d.designer !== operatorName) notifyUsers.add(d.designer);
+
+          // 精准通知：分配了新销售
+          if (d.sales && d.sales !== this.data.oldSales) {
           db.collection('notifications').add({
             data: {
               type: 'lead', title: '你有一条新线索',
@@ -349,71 +384,115 @@ Page({
               }).catch(console.error);
             }
           });
-        }
-
-        if (userInfo.role !== 'admin') {
-          db.collection('notifications').add({
-            data: {
-              type: 'lead', title: '客户线索已更新',
-              content: `${operatorName} 更新了客户【${d.name}】的资料。`,
-              targetUser: 'admin', isRead: false, createTime: db.serverDate(),
-              link: `/pages/leadDetail/index?id=${this.data.id}`
-            }
-          });
-        }
-        
-        wx.hideLoading();
-        
-        // 添加系统跟进记录
-        const now = new Date();
-        const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-        db.collection('followUps').add({
-          data: {
-            leadId: this.data.id,
-            content: `更新了客户资料`,
-            method: '系统记录',
-            createdBy: operatorName,
-            createdAt: db.serverDate(),
-            displayTime: nowStr,
-            timestamp: db.serverDate()
           }
-        }).catch(err => {
-          console.error('添加系统跟进记录失败', err);
-        });
-        
-        if (this.data.isSigningNow) {
-          // 签单全员通知
-          db.collection('employees').limit(100).get().then(resEmp => {
-            resEmp.data.forEach(u => {
-              db.collection('notifications').add({
-                data: {
-                  type: 'lead', title: '🎉 恭喜开单',
-                  content: `好消息！客户【${d.name}】已成功签单，大家再接再厉！`,
-                  targetUser: u.name, isRead: false, createTime: db.serverDate(),
-                  link: `/pages/leadDetail/index?id=${this.data.id}`
-                }
+
+          if (userInfo.role !== 'admin') {
+            db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+              adminRes.data.forEach(u => {
+                db.collection('notifications').add({
+                  data: {
+                    type: 'lead', title: '客户线索已更新',
+                    content: `${operatorName} 更新了客户【${d.name}】的资料。`,
+                    targetUser: u.name, isRead: false, createTime: db.serverDate(),
+                    link: `/pages/leadDetail/index?id=${this.data.id}`
+                  }
+                });
               });
             });
+          }
+
+          wx.hideLoading();
+
+          // 添加系统跟进记录
+          const now = new Date();
+          const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+          const followContent = `更新了客户资料`;
+          db.collection('followUps').add({
+            data: {
+              leadId: this.data.id,
+              content: followContent,
+              method: '系统记录',
+              createdBy: operatorName,
+              createdAt: db.serverDate(),
+              displayTime: nowStr,
+              timestamp: db.serverDate()
+            }
           }).catch(err => {
-            console.error('发送签单通知失败', err);
+            console.error('添加系统跟进记录失败', err);
           });
-          // 如果是签单，显示开单喜报弹窗（不使用 setTimeout，等待用户手动点击返回）
-          this.setData({ 
-            showSuccessModal: true,
-            isSigningNow: false
+
+          // 更新客户的 lastFollowUp 和 lastFollowUpAt 字段
+          db.collection('leads').doc(this.data.id).update({
+            data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+          }).catch(err => {
+            console.error('更新lastFollowUp失败', err);
           });
-        } else {
-          // 普通修改，提示后返回
-          wx.showToast({ title: '保存成功', icon: 'success' });
+
+          // 发送红点通知给相关人
+          const sysNotifyUsers = new Set();
+          if (d.sales) sysNotifyUsers.add(d.sales);
+          if (d.designer) sysNotifyUsers.add(d.designer);
+          if (d.manager) sysNotifyUsers.add(d.manager);
+          if (d.creatorName) sysNotifyUsers.add(d.creatorName);
+
+          db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+            adminRes.data.forEach(u => {
+              sysNotifyUsers.add(u.name);
+            });
+
+            sysNotifyUsers.forEach(u => {
+              if (!u) return;
+              db.collection('notifications').add({
+                data: {
+                  type: 'lead',
+                  title: '系统通知',
+                  content: `【系统自动记录】${followContent}`,
+                  targetUser: u,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/leadDetail/index?id=${this.data.id}`
+                }
+              }).catch(() => {});
+            });
+          });
+
+          if (this.data.isSigningNow) {
+            // 签单全员通知
+            db.collection('users').limit(100).get().then(resEmp => {
+              resEmp.data.forEach(u => {
+                db.collection('notifications').add({
+                  data: {
+                    type: 'lead', title: '🎉 恭喜开单',
+                    content: `好消息！客户【${d.name}】已成功签单，大家再接再厉！`,
+                    targetUser: u.name, isRead: false, createTime: db.serverDate(),
+                    link: `/pages/leadDetail/index?id=${this.data.id}`
+                  }
+                });
+              });
+            }).catch(err => {
+              console.error('发送签单通知失败', err);
+            });
+            // 如果是签单，显示开单喜报弹窗（不使用 setTimeout，等待用户手动点击返回）
+            this.setData({
+              showSuccessModal: true,
+              isSigningNow: false
+            });
+          } else {
+            // 普通修改，提示后返回
+            wx.showToast({ title: '保存成功', icon: 'success' });
             wx.disableAlertBeforeUnload();
             this._backTimer = setTimeout(() => {
-            wx.navigateBack();
-            this._backTimer = null;
-          }, 1000);
-        }
+              wx.navigateBack();
+              this._backTimer = null;
+            }, 1000);
+          }
+        }).catch(() => {
+          wx.hideLoading();
+          wx.showToast({ title: '修改失败', icon: 'none' });
+        });
       }).catch(() => {
         wx.hideLoading();
-        wx.showToast({ title: '修改失败', icon: 'none' });
+        wx.showToast({ title: '获取旧数据失败', icon: 'none' });
       });
     } else {
       // 新增逻辑已在其他地方处理

@@ -4,6 +4,36 @@ import { requestSubscribe, TEMPLATE_IDS } from '../../utils/subscribe';
 // 移除 mock 数据引入
 // const todosData = require('../../mock/todos.js');
 
+// 统一的时间解析函数，兼容三种格式
+function parseCreatedAtTime(createdAt) {
+  if (!createdAt) return 0;
+
+  // 格式1: { $date: 毫秒数 } - Web端写入
+  if (typeof createdAt === 'object' && createdAt.$date) {
+    const timestamp = typeof createdAt.$date === 'number' ? createdAt.$date : Number(createdAt.$date);
+    if (!isNaN(timestamp)) return timestamp;
+  }
+
+  // 格式2: 纯数字时间戳 - 小程序 db.serverDate() 写入后读出
+  if (typeof createdAt === 'number') {
+    return createdAt;
+  }
+
+  // 格式3: 字符串格式 - 手动写入或 displayTime
+  if (typeof createdAt === 'string') {
+    const d = new Date(createdAt.replace(/-/g, '/'));
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  // 格式4: Date 对象
+  if (createdAt instanceof Date) {
+    return createdAt.getTime();
+  }
+
+  // 无法解析，返回0
+  return 0;
+}
+
 Page({
   data: {
     todos: [],
@@ -156,36 +186,91 @@ Page({
     });
 
     // 2. 获取所有待办
-    db.collection('todos').get().then(res => {
-      wx.hideNavigationBarLoading();
-      wx.stopPullDownRefresh();
-      
+    db.collection('todos').orderBy('createdAt', 'desc').limit(100).get().then(res => {
       const userInfo = wx.getStorageSync('userInfo');
       const myName = userInfo ? userInfo.name : '';
       const isAdmin = userInfo && userInfo.role === 'admin';
-      
-      const list = res.data.map(t => {
-        const isRelated = isAdmin || t.creatorName === myName || (t.assignees && t.assignees.some(a => a.name === myName));
-        
-        if (!isRelated && t.relatedTo && t.relatedTo.type === 'lead') {
-          t.relatedTo.name = maskName(t.relatedTo.name);
-        }
-        return t;
-      }).sort((a, b) => {
-        const timeA = a && a.createdAt ? String(a.createdAt) : '';
-        const timeB = b && b.createdAt ? String(b.createdAt) : '';
-        return timeB.localeCompare(timeA);
-      });
-      
-      this.setData({ allTodos: list }, () => {
-        this.filterTodos();
-      });
+
+      // 收集所有关联的客户ID
+      const leadIds = res.data
+        .filter(t => t.relatedTo && t.relatedTo.type === 'lead' && t.relatedTo.id)
+        .map(t => t.relatedTo.id);
+
+      // 如果有关联客户，批量查询客户信息用于权限检查
+      if (leadIds.length > 0) {
+        const _ = db.command;
+        db.collection('leads').where({
+          _id: _.in(leadIds)
+        }).get().then(leadRes => {
+          const leadsMap = {};
+          leadRes.data.forEach(lead => {
+            leadsMap[lead._id] = lead;
+          });
+
+          this.processTodos(res.data, leadsMap, userInfo, myName, isAdmin);
+        }).catch(() => {
+          // 如果查询客户失败，仍然显示待办，但客户名全部脱敏
+          this.processTodos(res.data, {}, userInfo, myName, isAdmin);
+        });
+      } else {
+        // 没有关联客户的待办，直接处理
+        this.processTodos(res.data, {}, userInfo, myName, isAdmin);
+      }
     }).catch(err => {
       wx.hideNavigationBarLoading();
       wx.stopPullDownRefresh();
       console.error('获取待办失败', err);
       wx.showToast({ title: '获取数据失败', icon: 'none' });
     });
+  },
+
+  processTodos(todos, leadsMap, userInfo, myName, isAdmin) {
+    wx.hideNavigationBarLoading();
+    wx.stopPullDownRefresh();
+
+    const list = todos.map(t => {
+      // 如果待办关联了客户，检查当前用户是否有权限查看该客户
+      if (t.relatedTo && t.relatedTo.type === 'lead' && t.relatedTo.id) {
+        const lead = leadsMap[t.relatedTo.id];
+        if (lead) {
+          // 检查用户是否是该客户的相关人员
+          const isLeadRelated = isAdmin ||
+            lead.creatorName === myName ||
+            lead.sales === myName ||
+            lead.designer === myName ||
+            lead.manager === myName ||
+            lead.signer === myName ||
+            lead.status === '已签单';
+
+          // 如果不是客户相关人员，脱敏客户姓名
+          if (!isLeadRelated) {
+            t.relatedTo.name = maskName(t.relatedTo.name);
+          }
+        } else {
+          // 如果查不到客户信息（可能已删除），脱敏处理
+          t.relatedTo.name = maskName(t.relatedTo.name);
+        }
+      }
+
+      t.assignedNames = t.assignees && t.assignees.length > 0
+        ? (t.assignees.length > 3 ? t.assignees.slice(0, 2).map(a => a.name).join('，') + ` 等${t.assignees.length}人` : t.assignees.map(a => a.name).join('，'))
+        : '未分配';
+
+      // 解析时间戳用于排序
+      t._sortTimestamp = parseCreatedAtTime(t.createdAt);
+
+      return t;
+    }).sort((a, b) => {
+      // 使用时间戳排序，确保准确性
+      return (b._sortTimestamp || 0) - (a._sortTimestamp || 0);
+    });
+
+    this.setData({ allTodos: list }, () => {
+      this.filterTodos();
+    });
+  },
+
+  updateGroupedEmployees() {
   },
 
   updateGroupedEmployees() {
@@ -276,7 +361,9 @@ Page({
       
       let assignedNames = '待指派';
       if (t.assignees && t.assignees.length > 0) {
-        assignedNames = t.assignees.map(a => a.name).join(' | ');
+        assignedNames = t.assignees.length > 3 
+          ? t.assignees.slice(0, 2).map(a => a.name).join('，') + ` 等${t.assignees.length}人` 
+          : t.assignees.map(a => a.name).join('，');
       } else if (t.assignedTo) {
         assignedNames = t.assignedTo.name;
       }
@@ -349,6 +436,9 @@ Page({
       }
       return { ...t, dueStatus };
     });
+
+    // 确保列表始终按创建时间倒序（最新的在上面）
+    filtered.sort((a, b) => (b._sortTimestamp || 0) - (a._sortTimestamp || 0));
 
     this.setData({ todos: filtered });
     this.applyGrouping(filtered);
@@ -516,16 +606,20 @@ Page({
         
         // 抄送管理员
         if (userInfo.role !== 'admin') {
-          db.collection('notifications').add({
-            data: {
-              type: 'todo',
-              title: '待办任务已完成',
-              content: `${operatorName} 完成了待办任务：【${todo.title}】。`,
-              targetUser: 'admin',
-              isRead: false,
-              createTime: db.serverDate(),
-              link: `/pages/todoForm/index?id=${id}`
-            }
+          db.collection('users').where({ role: 'admin' }).get().then(res => {
+            res.data.forEach(u => {
+              db.collection('notifications').add({
+                data: {
+                  type: 'todo',
+                  title: '待办任务已完成',
+                  content: `${operatorName} 完成了待办任务：【${todo.title}】。`,
+                  targetUser: u.name,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/todoForm/index?id=${id}`
+                }
+              });
+            });
           });
         }
         
@@ -533,11 +627,12 @@ Page({
         if (todo.relatedTo && todo.relatedTo.type === 'lead' && todo.relatedTo.id) {
           const now = new Date();
           const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+          const followContent = `【待办已完成】${todo.title.trim()}`;
           
           db.collection('followUps').add({
             data: {
               leadId: todo.relatedTo.id,
-              content: `【待办已完成】${todo.title.trim()}`,
+              content: followContent,
               createdBy: operatorName,
               createdAt: db.serverDate(),
               method: '系统记录',
@@ -549,9 +644,41 @@ Page({
           // 更新客户的最后跟进时间
           db.collection('leads').doc(todo.relatedTo.id).update({
             data: {
-              lastFollowUp: nowStr
+              lastFollowUp: nowStr,
+              lastFollowUpAt: Date.now()
             }
           });
+
+          // 给相关人发送未读通知，确保产生红点
+          db.collection('leads').doc(todo.relatedTo.id).get().then(resLead => {
+            const lead = resLead.data;
+            const notifyUsers = new Set();
+            if (lead.sales) notifyUsers.add(lead.sales);
+            if (lead.designer) notifyUsers.add(lead.designer);
+            if (lead.manager) notifyUsers.add(lead.manager);
+            if (lead.creatorName) notifyUsers.add(lead.creatorName);
+
+            db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+              adminRes.data.forEach(u => {
+                notifyUsers.add(u.name);
+              });
+
+              notifyUsers.forEach(u => {
+                if (!u) return;
+                db.collection('notifications').add({
+                  data: {
+                    type: 'lead',
+                    title: '系统通知',
+                    content: `【系统自动记录】${followContent.substring(0, 30)}...`,
+                    targetUser: u,
+                    isRead: false,
+                    createTime: db.serverDate(),
+                    link: `/pages/leadDetail/index?id=${todo.relatedTo.id}`
+                  }
+                }).catch(() => {});
+              });
+            });
+          }).catch(() => {});
         }
       }
       
@@ -630,6 +757,8 @@ Page({
       }
     }, () => {
       this.updateGroupedEmployees && this.updateGroupedEmployees();
+      const tabbar = this.getTabBar();
+      if (tabbar) tabbar.setData({ showMask: true });
     });
   },
 
@@ -641,11 +770,15 @@ Page({
         success: (res) => {
           if (res.confirm) {
             this.setData({ showAddModal: false, showAssigneeDropdown: false });
+            const tabbar = this.getTabBar();
+            if (tabbar) tabbar.setData({ showMask: false });
           }
         }
       });
     } else {
       this.setData({ showAddModal: false, showAssigneeDropdown: false });
+      const tabbar = this.getTabBar();
+      if (tabbar) tabbar.setData({ showMask: false });
     }
   },
 
@@ -812,16 +945,20 @@ Page({
       
       // 抄送给管理员
       if (userInfo.role !== 'admin') {
-        db.collection('notifications').add({
-          data: {
-            type: 'todo',
-            title: '新建了待办任务',
-            content: `${operatorName} 创建了待办任务：【${title.trim()}】。`,
-            targetUser: 'admin',
-            isRead: false,
-            createTime: db.serverDate(),
-            link: `/pages/todoForm/index?id=${newTodoId}`
-          }
+        db.collection('users').where({ role: 'admin' }).get().then(res => {
+          res.data.forEach(u => {
+            db.collection('notifications').add({
+              data: {
+                type: 'todo',
+                title: '新建了待办任务',
+                content: `${operatorName} 创建了待办任务：【${title.trim()}】。`,
+                targetUser: u.name,
+                isRead: false,
+                createTime: db.serverDate(),
+                link: `/pages/todoForm/index?id=${newTodoId}`
+              }
+            });
+          });
         });
       }
       
@@ -835,6 +972,8 @@ Page({
         showAddModal: false,
         showAssigneeDropdown: false
       });
+      const tabbar = this.getTabBar();
+      if (tabbar) tabbar.setData({ showMask: false });
       
       this.fetchData();
     }).catch(err => {
@@ -850,9 +989,13 @@ Page({
 
   openAdvancedFilter() {
     this.setData({ showFilterModal: true });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: true });
   },
   closeFilterModal() {
     this.setData({ showFilterModal: false });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: false });
   },
   toggleFilterEmployee(e) {
     const id = e.currentTarget.dataset.id;
@@ -917,6 +1060,8 @@ Page({
       selectedEmployeeIds: selected,
       showFilterModal: false 
     }, () => {
+      const tabbar = this.getTabBar();
+      if (tabbar) tabbar.setData({ showMask: false });
       this.saveFilterState();
       this.filterTodos();
     });

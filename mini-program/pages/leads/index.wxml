@@ -122,19 +122,36 @@ module.exports = { getStatusClass: getStatusClass };
 
       <!-- 底部：最新跟进、人员信息 -->
       <view class="card-footer meta-stack">
-        <view class="meta-badge meta-related">
-          <view class="icon-calendar"></view>
-          <text>最新跟进: {{item.lastFollowUp}}</text>
+        <view class="meta-badge meta-related" style="position: relative; display: inline-flex; align-items: center; max-width: 100%;">
+          <view class="icon-calendar" style="flex-shrink: 0;"></view>
+          <text style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">最新跟进: {{item.lastFollowUp}}</text>
+          <view wx:if="{{item.hasUnread}}" class="badge-dot" style="position: relative; margin-left: 12rpx; flex-shrink: 0; transform: translateY(-2rpx);"></view>
         </view>
 
-        <view class="meta-assignee" wx:if="{{item.status === '已签单'}}">
-          <view class="icon-user"></view>
-          <text style="color: var(--rose-600); font-weight: bold;">签单: {{item.signer || '未知'}} | {{item.signDate || '未知时间'}}</text>
-        </view>
-        <view class="meta-assignee" wx:else>
-          <view class="icon-user"></view>
-          <text wx:if="{{item.sales || item.designer || item.manager}}">{{item.sales || '无销售'}} | {{item.designer || '无设计'}} | {{item.manager || '无经理'}}</text>
-          <text wx:else>创建人: {{item.creatorName || '未知'}}</text>
+        <!-- 人员及签单信息使用 Grid 布局，保证完美对齐 -->
+        <view class="meta-assignee-group" style="display: grid; grid-template-columns: 36rpx 1fr; gap: 8rpx 0; align-items: center; margin-top: 12rpx;">
+          
+          <!-- 第一行：人员图标 -->
+          <view style="display: flex; justify-content: center; align-items: center; height: 36rpx;">
+            <view class="icon-user" style="transform: scale(0.9) translateY(-6rpx); margin: 0;"></view>
+          </view>
+          
+          <!-- 第一行：人员文字 -->
+          <text style="font-size: 26rpx; color: var(--slate-500); line-height: 36rpx; display: block;" wx:if="{{item.sales || item.designer || item.manager}}">{{item.sales || '无销售'}} | {{item.designer || '无设计'}} | {{item.manager || '无经理'}}</text>
+          <text style="font-size: 26rpx; color: var(--slate-500); line-height: 36rpx; display: block;" wx:else>创建人: {{item.creatorName || '未知'}}</text>
+
+          <!-- 第二行：签单图标 (仅签单显示) -->
+          <block wx:if="{{item.status === '已签单'}}">
+            <view style="display: flex; justify-content: center; align-items: center; height: 36rpx;">
+              <view style="width: 26rpx; height: 26rpx; background: var(--rose-50); border-radius: 13rpx; border: 2rpx solid var(--rose-200); display: flex; align-items: center; justify-content: center; box-sizing: border-box;">
+                <view style="width: 8rpx; height: 12rpx; border-bottom: 3rpx solid var(--rose-600); border-right: 3rpx solid var(--rose-600); transform: rotate(45deg); margin-bottom: 2rpx;"></view>
+              </view>
+            </view>
+            
+            <!-- 第二行：签单文字 -->
+            <text style="font-size: 26rpx; color: var(--rose-600); font-weight: bold; line-height: 36rpx; display: block;">签单: {{item.signer || '未知'}} | {{item.signDate || '未知时间'}}</text>
+          </block>
+
         </view>
       </view>
 
@@ -149,13 +166,14 @@ module.exports = { getStatusClass: getStatusClass };
   </view>
 
   <!-- 高级筛选弹窗 (修改为团队待办样式的居中弹窗) -->
-  <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
-  <view class="modal-content" wx:if="{{showFilterModal}}">
-    <view class="modal-header">
-      <text>客户高级筛选</text>
-      <view class="btn-close" bindtap="applyFilter">确定</view>
-    </view>
-    <scroll-view scroll-y class="modal-list" style="height: 60vh;">
+  <block wx:if="{{showFilterModal}}">
+    <view class="modal-mask" bindtap="closeFilterModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text>客户高级筛选</text>
+        <view class="btn-close" bindtap="applyFilter">确定</view>
+      </view>
+      <scroll-view scroll-y class="modal-list" style="height: 60vh;">
       <view class="filter-section">
         <view class="filter-title">数据范围</view>
         <view class="filter-tags">
@@ -202,111 +220,105 @@ module.exports = { getStatusClass: getStatusClass };
           </view>
         </block>
       </view>
-    </scroll-view>
-  </view>
+      </scroll-view>
+    </view>
+  </block>
 
   <!-- 添加线索弹窗 -->
-  <view class="modal-mask" wx:if="{{showAddModal}}" bindtap="closeAddModal"></view>
-  <view class="modal-content" wx:if="{{showAddModal}}">
-    <view class="modal-header">
-      <text>添加线索</text>
-      <view class="btn-close" bindtap="closeAddModal">取消</view>
-    </view>
-    <scroll-view scroll-y class="modal-scroll">
-      <view class="modal-body">
-        <view class="form-group">
-          <text class="label">客户姓名 <text style="color:red">*</text></text>
-          <input class="input" placeholder="请输入姓名" value="{{newLead.name}}" bindinput="onNewLeadInput" data-field="name" />
-        </view>
-        <view class="form-group">
-          <text class="label">手机号 <text style="color:red">*</text></text>
-          <input class="input" type="number" placeholder="请输入手机号" value="{{newLead.phone}}" bindinput="onNewLeadInput" data-field="phone" />
-        </view>
-        <view class="form-group">
-          <text class="label">地址</text>
-          <input class="input" placeholder="如：保利香槟国际1栋1单元" value="{{newLead.address}}" bindinput="onNewLeadInput" data-field="address" />
-        </view>
-        <view class="form-group">
-          <text class="label">面积 (㎡)</text>
-          <input class="input" type="digit" placeholder="请输入房屋面积" value="{{newLead.area}}" bindinput="onNewLeadInput" data-field="area" />
-        </view>
-        <view class="form-group">
-          <text class="label">装修预算</text>
-          <input class="input" placeholder="例如：15万左右" value="{{newLead.budget}}" bindinput="onNewLeadInput" data-field="budget" />
-        </view>
-        <view class="form-group">
-          <text class="label">需求类型</text>
-          <picker bindchange="onNewLeadPickerChange" data-field="requirementType" range="{{['毛坯', '旧改', '精装微调']}}">
-            <view class="picker-view">
-              <text>{{newLead.requirementType}}</text>
-              <view class="arrow-down"></view>
-            </view>
-          </picker>
-        </view>
-        <view class="form-group">
-          <text class="label">客户评级</text>
-          <picker bindchange="onNewLeadPickerChange" data-field="rating" range="{{['A', 'B', 'C', 'D']}}">
-            <view class="picker-view">
-              <text>{{newLead.rating}}级</text>
-              <view class="arrow-down"></view>
-            </view>
-          </picker>
-        </view>
-        <view class="form-group">
-          <text class="label">来源</text>
-          <picker bindchange="onNewLeadPickerChange" data-field="source" range="{{['自然进店', '老介新', '抖音', '小红书', '大众点评', '自有关系', '其他']}}">
-            <view class="picker-view">
-              <text>{{newLead.source}}</text>
-              <view class="arrow-down"></view>
-            </view>
-          </picker>
-        </view>
-        <view class="form-group" style="margin-bottom: 0;">
-          <text class="label">备注</text>
-          <input class="input" placeholder="简单描述客户需求" value="{{newLead.notes}}" bindinput="onNewLeadInput" data-field="notes" />
-        </view>
-        <view class="btn-save hover-scale" bindtap="saveNewLead">保 存</view>
+  <block wx:if="{{showAddModal}}">
+    <view class="modal-mask" bindtap="closeAddModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text>添加线索</text>
+        <view class="btn-close" bindtap="closeAddModal">取消</view>
       </view>
-    </scroll-view>
-  </view>
+      <scroll-view scroll-y class="modal-scroll">
+        <view class="modal-body">
+          <view class="form-group">
+            <text class="label">客户姓名 <text style="color:red">*</text></text>
+            <input class="input" placeholder="请输入姓名" value="{{newLead.name}}" bindinput="onNewLeadInput" data-field="name" />
+          </view>
+          <view class="form-group">
+            <text class="label">手机号 <text style="color:red">*</text></text>
+            <input class="input" type="number" placeholder="请输入手机号" value="{{newLead.phone}}" bindinput="onNewLeadInput" data-field="phone" />
+          </view>
+          <view class="form-group">
+            <text class="label">地址</text>
+            <input class="input" placeholder="如：保利香槟国际1栋1单元" value="{{newLead.address}}" bindinput="onNewLeadInput" data-field="address" />
+          </view>
+          <view class="form-group">
+            <text class="label">面积 (㎡)</text>
+            <input class="input" type="digit" placeholder="请输入房屋面积" value="{{newLead.area}}" bindinput="onNewLeadInput" data-field="area" />
+          </view>
+          <view class="form-group">
+            <text class="label">装修预算</text>
+            <input class="input" placeholder="例如：15万左右" value="{{newLead.budget}}" bindinput="onNewLeadInput" data-field="budget" />
+          </view>
+          <view class="form-group">
+            <text class="label">需求类型</text>
+            <picker bindchange="onNewLeadPickerChange" data-field="requirementType" range="{{['毛坯', '旧改', '精装微调']}}">
+              <view class="picker-view">
+                <text>{{newLead.requirementType}}</text>
+                <view class="arrow-down"></view>
+              </view>
+            </picker>
+          </view>
+          <view class="form-group">
+            <text class="label">客户评级</text>
+            <picker bindchange="onNewLeadPickerChange" data-field="rating" range="{{['A', 'B', 'C', 'D']}}">
+              <view class="picker-view">
+                <text>{{newLead.rating}}级</text>
+                <view class="arrow-down"></view>
+              </view>
+            </picker>
+          </view>
+          <view class="form-group">
+            <text class="label">来源</text>
+            <picker bindchange="onNewLeadPickerChange" data-field="source" range="{{['自然进店', '老介新', '抖音', '小红书', '大众点评', '自有关系', '其他']}}">
+              <view class="picker-view">
+                <text>{{newLead.source}}</text>
+                <view class="arrow-down"></view>
+              </view>
+            </picker>
+          </view>
+          <view class="form-group" style="margin-bottom: 0;">
+            <text class="label">备注</text>
+            <input class="input" placeholder="简单描述客户需求" value="{{newLead.notes}}" bindinput="onNewLeadInput" data-field="notes" />
+          </view>
+          <view class="btn-save hover-scale" bindtap="saveNewLead">保 存</view>
+        </view>
+      </scroll-view>
+    </view>
+  </block>
 
   <!-- 恭喜签单弹窗 -->
-  <view class="modal-mask" wx:if="{{showSignModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 40rpx;">
-    <view class="sign-modal-content" style="background: #fff; width: 85%; border-radius: 32rpx; padding: 60rpx 40rpx 50rpx; position: relative; box-sizing: border-box; text-align: center; box-shadow: 0 20rpx 40rpx rgba(0,0,0,0.1);">
+  <block wx:if="{{showSignModal}}">
+    <view class="modal-mask" style="position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 40rpx;">
+        <view class="sign-modal-content" style="background: #fff; width: 85%; border-radius: 32rpx; padding: 60rpx 40rpx 50rpx; position: relative; box-sizing: border-box; text-align: center; box-shadow: 0 20rpx 40rpx rgba(0,0,0,0.1);">
       
-      <!-- 庆祝图标与标题 -->
-      <view style="width: 120rpx; height: 120rpx; background: var(--rose-50); border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin: 0 auto 36rpx; border: 4rpx solid #fff; box-shadow: 0 8rpx 16rpx rgba(153, 41, 51, 0.1);">
-        <icon type="success_no_circle" size="40" color="#992933"/>
-      </view>
-      <view style="font-size: 40rpx; font-weight: bold; color: var(--rose-600); margin-bottom: 12rpx; letter-spacing: 2rpx;">品诺筑家恭喜开单</view>
-      <view style="font-size: 26rpx; color: #64748b; margin-bottom: 50rpx;">【{{currentSignLeadName}}】项目已成功签单</view>
-      
-      <!-- 表单内容 -->
-      <view style="text-align: left; margin-bottom: 30rpx;">
-        <view style="font-size: 26rpx; color: #475569; margin-bottom: 16rpx; font-weight: 500;">签单时间</view>
-        <picker mode="date" value="{{signDate}}" bindchange="onSignDateChange">
-          <view style="width: 100%; height: 88rpx; line-height: 88rpx; padding: 0 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #334155;">
-            {{signDate || '请选择签单日期'}}
+          <!-- 庆祝图标与标题 -->
+          <image src="cloud://pnzj-3g4n3a709292db87.706e-pnzj-3g4n3a709292db87-1335003666/assets/congrats.png" mode="aspectFit" style="width: 240rpx; height: 240rpx; margin-bottom: 30rpx; display: inline-block;"></image>
+          <view style="font-size: 40rpx; font-weight: bold; color: var(--rose-600); margin-bottom: 12rpx; letter-spacing: 2rpx;">品诺筑家恭喜开单</view>
+          <view style="font-size: 26rpx; color: #64748b; margin-bottom: 50rpx;">【{{currentSignLeadName}}】项目已成功签单</view>
+          
+          <!-- 设计工作流选择 -->
+          <view class="form-group" style="text-align: left; margin-bottom: 40rpx; background: #f8fafc; padding: 30rpx; border-radius: 20rpx; border: 2rpx solid #e2e8f0;">
+            <text class="label" style="margin-bottom: 20rpx; font-size: 28rpx; color: #334155; font-weight: 600;">关联设计工作流</text>
+            <picker bindchange="onWorkflowTypeChange" range="{{['不开启设计流', '常规设计流 (仅设计验收)', '全案设计流 (含深化与主材)']}}">
+              <view class="picker-view" style="background: #fff; border: 2rpx solid #cbd5e1; border-radius: 12rpx; padding: 0 24rpx; height: 80rpx; line-height: 80rpx;">
+                <text style="color: {{selectedWorkflowType ? '#0f172a' : '#94a3b8'}}; font-size: 28rpx;">{{selectedWorkflowType || '请选择需要开启的工作流类型'}}</text>
+                <view class="arrow-down" style="border-color: #64748b;"></view>
+              </view>
+            </picker>
           </view>
-        </picker>
-      </view>
-
-      <view style="text-align: left; margin-bottom: 50rpx;">
-        <view style="font-size: 26rpx; color: #475569; margin-bottom: 16rpx; font-weight: 500;">签单人</view>
-        <picker bindchange="onSignerChange" value="{{signerIndex}}" range="{{signersList}}">
-          <view style="width: 100%; height: 88rpx; min-height: 88rpx; padding: 0 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #334155; display: flex; align-items: center; justify-content: space-between;">
-            <text>{{signer || '请选择签单人'}}</text>
-            <text style="font-size: 20rpx; color: #94a3b8;">▼</text>
+          
+          <!-- 按钮 -->
+          <view style="display: flex; gap: 24rpx;">
+            <button bindtap="closeSignModal" style="flex: 1; font-size: 30rpx; background: #f1f5f9; color: #475569; border-radius: 16rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: 500; line-height: 1;">取消</button>
+            <button bindtap="confirmSign" style="flex: 1; font-size: 30rpx; background: var(--rose-600); color: #fff; border-radius: 16rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: bold; line-height: 1; box-shadow: 0 8rpx 20rpx rgba(153, 41, 51, 0.25);">确认签单</button>
           </view>
-        </picker>
-      </view>
-      
-      <!-- 按钮 -->
-      <view style="display: flex; gap: 24rpx;">
-        <button bindtap="closeSignModal" style="flex: 1; font-size: 30rpx; background: #f1f5f9; color: #475569; border-radius: 16rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: 500; line-height: 1;">取消</button>
-        <button bindtap="confirmSign" style="flex: 1; font-size: 30rpx; background: var(--rose-600); color: #fff; border-radius: 16rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: bold; line-height: 1; box-shadow: 0 8rpx 20rpx rgba(153, 41, 51, 0.25);">确认签单</button>
-      </view>
+        </view>
     </view>
-  </view>
+  </block>
 
 </view>

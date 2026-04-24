@@ -3,6 +3,7 @@ Component({
     selected: 0,
     unreadCount: 0,
     hidden: false,
+    showMask: false,
     list: [
       { pagePath: "/pages/index/index", text: "待办", iconClass: "icon-todo" },
       { pagePath: "/pages/leads/index", text: "客户", iconClass: "icon-leads" },
@@ -21,6 +22,7 @@ Component({
     }
   },
   methods: {
+    noop() {},
     switchTab(e) {
       const data = e.currentTarget.dataset;
       const url = data.path;

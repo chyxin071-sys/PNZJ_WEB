@@ -40,8 +40,8 @@
           <text>关联{{formData.relatedType === 'lead' ? '客户' : '工地'}}</text>
         </view>
         <picker bindchange="onRelatedChange" value="{{relatedIndex}}" range="{{relatedOptions}}" range-key="name" disabled="{{mode === 'view'}}">
-          <view class="picker-box" style="{{mode === 'view' && formData.relatedId ? 'background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 8rpx; display: flex; justify-content: space-between; align-items: center; padding: 16rpx 24rpx;' : ''}}" bindtap="{{mode === 'view' && formData.relatedId ? 'goToRelated' : ''}}">
-            <text class="{{!formData.relatedId ? 'ph' : ''}}" style="{{mode === 'view' && formData.relatedId ? 'color: #475569; font-weight: bold;' : ''}}">{{relatedIndex !== -1 ? relatedOptions[relatedIndex].name : (formData._displayRelatedName || '请选择')}}</text>
+          <view class="picker-box" style="{{mode === 'view' && formData.relatedId ? 'background: #f5f0eb; border: 1rpx solid #d4c4b8; border-radius: 8rpx; display: flex; justify-content: space-between; align-items: center; padding: 16rpx 24rpx;' : ''}}" bindtap="{{mode === 'view' && formData.relatedId ? 'goToRelated' : ''}}">
+            <text class="{{!formData.relatedId ? 'ph' : ''}}" style="{{mode === 'view' && formData.relatedId ? 'color: var(--primary-700); font-weight: bold;' : ''}}">{{relatedIndex !== -1 ? relatedOptions[relatedIndex].name : (formData._displayRelatedName || '请选择')}}</text>
             <view class="arrow-down" wx:if="{{mode !== 'view'}}"></view>
           </view>
         </picker>
@@ -69,9 +69,17 @@
     </view>
 
     <!-- 详细描述 -->
-    <view class="form-group">
-      <view class="label">详细描述</view>
+    <view class="form-group" wx:if="{{mode !== 'view' || (mode === 'view' && formData.description)}}">
+      <view class="label" style="{{mode === 'view' && !formData.description ? 'color: #94a3b8; font-weight: normal;' : ''}}">详细描述</view>
       <textarea class="textarea-box" placeholder="添加更详细的任务描述（选填）..." placeholder-class="ph" value="{{formData.description}}" bindinput="onInput" data-field="description" auto-height maxlength="500" disabled="{{mode === 'view'}}"></textarea>
+    </view>
+
+    <!-- 创建日期 (仅查看模式) -->
+    <view class="form-group" wx:if="{{mode === 'view' && formData.createdAt}}">
+      <view class="label">创建日期</view>
+      <view class="view-text">
+        <text>{{formData.createdAt}}</text>
+      </view>
     </view>
     
     <view class="bottom-padding"></view>

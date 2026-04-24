@@ -3,8 +3,20 @@ Page({
     leadId: null,
     lead: null,
     files: [],
+    materials: [], // 新增材料清单数据
     loading: true,
-    isUploader: false
+    isUploader: false,
+    activeTab: 'files', // 'files' | 'materials'
+    showMaterialModal: false,
+    materialForm: {
+      category: '主材',
+      name: '',
+      brandModel: '',
+      quantity: '',
+      remark: ''
+    },
+    categories: ['主材', '辅材', '全屋定制', '家电软装', '其他'],
+    editMaterialIndex: -1
   },
 
   onLoad(options) {
@@ -15,6 +27,30 @@ Page({
       wx.showToast({ title: '参数错误', icon: 'none' });
       setTimeout(() => wx.navigateBack(), 1000);
     }
+  },
+
+  switchTab(e) {
+    this.setData({ activeTab: e.currentTarget.dataset.tab });
+  },
+
+  computeGroupedMaterials(materials) {
+    const categories = ['主材', '辅材', '全屋定制', '家电软装', '其他'];
+    const groups = categories.map(cat => ({
+      category: cat,
+      items: materials.filter(m => m.category === cat)
+    })).filter(g => g.items.length > 0);
+    
+    // 处理分类外的异常数据
+    const otherItems = materials.filter(m => !categories.includes(m.category));
+    if (otherItems.length > 0) {
+      const otherGroup = groups.find(g => g.category === '其他');
+      if (otherGroup) {
+        otherGroup.items.push(...otherItems);
+      } else {
+        groups.push({ category: '其他', items: otherItems });
+      }
+    }
+    return groups;
   },
 
   fetchFiles() {
@@ -39,6 +75,8 @@ Page({
 
         // 如果没有 files 数组则初始化为空数组
         const files = lead.files || [];
+        const materials = lead.materialList || []; // 获取材料清单
+        const groupedMaterials = this.computeGroupedMaterials(materials);
         
         // 修正：确保在调用 sort 和 localeCompare 之前，files 数组中对象格式正确
         const sortedFiles = files.map(f => {
@@ -59,6 +97,8 @@ Page({
         this.setData({ 
           lead: lead, 
           files: sortedFiles,
+          materials: materials,
+          groupedMaterials: groupedMaterials,
           isUploader,
           loading: false 
         });
@@ -68,6 +108,113 @@ Page({
         wx.showToast({ title: '获取数据失败', icon: 'none' });
         this.setData({ loading: false });
       });
+  },
+
+  // === 材料清单管理 ===
+  openAddMaterial() {
+    this.setData({
+      showMaterialModal: true,
+      editMaterialIndex: -1,
+      materialForm: { category: '主材', name: '', brandModel: '', quantity: '', remark: '' }
+    });
+  },
+
+  openEditMaterial(e) {
+    const itemIndex = e.currentTarget.dataset.index;
+    const catIndex = e.currentTarget.dataset.catindex;
+    const item = this.data.groupedMaterials[catIndex].items[itemIndex];
+    const index = this.data.materials.findIndex(m => m.id === item.id);
+    
+    if (index === -1) return;
+
+    this.setData({
+      showMaterialModal: true,
+      editMaterialIndex: index,
+      materialForm: { ...this.data.materials[index] }
+    });
+  },
+
+  closeMaterialModal() {
+    this.setData({ showMaterialModal: false });
+  },
+
+  onMaterialFormInput(e) {
+    const field = e.currentTarget.dataset.field;
+    this.setData({
+      [`materialForm.${field}`]: e.detail.value
+    });
+  },
+
+  onCategoryChange(e) {
+    this.setData({
+      'materialForm.category': this.data.categories[e.detail.value]
+    });
+  },
+
+  saveMaterial() {
+    const form = this.data.materialForm;
+    if (!form.name.trim()) return wx.showToast({ title: '请输入材料名称', icon: 'none' });
+    if (!form.brandModel.trim()) return wx.showToast({ title: '请输入品牌型号', icon: 'none' });
+
+    wx.showLoading({ title: '保存中' });
+    let newMaterials = [...this.data.materials];
+    if (this.data.editMaterialIndex === -1) {
+      newMaterials.push({ ...form, id: Date.now().toString() });
+    } else {
+      newMaterials[this.data.editMaterialIndex] = { ...form, id: newMaterials[this.data.editMaterialIndex].id };
+    }
+
+    const db = wx.cloud.database();
+    db.collection('leads').doc(this.data.leadId).update({
+      data: { materialList: newMaterials }
+    }).then(() => {
+      wx.hideLoading();
+      this.setData({ 
+        materials: newMaterials, 
+        groupedMaterials: this.computeGroupedMaterials(newMaterials),
+        showMaterialModal: false 
+      });
+      wx.showToast({ title: '保存成功' });
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '保存失败', icon: 'none' });
+    });
+  },
+
+  deleteMaterial(e) {
+    const itemIndex = e.currentTarget.dataset.index;
+    const catIndex = e.currentTarget.dataset.catindex;
+    // 需要找到该 item 在全局 materials 中的真实索引
+    const item = this.data.groupedMaterials[catIndex].items[itemIndex];
+    const index = this.data.materials.findIndex(m => m.id === item.id);
+    
+    if (index === -1) return;
+
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这条材料清单吗？',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中' });
+          let newMaterials = [...this.data.materials];
+          newMaterials.splice(index, 1);
+          const db = wx.cloud.database();
+          db.collection('leads').doc(this.data.leadId).update({
+            data: { materialList: newMaterials }
+          }).then(() => {
+            wx.hideLoading();
+            this.setData({ 
+              materials: newMaterials,
+              groupedMaterials: this.computeGroupedMaterials(newMaterials)
+            });
+            wx.showToast({ title: '已删除' });
+          }).catch(() => {
+            wx.hideLoading();
+            wx.showToast({ title: '删除失败', icon: 'none' });
+          });
+        }
+      }
+    });
   },
 
   // 格式化文件大小
@@ -111,16 +258,40 @@ Page({
             sourceType: ['album', 'camera'],
             sizeType: ['compressed'], // 强制压缩
             success: (res) => {
-              const tempFiles = res.tempFiles.map(f => {
-                const ext = (f.tempFilePath.split('.').pop() || 'jpg').toLowerCase();
-                const finalExt = (f.fileType === 'video' && ext !== 'mp4') ? 'mp4' : ext;
-                return {
-                  path: f.tempFilePath,
-                  name: `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}.${finalExt}`,
-                  size: f.size
-                };
+              wx.showLoading({ title: '处理中...', mask: true });
+              const compressPromises = res.tempFiles.map(f => {
+                return new Promise((resolve) => {
+                  const ext = (f.tempFilePath.split('.').pop() || 'jpg').toLowerCase();
+                  const finalExt = (f.fileType === 'video' && ext !== 'mp4') ? 'mp4' : ext;
+                  const fileInfo = {
+                    name: `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}.${finalExt}`,
+                    size: f.size
+                  };
+                  
+                  if (f.fileType === 'image') {
+                    wx.compressImage({
+                      src: f.tempFilePath,
+                      quality: 60,
+                      success: (compRes) => {
+                        fileInfo.path = compRes.tempFilePath;
+                        resolve(fileInfo);
+                      },
+                      fail: () => {
+                        fileInfo.path = f.tempFilePath;
+                        resolve(fileInfo);
+                      }
+                    });
+                  } else {
+                    fileInfo.path = f.tempFilePath;
+                    resolve(fileInfo);
+                  }
+                });
               });
-              this.uploadToCloud(tempFiles);
+
+              Promise.all(compressPromises).then(tempFiles => {
+                wx.hideLoading();
+                this.uploadToCloud(tempFiles);
+              });
             }
           });
         } else if (res.tapIndex === 2) {

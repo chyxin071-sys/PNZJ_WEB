@@ -11,15 +11,26 @@ import DatePicker from "../../../components/DatePicker";
 
 // 8大节点标准模板
 const TEMPLATE_NODES = [
-  { name: "开工", duration: 10, subNodes: [{name:"开工仪式",duration:1},{name:"现场交底",duration:1},{name:"成品保护",duration:1},{name:"墙体拆除",duration:2},{name:"垃圾清运",duration:1},{name:"设备定位",duration:1},{name:"砌筑新建",duration:2},{name:"墙体批荡",duration:1}] },
-  { name: "水电", duration: 9,  subNodes: [{name:"水电交底",duration:1},{name:"开槽布管",duration:3},{name:"排污下水",duration:1},{name:"线管敷设",duration:2},{name:"打压测试",duration:1},{name:"水电验收",duration:1}] },
-  { name: "木工", duration: 10, subNodes: [{name:"木工交底",duration:1},{name:"吊顶龙骨",duration:3},{name:"石膏板封样",duration:2},{name:"背景墙打底",duration:2},{name:"隔墙制作",duration:1},{name:"木工验收",duration:1}] },
-  { name: "瓦工", duration: 16, subNodes: [{name:"瓦工交底",duration:1},{name:"下水管包管",duration:1},{name:"防水涂刷",duration:2},{name:"闭水试验",duration:2},{name:"地面找平",duration:2},{name:"瓷砖铺贴",duration:6},{name:"瓷砖美缝",duration:1},{name:"瓦工验收",duration:1}] },
-  { name: "墙面", duration: 14, subNodes: [{name:"墙面交底",duration:1},{name:"基层找平",duration:2},{name:"挂网防裂",duration:1},{name:"腻子批刮",duration:4},{name:"乳胶漆涂刷",duration:5},{name:"墙面验收",duration:1}] },
-  { name: "定制", duration: 12, subNodes: [{name:"复尺测量",duration:1},{name:"厨卫吊顶",duration:1},{name:"木地板铺装",duration:2},{name:"木门安装",duration:1},{name:"柜体安装",duration:4},{name:"台面安装",duration:1},{name:"五金挂件",duration:2}] },
-  { name: "软装", duration: 6,  subNodes: [{name:"窗帘壁纸",duration:1},{name:"灯具安装",duration:1},{name:"开关面板",duration:1},{name:"卫浴安装",duration:1},{name:"大家电进场",duration:1},{name:"家具进场",duration:1}] },
-  { name: "交付", duration: 4,  subNodes: [{name:"拓荒保洁",duration:1},{name:"室内空气治理",duration:1},{name:"竣工验收",duration:1},{name:"钥匙移交/合影留念",duration:1}] },
+  { name: "开工", duration: 10, subNodes: [{name:"开工交底",duration:1},{name:"成品保护",duration:1},{name:"墙体拆除",duration:2},{name:"垃圾清运",duration:1},{name:"设备定位",duration:1},{name:"砌筑新建",duration:2},{name:"墙体批荡",duration:1},{name:"阶段验收",duration:1}] },
+  { name: "水电", duration: 9,  subNodes: [{name:"水电交底",duration:1},{name:"开槽布管",duration:3},{name:"排污下水",duration:1},{name:"线管敷设",duration:2},{name:"打压测试",duration:1},{name:"阶段验收",duration:1}] },
+  { name: "木工", duration: 10, subNodes: [{name:"木工作交底",duration:1},{name:"吊顶龙骨",duration:3},{name:"石膏板封样",duration:2},{name:"背景墙打底",duration:2},{name:"隔墙制作",duration:1},{name:"阶段验收",duration:1}] },
+  { name: "瓦工", duration: 16, subNodes: [{name:"泥瓦交底",duration:1},{name:"下水管包管",duration:1},{name:"防水涂刷",duration:2},{name:"闭水试验",duration:2},{name:"地面找平",duration:2},{name:"瓷砖铺贴",duration:6},{name:"瓷砖美缝",duration:1},{name:"阶段验收",duration:1}] },
+  { name: "墙面", duration: 14, subNodes: [{name:"油漆交底",duration:1},{name:"基层找平",duration:2},{name:"挂网防裂",duration:1},{name:"腻子批刮",duration:4},{name:"乳胶漆涂刷",duration:5},{name:"阶段验收",duration:1}] },
+  { name: "定制", duration: 12, subNodes: [{name:"复尺测量",duration:1},{name:"厨卫吊顶",duration:1},{name:"木地板铺装",duration:2},{name:"木门安装",duration:1},{name:"柜体安装",duration:4},{name:"台面安装",duration:1},{name:"五金挂件",duration:2},{name:"阶段验收",duration:1}] },
+  { name: "软装", duration: 6,  subNodes: [{name:"软装进场交底",duration:1},{name:"窗帘壁纸",duration:1},{name:"灯具安装",duration:1},{name:"开关面板",duration:1},{name:"卫浴安装",duration:1},{name:"大家电进场",duration:1},{name:"家具进场",duration:1},{name:"阶段验收",duration:1}] },
+  { name: "交付", duration: 4,  subNodes: [{name:"交付启动交底",duration:1},{name:"拓荒保洁",duration:1},{name:"室内空气治理",duration:1},{name:"钥匙移交/合影留念",duration:1},{name:"竣工验收",duration:1}] },
 ];
+
+function formatDateRange(start: string, end: string) {
+  if (!start || !end) return `${start || '-'} ~ ${end || '-'}`;
+  const startParts = start.split('-');
+  const endParts = end.split('-');
+  if (startParts.length !== 3 || endParts.length !== 3) return `${start} ~ ${end}`;
+  if (startParts[0] === endParts[0]) {
+    return `${start} ~ ${endParts[1]}-${endParts[2]}`;
+  }
+  return `${start} ~ ${end}`;
+}
 
 function recalculateGantt(nodes: any[], baseDate: string): any[] {
   let cursor = baseDate;
@@ -86,6 +97,18 @@ export default function ProjectDetailPage() {
   const [tempPhotos, setTempPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [remark, setRemark] = useState('');
+  const [editDelayReason, setEditDelayReason] = useState('');
+
+  // 锁定背景滚动
+  useEffect(() => {
+    const hasOpenModal = startModal || subNodeModal || delayModal || durationModal || editProjectModal;
+    if (hasOpenModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [startModal, subNodeModal, delayModal, durationModal, editProjectModal]);
 
   // 编辑节点状态
   const [isEditingNodes, setIsEditingNodes] = useState(false);
@@ -122,14 +145,14 @@ export default function ProjectDetailPage() {
       if (nodes.length === 0) {
         nodes = TEMPLATE_NODES.map((t, i) => ({
           name: t.name, duration: t.duration,
-          subNodes: t.subNodes.map(s => ({ name: s.name, duration: s.duration, status: 'pending', startDate: '', endDate: '', records: [] })),
-          status: 'pending', startDate: '', endDate: '', records: [], delayRecords: [],
+          subNodes: t.subNodes.map(s => ({ name: s.name, duration: s.duration, status: 'pending', startDate: '', endDate: '', actualStartDate: '', actualEndDate: '', records: [] })),
+          status: 'pending', startDate: '', endDate: '', actualStartDate: '', actualEndDate: '', records: [], delayRecords: [],
         }));
       } else {
         nodes = nodes.map((n: any, i: number) => ({
           ...n,
           duration: n.duration || TEMPLATE_NODES[i]?.duration || 5,
-          subNodes: (n.subNodes || []).map((s: any) => typeof s === 'string' ? { name: s, duration: 1, status: 'pending', startDate: '', endDate: '', records: [] } : s),
+          subNodes: (n.subNodes || []).map((s: any) => typeof s === 'string' ? { name: s, duration: 1, status: 'pending', startDate: '', endDate: '', actualStartDate: '', actualEndDate: '', records: [] } : s),
           delayRecords: n.delayRecords || [],
         }));
       }
@@ -163,14 +186,14 @@ export default function ProjectDetailPage() {
 
   const handleEditProjectSave = async () => {
     let nodes = [...project.nodesData];
-    
+
     // 如果开工日期有变化，且不为空，才重新排期
     if (editStartDate && editStartDate !== project.startDate) {
       nodes = recalculateGantt(nodes, editStartDate);
     }
-    
-    const patch: any = { 
-      manager: editManager, 
+
+    const patch: any = {
+      manager: editManager,
       nodesData: nodes,
       expectedEndDate: nodes.length > 0 ? nodes[nodes.length-1].endDate : ''
     };
@@ -181,6 +204,34 @@ export default function ProjectDetailPage() {
     if (await save(patch)) {
       setProject({ ...project, ...patch });
       setEditProjectModal(false);
+
+      // 写入系统跟进记录
+      if (project.leadId) {
+        let changeLog = '';
+        if (editManager !== project.manager && editStartDate && editStartDate !== project.startDate) {
+          // 两个都改了
+          changeLog = `调整了施工排期\n项目经理：${project.manager || '未分配'} → ${editManager}\n开工日期：${project.startDate || '未定'} → ${editStartDate}\n预计完工：${patch.expectedEndDate}`;
+        } else if (editManager !== project.manager) {
+          // 只改项目经理
+          changeLog = `更换了项目经理\n${project.manager || '未分配'} → ${editManager}`;
+        } else if (editStartDate && editStartDate !== project.startDate) {
+          // 只改开工日期
+          changeLog = `调整了施工排期\n开工日期：${project.startDate || '未定'} → ${editStartDate}\n预计完工：${patch.expectedEndDate}`;
+        }
+
+        if (changeLog) {
+          await fetch('/api/followUps', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              leadId: project.leadId,
+              content: changeLog,
+              method: '系统记录',
+              createdBy: userName
+            })
+          });
+        }
+      }
     } else {
       alert('保存失败');
     }
@@ -190,6 +241,11 @@ export default function ProjectDetailPage() {
     if (!baseStartDate) return alert('请选择开工日期');
     let nodes = [...project.nodesData];
     nodes[0].status = 'current';
+    nodes[0].actualStartDate = baseStartDate;
+    if (nodes[0].subNodes && nodes[0].subNodes.length > 0) {
+      nodes[0].subNodes[0].status = 'current';
+      nodes[0].subNodes[0].actualStartDate = baseStartDate;
+    }
     nodes = recalculateGantt(nodes, baseStartDate);
     const patch = { status: '施工中', startDate: baseStartDate, expectedEndDate: nodes[nodes.length-1].endDate, nodesData: nodes, currentNode: 1 };
     if (await save(patch)) {
@@ -216,11 +272,32 @@ export default function ProjectDetailPage() {
     if (!durationModal) return;
     const { majorIdx, subIdx } = durationModal;
     let nodes = [...project.nodesData];
+    const oldDuration = nodes[majorIdx].subNodes[subIdx].duration;
     nodes[majorIdx].subNodes[subIdx].duration = newDuration;
     nodes = recalculateGantt(nodes, project.startDate);
     const patch = { nodesData: nodes, expectedEndDate: nodes[nodes.length-1].endDate };
-    if (await save(patch)) { setProject({ ...project, ...patch }); setDurationModal(null); }
-    else alert('保存失败');
+    if (await save(patch)) {
+      setProject({ ...project, ...patch });
+      setDurationModal(null);
+
+      // 写入系统跟进记录
+      if (project.leadId) {
+        const majorNode = nodes[majorIdx];
+        const subNode = majorNode.subNodes[subIdx];
+        await fetch('/api/followUps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: project.leadId,
+            content: `调整了施工排期\n【${majorNode.name} - ${subNode.name}】\n工期：${oldDuration}天 → ${newDuration}天\n开工：${subNode.startDate}\n完工：${subNode.endDate}\n预计总完工：${patch.expectedEndDate}`,
+            method: '系统记录',
+            createdBy: userName
+          })
+        });
+      }
+    } else {
+      alert('保存失败');
+    }
   };
 
   const handleDelaySubmit = async () => {
@@ -258,26 +335,71 @@ export default function ProjectDetailPage() {
     let nodes = [...project.nodesData];
     const sub = nodes[majorIdx].subNodes[subIdx];
     const nowStr = new Date().toISOString().split('T')[0];
-    sub.status = 'completed';
+    
+    const isFirst = subIdx === 0;
+    const isLast = subIdx === nodes[majorIdx].subNodes.length - 1;
+
     if (!sub.actualStartDate) sub.actualStartDate = nowStr;
     sub.actualEndDate = nowStr;
     if (!sub.records) sub.records = [];
     sub.records.push({ remark, photos: tempPhotos, uploader: userName, createdAt: nowStr });
 
-    // 动态排期：只要有工序完成，就重新推算后续所有工序的排期
+    if (isFirst || isLast) {
+      // 首尾特殊工序进入待签字状态
+      sub.status = 'awaiting_signature';
+      alert('已提交现场记录！该特殊工序现已进入“待签字”状态，请分享给客户确认。');
+    } else {
+      // 中间工序直接完成
+      sub.status = 'completed';
+      
+      // 检查中间工序是否全部完成
+      let allMiddleDone = true;
+      for (let i = 1; i < nodes[majorIdx].subNodes.length - 1; i++) {
+        if (nodes[majorIdx].subNodes[i].status !== 'completed') {
+          allMiddleDone = false;
+          break;
+        }
+      }
+      // 如果中间全部完成，激活最后一个验收工序
+      if (allMiddleDone) {
+        const lastNode = nodes[majorIdx].subNodes[nodes[majorIdx].subNodes.length - 1];
+        if (lastNode.status === 'pending') {
+          lastNode.status = 'current';
+          if (!lastNode.actualStartDate) lastNode.actualStartDate = nowStr;
+        }
+      }
+    }
+
+    // 动态排期重算
     nodes = recalculateGantt(nodes, project.startDate);
 
     let newCurrentNode = project.currentNode || 1;
     let newStatus = project.status;
     const allDone = nodes[majorIdx].subNodes.every((s: any) => s.status === 'completed');
+    
     if (allDone) {
       nodes[majorIdx].status = 'completed';
       nodes[majorIdx].actualEndDate = nowStr;
-      nodes[majorIdx].endDate = nowStr;
-      if (majorIdx + 1 < nodes.length) { nodes[majorIdx+1].status = 'current'; nodes[majorIdx+1].startDate = nowStr; newCurrentNode = majorIdx + 2; }
+      if (!nodes[majorIdx].actualStartDate) nodes[majorIdx].actualStartDate = nodes[majorIdx].subNodes[0]?.actualStartDate || nowStr;
+      
+      if (majorIdx + 1 < nodes.length) { 
+        nodes[majorIdx+1].status = 'current'; 
+        nodes[majorIdx+1].actualStartDate = nowStr; 
+        newCurrentNode = majorIdx + 2; 
+
+        // 自动激活下一个大节点的第一个未完成子工序
+        const nextSubNodes = nodes[majorIdx + 1].subNodes;
+        if (nextSubNodes && nextSubNodes.length > 0) {
+          if (nextSubNodes[0].status !== 'completed') {
+            nextSubNodes[0].status = 'current';
+            if (!nextSubNodes[0].actualStartDate) nextSubNodes[0].actualStartDate = nowStr;
+          }
+        }
+      }
       nodes = recalculateGantt(nodes, project.startDate);
       if (majorIdx + 1 >= nodes.length) newStatus = '已竣工';
     }
+    
     const patch = { nodesData: nodes, currentNode: newCurrentNode, status: newStatus, expectedEndDate: nodes[nodes.length-1].endDate };
     if (await save(patch)) {
       setProject({ ...project, ...patch });
@@ -286,7 +408,10 @@ export default function ProjectDetailPage() {
 
       // 写入跟进记录
       if (project.leadId) {
-        let content = `工地进度更新：【${nodes[majorIdx].name}】阶段的【${sub.name}】已完工。`;
+        let content = `工地进度更新：【${nodes[majorIdx].name}】阶段的【${sub.name}】现场记录已提交。`;
+        if (isFirst || isLast) {
+          content += `\n目前正在等待客户签字确认。`;
+        }
         if (allDone) {
           content += `\n此工序完成标志着【${nodes[majorIdx].name}】大阶段已全部验收通过。`;
         }
@@ -360,11 +485,32 @@ export default function ProjectDetailPage() {
     setDraggedIdx(null);
   };
 
+  const handleSaveDelayReason = async () => {
+    if (!subNodeModal || !editDelayReason.trim()) return alert('请填写逾期原因');
+    const { majorIdx, subIdx } = subNodeModal;
+    let nodes = [...project.nodesData];
+    const sub = nodes[majorIdx].subNodes[subIdx];
+    if (!sub.acceptanceRecord) sub.acceptanceRecord = {};
+    sub.acceptanceRecord.delayReason = editDelayReason;
+    
+    const patch = { nodesData: nodes };
+    if (await save(patch)) { 
+      setProject({ ...project, ...patch }); 
+      setEditDelayReason('');
+      alert('逾期原因已保存');
+    } else {
+      alert('保存失败');
+    }
+  };
+
   const handleAddMajorNode = () => {
     const nodes = [...project.nodesData];
     nodes.push({
       name: "新大阶段", duration: 1, status: "pending", startDate: "", endDate: "", records: [], delayRecords: [],
-      subNodes: [{ name: "新工序", duration: 1, status: "pending", startDate: "", endDate: "", records: [] }]
+      subNodes: [
+        { name: "阶段交底", duration: 1, status: "pending", startDate: "", endDate: "", records: [] },
+        { name: "阶段验收", duration: 1, status: "pending", startDate: "", endDate: "", records: [] }
+      ]
     });
     setProject({ ...project, nodesData: nodes });
   };
@@ -384,13 +530,25 @@ export default function ProjectDetailPage() {
 
   const handleAddSubNode = (idx: number) => {
     const nodes = [...project.nodesData];
-    nodes[idx].subNodes.push({ name: "新工序", duration: 1, status: "pending", startDate: "", endDate: "", records: [] });
+    const subNodes = nodes[idx].subNodes;
+    if (subNodes.length >= 2) {
+      // 插入到验收（最后一个）之前
+      const lastSub = subNodes.pop();
+      subNodes.push({ name: "新工序", duration: 1, status: "pending", startDate: "", endDate: "", records: [] });
+      subNodes.push(lastSub);
+    } else {
+      subNodes.push({ name: "新工序", duration: 1, status: "pending", startDate: "", endDate: "", records: [] });
+    }
     setProject({ ...project, nodesData: nodes });
   };
 
   const handleDeleteSubNode = (idx: number, sIdx: number) => {
     const nodes = [...project.nodesData];
-    nodes[idx].subNodes.splice(sIdx, 1);
+    const subNodes = nodes[idx].subNodes;
+    if (sIdx === 0 || sIdx === subNodes.length - 1) {
+      return alert('首尾特殊工序（交底/验收）不可删除，这是客户签字的必经节点！');
+    }
+    subNodes.splice(sIdx, 1);
     setProject({ ...project, nodesData: nodes });
   };
 
@@ -492,7 +650,7 @@ export default function ProjectDetailPage() {
                   </div>
                 ) : (
                   <button onClick={enterEditMode} className="px-3 py-1.5 text-xs font-bold bg-white text-primary-700 rounded-full border border-primary-200 hover:bg-primary-50 flex items-center gap-1 shadow-sm transition-colors">
-                    <Edit2 className="w-3 h-3" /> 编辑工序
+                    <Edit2 className="w-3 h-3" /> 编辑节点
                   </button>
                 )
               )}
@@ -539,17 +697,11 @@ export default function ProjectDetailPage() {
                                 className="flex-1 text-sm bg-transparent border-b border-dashed border-primary-200 focus:border-primary-400 outline-none px-1 py-0.5 text-primary-800 min-w-0" 
                                 placeholder="工序名称"
                               />
-                              <div className="flex items-center gap-1.5 bg-white border border-primary-200 rounded-md px-2 py-1 shadow-sm shrink-0">
-                                <input 
-                                  type="number" 
-                                  min="0"
-                                  value={sub.duration} 
-                                  onChange={(e) => handleUpdateSubNodeDuration(idx, sIdx, Number(e.target.value))} 
-                                  className="w-10 text-sm text-center outline-none font-medium text-primary-900" 
-                                />
-                                <span className="text-xs text-primary-500 font-medium">天</span>
-                              </div>
-                              <button onClick={() => handleDeleteSubNode(idx, sIdx)} className="text-primary-300 hover:text-rose-500 p-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" title="删除工序">
+                              <button 
+                                onClick={() => handleDeleteSubNode(idx, sIdx)} 
+                                className={`p-1 shrink-0 transition-opacity ${sIdx === 0 || sIdx === node.subNodes.length - 1 ? 'opacity-20 cursor-not-allowed' : 'opacity-0 group-hover:opacity-100 text-primary-300 hover:text-rose-500'}`} 
+                                title={sIdx === 0 || sIdx === node.subNodes.length - 1 ? "首尾特殊工序不可删除" : "删除工序"}
+                              >
                                 <X className="w-4 h-4"/>
                               </button>
                             </div>
@@ -586,11 +738,21 @@ export default function ProjectDetailPage() {
                             onClick={() => setExpandedIdx(expanded ? null : idx)}>
                             <div>
                               <h3 className={`text-base font-bold mb-0.5 ${active ? 'text-amber-600' : done ? 'text-primary-900' : 'text-primary-400'}`}>{node.name}</h3>
-                              <p className="text-xs text-primary-400 font-mono">
-                                {done && `已完成：${node.startDate} ~ ${node.actualEndDate || node.endDate}`}
-                                {active && `进行中 | 预计开工：${node.startDate} | 预计完工：${node.endDate}`}
-                                {!done && !active && `未开始 | 预计：${node.startDate} ~ ${node.endDate}`}
-                              </p>
+                              <div className="text-[11px] text-primary-400 font-mono mt-1.5 flex flex-col gap-1">
+                                <div className="flex">
+                                  <span className="w-10">计划：</span>
+                                  <span>{formatDateRange(node.startDate, node.endDate)}</span>
+                                </div>
+                                {(node.actualStartDate || node.actualEndDate) && (
+                                  <div className={`flex ${node.status === 'completed' && node.actualEndDate > node.endDate ? 'text-rose-600' : ''}`}>
+                                    <span className="w-10">实际：</span>
+                                    <span>
+                                      {formatDateRange(node.actualStartDate || node.startDate, node.actualEndDate || node.endDate)}
+                                      {node.status === 'completed' && node.actualEndDate > node.endDate && <span className="ml-1 font-bold">(延期)</span>}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             <ChevronDown className={`w-5 h-5 text-primary-300 transition-transform ${expanded ? 'rotate-180' : ''}`} />
                           </div>
@@ -602,28 +764,91 @@ export default function ProjectDetailPage() {
                               <p className="text-xs font-medium text-primary-400 mb-3">施工工序</p>
                               <div className="space-y-2 mb-6">
                                 {(node.subNodes || []).map((sub: any, si: number) => {
+                                  const isSpecial = si === 0 || si === node.subNodes.length - 1;
                                   const subDone = sub.status === 'completed';
-                                  let timeStr = '';
-                                  if (subDone) timeStr = `实际完工：${sub.actualEndDate || '-'}`;
-                                  else timeStr = `预计：${sub.startDate || '-'} ~ ${sub.endDate || '-'}`;
+                                  const subCurrent = sub.status === 'current';
+                                  const subAwaiting = sub.status === 'awaiting_signature';
+                                  const isDelayed = subDone && sub.actualEndDate > sub.endDate;
                                   return (
-                                    <div key={si} className="relative flex items-center gap-3 bg-white border border-primary-100 rounded-lg px-4 py-3 hover:border-primary-300 transition-colors cursor-pointer shadow-sm"
+                                    <div key={si} className={`relative flex items-center gap-3 bg-white border ${isSpecial ? 'border-amber-300 shadow-md' : 'border-primary-100 shadow-sm'} rounded-lg px-4 py-3 hover:border-primary-300 transition-colors cursor-pointer`}
                                       onClick={() => {
                                         if (node.status === 'pending') return alert('前置节点尚未完工，当前阶段未解锁');
                                         setSubNodeModal({ majorIdx: idx, subIdx: si });
                                       }}>
-                                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${subDone ? 'bg-primary-900' : 'bg-primary-200'}`}></div>
-                                      <div className="flex-1 min-w-0">
-                                        <span className={`text-sm font-medium ${subDone ? 'text-primary-900' : 'text-primary-700'}`}>{sub.name}</span>
-                                        <span className="text-[11px] text-primary-400 font-mono ml-3">{timeStr}</span>
+                                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${subDone ? 'bg-primary-900' : (subCurrent || subAwaiting) ? 'bg-amber-400' : 'bg-primary-200'} ${subAwaiting ? 'animate-pulse' : ''}`}></div>
+                                      <div className="flex-1 min-w-0 flex items-center justify-between">
+                                        <div>
+                                          <div className="flex items-center gap-2 mb-1">
+                                            <span className={`text-sm font-bold ${subDone ? 'text-primary-900' : (subCurrent || subAwaiting) ? 'text-amber-600' : 'text-primary-700'}`}>{sub.name}</span>
+                                            {isSpecial && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">需签字</span>}
+                                          </div>
+                                          <div className="text-[11px] text-primary-400 font-mono inline-flex flex-col gap-1 mt-0.5">
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex items-center">
+                                                <span className="w-10">计划：</span>
+                                                <span>{formatDateRange(sub.startDate, sub.endDate)}</span>
+                                              </div>
+                                              <span className="ml-4 px-1.5 py-0.5 bg-primary-50 text-primary-500 rounded text-[10px] font-medium whitespace-nowrap">计划 {sub.duration} 天</span>
+                                            </div>
+                                            {(sub.actualStartDate || sub.actualEndDate) && (
+                                              <div className={`flex items-center justify-between`}>
+                                                <div className="flex items-center">
+                                                  <span className="w-10">实际：</span>
+                                                  <span className="flex items-center">
+                                                    {formatDateRange(sub.actualStartDate || sub.startDate, sub.actualEndDate || sub.endDate)}
+                                                  </span>
+                                                </div>
+                                                {subDone && <span className={`ml-4 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap bg-primary-50 text-primary-600`}>用时 {Math.max(1, Math.floor((new Date(sub.actualEndDate.replace(/-/g, '/')).getTime() - new Date((sub.actualStartDate || sub.startDate).replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24)) + 1)} 天</span>}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                        {subDone && (
+                                          <div>
+                                            {isSpecial ? (
+                                              <span className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full font-medium whitespace-nowrap">已确认</span>
+                                            ) : !isDelayed ? (
+                                              <span className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full font-medium whitespace-nowrap">按时完成</span>
+                                            ) : (
+                                              <span className="text-[10px] px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full font-medium whitespace-nowrap">
+                                                逾期 {Math.floor((new Date(sub.actualEndDate.replace(/-/g, '/')).getTime() - new Date(sub.endDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24))} 天
+                                              </span>
+                                            )}
+                                            {isDelayed && (
+                                              sub.acceptanceRecord?.delayReason ? (
+                                                <div className="mt-2 text-rose-600 bg-rose-50 p-2 rounded border border-rose-100 text-[10px]">
+                                                  <span className="font-bold">逾期原因：</span>{sub.acceptanceRecord.delayReason}
+                                                </div>
+                                              ) : (
+                                                <div className="mt-2 text-[10px] text-rose-600">
+                                                  * 此工序已逾期，请补充填写逾期原因
+                                                  <button onClick={(e) => { e.stopPropagation(); setSubNodeModal({ majorIdx: idx, subIdx: si }); }} className="ml-2 text-primary-600 underline font-bold">去填写</button>
+                                                </div>
+                                              )
+                                            )}
+                                          </div>
+                                        )}
                                       </div>
-                                      {!subDone && active && canEdit && (
+                                      {!subDone && active && canEdit && !subAwaiting && (
                                         <button onClick={(e) => { e.stopPropagation(); setDurationModal({ majorIdx: idx, subIdx: si, cur: Number(sub.duration)||0 }); setNewDuration(Number(sub.duration)||0); }}
                                           className="text-[11px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded border border-amber-100 flex items-center shrink-0">
                                           {sub.duration}天 <Edit2 className="w-2.5 h-2.5 ml-0.5" />
                                         </button>
                                       )}
+                                      {!active && !subDone && !subAwaiting && (
+                                        <span className="text-[11px] bg-primary-50 text-primary-600 px-2 py-0.5 rounded border border-primary-100 font-medium shrink-0">{sub.duration}天</span>
+                                      )}
+                                      {subAwaiting && <span className="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded border border-rose-100 font-bold shrink-0 animate-pulse">待客户签字</span>}
                                       {subDone && <span className="text-[10px] bg-primary-50 text-primary-600 px-2 py-0.5 rounded font-bold shrink-0">已完成</span>}
+                                      {subCurrent && (() => {
+                                        const isOverdue = new Date() > new Date(sub.endDate.replace(/-/g, '/')) && new Date().toISOString().split('T')[0] !== sub.endDate;
+                                        const overdueDays = isOverdue ? Math.floor((new Date().getTime() - new Date(sub.endDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24)) : 0;
+                                        return isOverdue ? (
+                                          <span className="text-[10px] bg-rose-50 text-rose-600 px-2 py-0.5 rounded font-bold shrink-0 border border-rose-100">逾期 {overdueDays} 天</span>
+                                        ) : (
+                                          <span className="text-[10px] bg-amber-50 text-amber-600 px-2 py-0.5 rounded font-bold shrink-0 border border-amber-100">施工中</span>
+                                        );
+                                      })()}
                                     </div>
                                   );
                                 })}
@@ -753,6 +978,7 @@ export default function ProjectDetailPage() {
           const { majorIdx, subIdx } = subNodeModal;
           const sub = project.nodesData[majorIdx].subNodes[subIdx];
           const isDone = sub.status === 'completed';
+          const isAwaiting = sub.status === 'awaiting_signature';
           const canOperate = ['admin','manager','worker'].includes(userRole);
           return (
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" style={{zIndex:9999}}>
@@ -790,8 +1016,32 @@ export default function ProjectDetailPage() {
                     </div>
                   )}
 
+                  {/* 等待客户签字提示 */}
+                  {isAwaiting && (
+                    <div className="bg-amber-50 rounded-xl p-6 border border-amber-100 text-center">
+                      <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <AlertTriangle className="w-6 h-6 text-amber-500" />
+                      </div>
+                      <h3 className="text-sm font-bold text-amber-900 mb-1">正在等待客户签字</h3>
+                      <p className="text-xs text-amber-700">您已提交现场记录。客户通过小程序签字确认后，该工序将正式完成。</p>
+                    </div>
+                  )}
+
+                  {/* 客户签名展示 */}
+                  {sub.signature && (
+                    <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+                      <h3 className="text-sm font-bold text-emerald-900 mb-3 flex items-center">
+                        <CheckCircle2 className="w-4 h-4 mr-1.5" /> 客户已确认
+                      </h3>
+                      <div className="bg-white rounded-lg border border-emerald-200 p-2 h-24 flex items-center justify-center">
+                        <img src={sub.signature.url} className="max-h-full max-w-full object-contain" alt="客户签名" />
+                      </div>
+                      <p className="text-xs text-emerald-600 mt-2 text-right">签字时间: {sub.signature.time}</p>
+                    </div>
+                  )}
+
                   {/* 上传区（未完成时显示） */}
-                  {canOperate && !isDone && (
+                  {canOperate && !isDone && !isAwaiting && (
                     <div className="bg-zinc-50 rounded-xl p-4 border border-primary-100">
                       <label className="block text-sm font-bold text-primary-900 mb-3">上传现场影像</label>
                       <div className="grid grid-cols-4 gap-2 mb-4">
@@ -812,6 +1062,19 @@ export default function ProjectDetailPage() {
                         className="w-full p-3 border border-primary-200 rounded-lg text-sm focus:outline-none focus:border-primary-500 bg-white mb-4" />
                       <button onClick={handleSubNodeSubmit} className="w-full py-3 bg-primary-900 text-white rounded-xl font-bold hover:bg-primary-800">
                         提交现场记录
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 逾期原因补充区 */}
+                  {canOperate && isDone && sub.actualEndDate > sub.endDate && !sub.acceptanceRecord?.delayReason && (
+                    <div className="bg-rose-50 rounded-xl p-4 border border-rose-100 mt-4">
+                      <label className="block text-sm font-bold text-rose-900 mb-2">补充逾期原因</label>
+                      <textarea rows={3} value={editDelayReason} onChange={e => setEditDelayReason(e.target.value)}
+                        placeholder="请详细说明导致此工序逾期的原因..."
+                        className="w-full p-3 border border-rose-200 rounded-lg text-sm focus:outline-none focus:border-rose-400 bg-white mb-3 text-rose-900" />
+                      <button onClick={handleSaveDelayReason} className="w-full py-2.5 bg-rose-600 text-white rounded-xl font-bold hover:bg-rose-700">
+                        保存逾期复盘
                       </button>
                     </div>
                   )}

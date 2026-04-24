@@ -146,6 +146,11 @@ Page({
         },
       })
       .then((res) => {
+        if (res.stats && res.stats.updated === 0) {
+          wx.hideLoading();
+          wx.showToast({ title: "权限不足，请联系超级管理员在组织架构中修改", icon: "none", duration: 3000 });
+          return;
+        }
         console.log("更新姓名成功:", res);
         
         // --- 开始全局名字同步联动 ---
@@ -154,6 +159,7 @@ Page({
           { creatorName: oldName },
           { sales: oldName },
           { designer: oldName },
+          { manager: oldName },
           { signer: oldName }
         ])).get().then(res => {
           res.data.forEach(item => {
@@ -161,6 +167,7 @@ Page({
             if (item.creatorName === oldName) updateData.creatorName = newName;
             if (item.sales === oldName) updateData.sales = newName;
             if (item.designer === oldName) updateData.designer = newName;
+            if (item.manager === oldName) updateData.manager = newName;
             if (item.signer === oldName) updateData.signer = newName;
             db.collection('leads').doc(item._id).update({ data: updateData });
           });
@@ -212,23 +219,35 @@ Page({
         });
 
         // 5. 同步跟进记录 (followUps)
-        db.collection('followUps').where({ createdBy: oldName }).get().then(res => {
+        db.collection('followUps').where({ createdBy: oldName }).limit(1000).get().then(res => {
           res.data.forEach(item => {
-            db.collection('followUps').doc(item._id).update({ data: { createdBy: newName } });
+            db.collection('followUps').doc(item._id).update({
+              data: { createdBy: newName }
+            }).catch(err => {
+              console.error('同步跟进记录失败:', item._id, err);
+            });
           });
+        }).catch(err => {
+          console.error('查询跟进记录失败:', err);
         });
 
         // 6. 同步消息通知 (notifications)
         db.collection('notifications').where(_.or([
           { senderName: oldName },
           { targetUser: oldName }
-        ])).get().then(res => {
+        ])).limit(1000).get().then(res => {
           res.data.forEach(item => {
             let updateData = {};
             if (item.senderName === oldName) updateData.senderName = newName;
             if (item.targetUser === oldName) updateData.targetUser = newName;
-            db.collection('notifications').doc(item._id).update({ data: updateData });
+            db.collection('notifications').doc(item._id).update({
+              data: updateData
+            }).catch(err => {
+              console.error('同步通知失败:', item._id, err);
+            });
           });
+        }).catch(err => {
+          console.error('查询通知失败:', err);
         });
         // --- 结束全局同步 ---
 
@@ -258,7 +277,7 @@ Page({
 
     wx.showLoading({ title: '验证中...' });
     const db = wx.cloud.database();
-    
+
     // 1. 验证原密码
     db.collection('users').doc(userInfo._id || userInfo.id).get().then(res => {
       const user = res.data;
@@ -267,10 +286,11 @@ Page({
         return wx.showToast({ title: '原密码错误', icon: 'none' });
       }
 
-      // 2. 更新新密码
+      // 2. 更新新密码（同时更新明文和哈希字段，确保两端都能登录）
       db.collection('users').doc(userInfo._id || userInfo.id).update({
         data: {
-          passwordPlain: newPassword
+          passwordPlain: newPassword,
+          passwordHash: newPassword  // 小程序端无法使用bcrypt，所以两个字段都存明文
         }
       }).then(() => {
         wx.hideLoading();

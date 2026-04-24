@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "工地进度",
+  "navigationBarBackgroundColor": "#f8fafc",
+  "navigationBarTextStyle": "black",
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "customer-info": "/components/customer-info/index"
+  }
+}

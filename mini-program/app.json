@@ -9,7 +9,6 @@
     "pages/leadForm/index",
     "pages/leadDetail/index",
     "pages/addFollowUp/index",
-    "pages/projectForm/index",
     "pages/employees/index",
     "pages/notifications/index",
     "pages/quotes/index",
@@ -17,15 +16,22 @@
     "pages/materials/index",
     "pages/materialForm/index",
     "pages/projectDetail/index",
-    "pages/projectFiles/index"
+    "pages/projectShare/index",
+    "pages/projectFiles/index",
+    "pages/shareAccessManage/index"
   ],
   "window": {
     "navigationBarBackgroundColor": "#ffffff",
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "品诺筑家",
     "backgroundColor": "#f5f4f2",
-    "backgroundTextStyle": "light"
+    "backgroundTextStyle": "light",
+    "pageOrientation": "portrait"
   },
+  "globalStyle": {
+    "disableScroll": false
+  },
+  "lazyCodeLoading": "requiredComponents",
   "tabBar": {
     "custom": true,
     "color": "#999999",

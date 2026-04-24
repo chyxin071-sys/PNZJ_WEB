@@ -109,18 +109,20 @@
           </view>
         </view>
 
-        <!-- 底部：关联对象、执行人 -->
-        <view class="card-footer meta-stack">
+        <!-- 底部：执行人、关联对象 -->
+        <view class="card-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f1f5f9; padding-left: 64rpx; overflow: hidden;">
+          <!-- 执行人多选展示 -->
+            <view class="meta-assignee" style="display: flex; align-items: center; flex: 1; min-width: 0; padding-left: 0; margin-bottom: 0; height: 32rpx;">
+              <view style="display: flex; justify-content: center; align-items: center; width: 32rpx; height: 32rpx; margin-right: 4rpx; flex-shrink: 0;">
+                <view class="icon-user" style="transform: scale(0.9) translateY(-6rpx); margin: 0;"></view>
+              </view>
+              <text style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; line-height: 32rpx; height: 32rpx; color: var(--primary-700); min-width: 0; flex: 1;">{{item.assignedNames}}</text>
+            </view>
+
           <!-- 关联对象标签 (带图标) -->
-          <view class="meta-badge meta-related" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
-            <view class="icon-target"></view>
-            <text>{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
-          </view>
-          
-          <!-- 执行人多选展示 (隐藏派发人) -->
-          <view class="meta-assignee">
-            <view class="icon-user"></view>
-            <text>{{item.assignedNames}}</text>
+          <view class="meta-badge meta-related" style="flex-shrink: 0; margin-left: 16rpx; padding: 6rpx 16rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 12rpx; color: var(--primary-700); margin-bottom: 0; display: flex; align-items: center; max-width: 50%;" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
+            <view class="icon-target" style="margin-bottom: 0; width: 18rpx; height: 18rpx; border-width: 2rpx; margin-right: 8rpx; flex-shrink: 0;"></view>
+            <text style="font-size: 24rpx; font-weight: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
           </view>
         </view>
 
@@ -170,14 +172,14 @@
               </view>
             </view>
           </view>
-          <view class="card-footer meta-stack">
-            <view class="meta-badge meta-related" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
-              <view class="icon-target"></view>
-              <text>{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
+          <view class="card-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f1f5f9; padding-left: 64rpx; overflow: hidden;">
+            <view class="meta-assignee" style="display: flex; align-items: center; flex: 1; min-width: 0; padding-left: 0; margin-bottom: 0;">
+              <view class="icon-user" style="flex-shrink: 0; margin-bottom: 0; margin-right: 12rpx;"></view>
+              <text style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: var(--primary-700); min-width: 0; flex: 1;">{{item.assignedNames}}</text>
             </view>
-            <view class="meta-assignee">
-              <view class="icon-user"></view>
-              <text>{{item.assignedNames}}</text>
+            <view class="meta-badge meta-related" style="flex-shrink: 0; margin-left: 16rpx; padding: 6rpx 16rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 12rpx; color: var(--primary-700); margin-bottom: 0; display: flex; align-items: center; max-width: 50%;" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
+              <view class="icon-target" style="margin-bottom: 0; width: 18rpx; height: 18rpx; border-width: 2rpx; margin-right: 8rpx; flex-shrink: 0;"></view>
+              <text style="font-size: 24rpx; font-weight: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
             </view>
           </view>
         </view>
@@ -193,13 +195,14 @@
   </view>
 
   <!-- 高级人员筛选弹窗 -->
-  <view class="modal-mask" wx:if="{{showFilterModal}}" bindtap="closeFilterModal"></view>
-  <view class="modal-content" wx:if="{{showFilterModal}}">
-    <view class="modal-header">
-      <text>待办高级筛选</text>
-      <view class="btn-close" bindtap="applyFilter">确定</view>
-    </view>
-    <scroll-view scroll-y class="modal-list" style="height: 60vh;">
+  <block wx:if="{{showFilterModal}}">
+    <view class="modal-mask" bindtap="closeFilterModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text>待办高级筛选</text>
+        <view class="btn-close" bindtap="applyFilter">确定</view>
+      </view>
+      <scroll-view scroll-y class="modal-list" style="height: 60vh;">
       <!-- 与我相关 / 全部 (所有人可见) -->
       <view class="filter-section">
         <view class="filter-title">范围</view>
@@ -248,90 +251,92 @@
           </view>
         </block>
       </view>
-
-    </scroll-view>
-  </view>
+      </scroll-view>
+    </view>
+  </block>
 
   <!-- 新建待办弹窗 -->
-  <view class="modal-mask" wx:if="{{showAddModal}}" bindtap="closeAddModal"></view>
-  <view class="modal-content" wx:if="{{showAddModal}}">
-    <view class="modal-header">
-      <text>新建待办</text>
-      <view class="btn-close" bindtap="closeAddModal">取消</view>
-    </view>
-    <scroll-view scroll-y class="modal-scroll">
-      <view class="modal-body">
-        <view class="form-group">
-          <text class="label">任务标题 <text style="color:red">*</text></text>
-          <input class="input" placeholder="请输入待办标题" value="{{newTodo.title}}" bindinput="onNewTodoInput" data-field="title" />
-        </view>
-        <view class="form-group">
-          <text class="label">详细描述</text>
-          <input class="input" placeholder="选填，任务的具体要求" value="{{newTodo.description}}" bindinput="onNewTodoInput" data-field="description" />
-        </view>
-        <view class="form-group">
-          <text class="label">优先级</text>
-          <picker bindchange="onNewTodoPickerChange" data-field="priority" range="{{['紧急', '重要', '普通']}}">
-            <view class="picker-view">
-              <text>{{newTodo.priority === 'high' ? '紧急' : newTodo.priority === 'medium' ? '重要' : '普通'}}</text>
-              <view class="arrow-down"></view>
-            </view>
-          </picker>
-        </view>
-        
-        <view class="form-group">
-          <text class="label">关联客户 (选填)</text>
-          <picker bindchange="onNewTodoPickerChange" data-field="relatedLead" range="{{createLeadNames}}">
-            <view class="picker-view">
-              <text class="{{newTodo.relatedLeadName ? 'text-primary' : 'text-placeholder'}}">{{newTodo.relatedLeadName || '请选择要关联的客户'}}</text>
-              <view class="arrow-down"></view>
-            </view>
-          </picker>
-        </view>
-        <view class="form-group">
-          <text class="label">截止日期</text>
-          <picker mode="date" value="{{newTodo.dueDate}}" bindchange="onNewTodoDateChange">
-            <view class="picker-view">
-              <text>{{newTodo.dueDate || '不填默认今天'}}</text>
-              <view class="arrow-down"></view>
-            </view>
-          </picker>
-        </view>
-        <view class="form-group" style="margin-bottom: 0;">
-          <text class="label">执行人 <text style="color:red">*</text></text>
-          <!-- 多选执行人下拉框 -->
-          <view class="picker-view" bindtap="toggleAssigneeDropdown">
-            <text class="{{newTodo.assigneeNames ? 'text-primary' : 'text-placeholder'}}">{{newTodo.assigneeNames || '请选择执行人 (可多选)'}}</text>
-            <view class="arrow-down"></view>
+  <block wx:if="{{showAddModal}}">
+    <view class="modal-mask" bindtap="closeAddModal"></view>
+    <view class="modal-content">
+      <view class="modal-header">
+        <text>新建待办</text>
+        <view class="btn-close" bindtap="closeAddModal">取消</view>
+      </view>
+      <scroll-view scroll-y class="modal-scroll">
+        <view class="modal-body">
+          <view class="form-group">
+            <text class="label">任务标题 <text style="color:red">*</text></text>
+            <input class="input" placeholder="请输入待办标题" value="{{newTodo.title}}" bindinput="onNewTodoInput" data-field="title" />
+          </view>
+          <view class="form-group">
+            <text class="label">详细描述</text>
+            <input class="input" placeholder="选填，任务的具体要求" value="{{newTodo.description}}" bindinput="onNewTodoInput" data-field="description" />
+          </view>
+          <view class="form-group">
+            <text class="label">优先级</text>
+            <picker bindchange="onNewTodoPickerChange" data-field="priority" range="{{['紧急', '重要', '普通']}}">
+              <view class="picker-view">
+                <text>{{newTodo.priority === 'high' ? '紧急' : newTodo.priority === 'medium' ? '重要' : '普通'}}</text>
+                <view class="arrow-down"></view>
+              </view>
+            </picker>
           </view>
           
-          <!-- 模拟下拉多选面板 -->
-          <view class="dropdown-panel" wx:if="{{showAssigneeDropdown}}">
-            <scroll-view scroll-y style="max-height: 400rpx;">
-              <block wx:for="{{groupedEmployees}}" wx:key="dept">
-                <view class="dropdown-dept-title" bindtap="toggleDept" data-dept="{{item.dept}}">
-                  <text>{{item.dept}}</text>
-                  <view class="arrow {{item.expanded ? 'up' : 'down'}}"></view>
-                </view>
-                <view class="dept-employees" wx:if="{{item.expanded}}">
-                  <view class="dropdown-item" wx:for="{{item.employees}}" wx:for-item="emp" wx:key="id" bindtap="toggleNewTodoAssignee" data-id="{{emp.id}}">
-                    <text>{{emp.name}}</text>
-                    <view class="checkbox {{emp._todoSelected ? 'checked' : ''}}">
-                      <view wx:if="{{emp._todoSelected}}" class="checkmark"></view>
+          <view class="form-group">
+            <text class="label">关联客户 (选填)</text>
+            <picker bindchange="onNewTodoPickerChange" data-field="relatedLead" range="{{createLeadNames}}">
+              <view class="picker-view">
+                <text class="{{newTodo.relatedLeadName ? 'text-primary' : 'text-placeholder'}}">{{newTodo.relatedLeadName || '请选择要关联的客户'}}</text>
+                <view class="arrow-down"></view>
+              </view>
+            </picker>
+          </view>
+          <view class="form-group">
+            <text class="label">截止日期</text>
+            <picker mode="date" value="{{newTodo.dueDate}}" bindchange="onNewTodoDateChange">
+              <view class="picker-view">
+                <text>{{newTodo.dueDate || '不填默认今天'}}</text>
+                <view class="arrow-down"></view>
+              </view>
+            </picker>
+          </view>
+          <view class="form-group" style="margin-bottom: 0;">
+            <text class="label">执行人 <text style="color:red">*</text></text>
+            <!-- 多选执行人下拉框 -->
+            <view class="picker-view" bindtap="toggleAssigneeDropdown">
+              <text class="{{newTodo.assigneeNames ? 'text-primary' : 'text-placeholder'}}">{{newTodo.assigneeNames || '请选择执行人 (可多选)'}}</text>
+              <view class="arrow-down"></view>
+            </view>
+            
+            <!-- 模拟下拉多选面板 -->
+            <view class="dropdown-panel" wx:if="{{showAssigneeDropdown}}">
+              <scroll-view scroll-y style="max-height: 400rpx;">
+                <block wx:for="{{groupedEmployees}}" wx:key="dept">
+                  <view class="dropdown-dept-title" bindtap="toggleDept" data-dept="{{item.dept}}">
+                    <text>{{item.dept}}</text>
+                    <view class="arrow {{item.expanded ? 'up' : 'down'}}"></view>
+                  </view>
+                  <view class="dept-employees" wx:if="{{item.expanded}}">
+                    <view class="dropdown-item" wx:for="{{item.employees}}" wx:for-item="emp" wx:key="id" bindtap="toggleNewTodoAssignee" data-id="{{emp.id}}">
+                      <text>{{emp.name}}</text>
+                      <view class="checkbox {{emp._todoSelected ? 'checked' : ''}}">
+                        <view wx:if="{{emp._todoSelected}}" class="checkmark"></view>
+                      </view>
                     </view>
                   </view>
-                </view>
-              </block>
-            </scroll-view>
-            <view class="dropdown-footer" bindtap="toggleAssigneeDropdown">
-              <text>确定</text>
+                </block>
+              </scroll-view>
+              <view class="dropdown-footer" bindtap="toggleAssigneeDropdown">
+                <text>确定</text>
+              </view>
             </view>
           </view>
+          
+          <view class="btn-save hover-scale" bindtap="saveNewTodo">保 存</view>
         </view>
-        
-        <view class="btn-save hover-scale" bindtap="saveNewTodo">保 存</view>
-      </view>
-    </scroll-view>
-  </view>
+      </scroll-view>
+    </view>
+  </block>
 
 </view>

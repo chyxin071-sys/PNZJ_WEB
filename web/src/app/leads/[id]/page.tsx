@@ -9,6 +9,17 @@ import CustomerInfo from "../../../components/CustomerInfo";
 import { getNextWorkingDay, calculateEndDate, formatDate } from "../../../lib/date";
 import DatePicker from "../../../components/DatePicker";
 
+function formatDateRange(start: string, end: string) {
+  if (!start || !end) return `${start || '-'} ~ ${end || '-'}`;
+  const startParts = start.split('-');
+  const endParts = end.split('-');
+  if (startParts.length !== 3 || endParts.length !== 3) return `${start} ~ ${end}`;
+  if (startParts[0] === endParts[0]) {
+    return `${start} ~ ${endParts[1]}-${endParts[2]}`;
+  }
+  return `${start} ~ ${end}`;
+}
+
 export default function LeadDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -95,6 +106,41 @@ export default function LeadDetailPage() {
     return address + ' ***';
   };
 
+  // ==== 设计进度弹窗 ====
+  const [showDesignCompleteModal, setShowDesignCompleteModal] = useState(false);
+  const [designCompleteIdx, setDesignCompleteIdx] = useState(0);
+  const [designDelayReason, setDesignDelayReason] = useState('');
+  const [designIsDelayed, setDesignIsDelayed] = useState(false);
+
+  const parseFollowUpTime = (f: any): string => {
+    const ca = f.createdAt;
+    if (!ca) return f.displayTime || '';
+    if (typeof ca === 'object' && ca.$date) {
+      const d = new Date(typeof ca.$date === 'number' ? ca.$date : Number(ca.$date));
+      if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+    if (typeof ca === 'number') {
+      const d = new Date(ca);
+      if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    }
+    if (typeof ca === 'string') return ca.substring(0, 16);
+    return f.displayTime || '';
+  };
+
+  const parseFollowUpTimestamp = (f: any): number => {
+    const ca = f.createdAt;
+    if (!ca) return 0;
+    if (typeof ca === 'object' && ca.$date) {
+      return typeof ca.$date === 'number' ? ca.$date : Number(ca.$date);
+    }
+    if (typeof ca === 'number') return ca;
+    if (typeof ca === 'string') {
+      const parsed = new Date(ca).getTime();
+      return isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  };
+
   const fetchAllData = async () => {
     try {
       const [leadRes, quoteRes, projectRes, followRes] = await Promise.all([
@@ -141,22 +187,14 @@ export default function LeadDetailPage() {
       // 处理跟进记录
       if (followRes.ok) {
         const followUpsData = await followRes.json();
-        const timelineData = Array.isArray(followUpsData.data || followUpsData) ? (followUpsData.data || followUpsData).map((f: any) => {
-          let timeStr = '';
-          if (f.createdAt && typeof f.createdAt === 'object' && f.createdAt.$date) {
-            const d = new Date(f.createdAt.$date);
-            timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-          } else if (f.createdAt && typeof f.createdAt === 'string') {
-            timeStr = f.createdAt.substring(0, 16);
-          }
-          return {
-            id: f._id,
-            type: f.method === '系统记录' ? 'system' : 'user',
-            user: f.createdBy || f.user || '未知',
-            time: timeStr,
-            content: f.content || ''
-          };
-        }) : [];
+        const timelineData = Array.isArray(followUpsData.data || followUpsData) ? (followUpsData.data || followUpsData).map((f: any) => ({
+          id: f._id,
+          type: f.method === '系统记录' ? 'system' : 'user',
+          user: f.createdBy || f.user || '未知',
+          time: parseFollowUpTime(f),
+          content: f.content || '',
+          _timestamp: parseFollowUpTimestamp(f)
+        })) : [];
 
         if (timelineData.length === 0 && dateStr) {
           timelineData.push({
@@ -164,10 +202,11 @@ export default function LeadDetailPage() {
             type: 'system',
             user: '系统',
             time: `${dateStr} 10:15`,
-            content: `【系统日志】线索已录入系统，初步意向评级：${formatted.rating}。`
+            content: `【系统日志】线索已录入系统，初步意向评级：${formatted.rating}。`,
+            _timestamp: new Date(`${dateStr} 10:15`).getTime()
           });
         }
-        timelineData.sort((a: any, b: any) => (b.time || '').localeCompare(a.time || ''));
+        timelineData.sort((a: any, b: any) => (b._timestamp || 0) - (a._timestamp || 0));
         setTimeline(timelineData);
       }
     } catch (e) {
@@ -205,22 +244,14 @@ export default function LeadDetailPage() {
         fetch(`/api/followUps?leadId=${leadId}`)
           .then(res => res.json())
           .then(followUpsData => {
-             const timelineData = Array.isArray(followUpsData.data || followUpsData) ? (followUpsData.data || followUpsData).map((f: any) => {
-                let timeStr = '';
-                if (f.createdAt && typeof f.createdAt === 'object' && f.createdAt.$date) {
-                  const d = new Date(f.createdAt.$date);
-                  timeStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-                } else if (f.createdAt && typeof f.createdAt === 'string') {
-                  timeStr = f.createdAt.substring(0, 16);
-                }
-                return {
-                  id: f._id,
-                  type: f.method === '系统记录' ? 'system' : 'user',
-                  user: f.createdBy || f.user || '未知',
-                  time: timeStr,
-                  content: f.content || ''
-                };
-             }) : [];
+             const timelineData = Array.isArray(followUpsData.data || followUpsData) ? (followUpsData.data || followUpsData).map((f: any) => ({
+                id: f._id,
+                type: f.method === '系统记录' ? 'system' : 'user',
+                user: f.createdBy || f.user || '未知',
+                time: parseFollowUpTime(f),
+                content: f.content || '',
+                _timestamp: parseFollowUpTimestamp(f)
+             })) : [];
 
              if (timelineData.length === 0) {
                timelineData.push({
@@ -228,10 +259,11 @@ export default function LeadDetailPage() {
                  type: 'system',
                  user: '系统',
                  time: `${formatted.createdAt} 10:15`,
-                 content: `【系统日志】线索已录入系统，初步意向评级：${formatted.rating}。`
+                 content: `【系统日志】线索已录入系统，初步意向评级：${formatted.rating}。`,
+                 _timestamp: new Date(`${formatted.createdAt} 10:15`).getTime()
                });
              }
-             timelineData.sort((a: any, b: any) => (b.time || '').localeCompare(a.time || ''));
+             timelineData.sort((a: any, b: any) => (b._timestamp || 0) - (a._timestamp || 0));
              setTimeline(timelineData);
           });
       }
@@ -588,7 +620,11 @@ export default function LeadDetailPage() {
 
   const confirmStartDesign = async () => {
     if (!designStartDate || editDesignNodes.length === 0) return;
-    const nodes = recalcDesignGantt(editDesignNodes.map((n, i) => ({ ...n, status: i === 0 ? 'current' : 'pending' })), designStartDate);
+    const nodes = recalcDesignGantt(editDesignNodes.map((n, i) => ({ 
+      ...n, 
+      status: i === 0 ? 'current' : 'pending',
+      actualStartDate: i === 0 ? designStartDate : undefined
+    })), designStartDate);
     try {
       await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
@@ -662,9 +698,12 @@ export default function LeadDetailPage() {
     const nodeName = nodes[idx].name;
     nodes[idx].status = 'completed';
     nodes[idx].actualEndDate = today;
+    if (!nodes[idx].actualStartDate) {
+      nodes[idx].actualStartDate = nodes[idx].startDate || today;
+    }
     if (idx + 1 < nodes.length) {
       nodes[idx + 1].status = 'current';
-      nodes[idx + 1].startDate = today;
+      nodes[idx + 1].actualStartDate = today;
     }
     const start = lead.designStartDate || today;
     const recalced = recalcDesignGantt(nodes, start);
@@ -965,29 +1004,76 @@ export default function LeadDetailPage() {
                              node.status === 'current' ? <Clock className="w-3.5 h-3.5" /> : null}
                           </div>
                           {/* 内容 */}
-                          <div className="flex-1 pt-1">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className={`text-sm font-bold ${node.status === 'completed' ? 'text-primary-400 line-through' : 'text-primary-900'}`}>
-                                {node.name}
-                                <span className="ml-2 text-xs font-normal text-primary-400">{node.duration}天</span>
-                              </span>
-                              {node.status === 'current' && (currentUser?.role === 'admin' || isAssignedToMe(lead)) && (
-                                <button
-                                  onClick={() => completeDesignNode(idx)}
-                                  className="text-xs px-3 py-1 bg-emerald-500 text-white rounded-full font-medium hover:bg-emerald-600 transition-colors"
-                                >
-                                  完成
-                                </button>
-                              )}
-                              {node.status === 'completed' && (
-                                <span className="text-xs px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100">已完成</span>
+                          <div className={`flex-1 rounded-xl border p-4 ${
+                            node.status === 'completed' ? 'bg-primary-50/50 border-primary-100' :
+                            node.status === 'current' ? 'bg-white border-primary-900 shadow-md ring-1 ring-primary-900/10' :
+                            'bg-white/50 border-primary-100 opacity-60'
+                          }`}>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <h4 className={`font-bold text-base ${node.status === 'completed' ? 'text-primary-900' : 'text-primary-900'}`}>
+                                  {node.name}
+                                </h4>
+                              </div>
+                              
+                              <div className="flex items-center gap-2">
+                                {node.status === 'completed' ? (
+                                  node.actualEndDate <= node.endDate ? (
+                                    <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold">按时完成</span>
+                                  ) : (
+                                    <span className="text-xs px-2 py-1 bg-rose-50 text-rose-600 rounded-full font-bold">
+                                      逾期 {Math.floor((new Date(node.actualEndDate.replace(/-/g, '/')).getTime() - new Date(node.endDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24))} 天
+                                    </span>
+                                  )
+                                ) : node.status === 'current' ? (
+                                  <span className="text-xs px-2 py-1 bg-amber-50 text-amber-600 rounded-full font-bold border border-amber-200">进行中</span>
+                                ) : null}
+
+                                {node.status === 'current' && (currentUser?.role === 'designer' || currentUser?.role === 'admin') && (
+                                  <button onClick={() => completeDesignNode(idx)}
+                                    className="ml-2 px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-bold hover:bg-emerald-600 transition-colors shadow-sm"
+                                  >
+                                    完成节点
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-col gap-1.5 text-[13px] text-primary-400 font-mono mt-1">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center">
+                                  <span className="w-12">计划：</span>
+                                  <span>{formatDateRange(node.startDate, node.endDate)}</span>
+                                </div>
+                                <span className="ml-4 px-1.5 py-0.5 bg-primary-50 text-primary-500 rounded text-[10px] font-medium whitespace-nowrap">计划 {node.duration} 天</span>
+                              </div>
+                              {node.status !== 'pending' && node.actualStartDate && (
+                                <div className={`flex items-center justify-between`}>
+                                  <div className="flex items-center">
+                                    <span className="w-12">实际：</span>
+                                    <span className="flex items-center">
+                                      {formatDateRange(node.actualStartDate, node.actualEndDate || '至今')}
+                                    </span>
+                                  </div>
+                                  {node.status === 'completed' && <span className={`ml-4 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap bg-primary-50 text-primary-600`}>用时 {Math.max(1, Math.floor((new Date(node.actualEndDate.replace(/-/g, '/')).getTime() - new Date(node.actualStartDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24)) + 1)} 天</span>}
+                                </div>
                               )}
                             </div>
-                            <p className="text-xs text-primary-400">
-                              {node.status === 'completed' ? `实际完成: ${node.actualEndDate}` :
-                               node.status === 'current' ? `预计完成: ${node.endDate}` :
-                               `预计开始: ${node.startDate}`}
-                            </p>
+                            
+                            {node.status === 'completed' && node.actualEndDate > node.endDate && (
+                              <div className="mt-3">
+                                {node.delayReason ? (
+                                  <div className="text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-100 text-[11px] leading-relaxed break-words">
+                                    <span className="font-bold">逾期原因：</span>{node.delayReason}
+                                  </div>
+                                ) : (
+                                  <div className="text-[11px] text-rose-600">
+                                    * 此工序已逾期，请补充填写逾期原因
+                                    <button onClick={(e) => { e.stopPropagation(); setDesignCompleteIdx(idx); setDesignDelayReason(''); setShowDesignCompleteModal(true); setDesignIsDelayed(true); }} className="ml-2 text-primary-600 underline font-bold">去填写</button>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1021,7 +1107,7 @@ export default function LeadDetailPage() {
                             <span className="font-bold text-sm text-primary-900">{item.user}</span>
                             <span className="text-xs text-primary-400 font-mono">{item.time}</span>
                           </div>
-                          {item.type === 'user' && (
+                          {item.type === 'user' && (currentUser?.role === 'admin' || currentUser?.name === item.user) && (
                             <div className="flex items-center space-x-1 relative">
                               <button onClick={() => { setEditingNoteId(item.id); setEditNoteContent(item.content); }} className="p-1.5 text-primary-400 hover:text-primary-900 transition-colors bg-primary-50 rounded-md hover:bg-primary-100">
                                 <Edit2 className="w-3.5 h-3.5" />

@@ -2,11 +2,23 @@
 
 /* 客户页专有样式补�?*/
 .bg-blue-50 { background: #eff6ff; }
+
+.badge-dot {
+  position: absolute;
+  width: 14rpx;
+  height: 14rpx;
+  background: var(--rose-600);
+  border-radius: 50%;
+}
 .icon-users { width: 20rpx; height: 20rpx; border: 3rpx solid #3b82f6; border-radius: 50%; position: relative; }
 .icon-users::after { content: ''; position: absolute; top: 10rpx; left: 50%; transform: translateX(-50%); width: 28rpx; height: 14rpx; border: 3rpx solid #3b82f6; border-bottom: none; border-radius: 14rpx 14rpx 0 0; }
 
 /* 五角星使用文本形式，更稳定美�?*/
 .icon-star { font-size: 24rpx; color: var(--amber-600); line-height: 1; font-weight: normal; margin-top: -2rpx; }
+
+/* 覆盖待办页面样式，使用主题色 */
+.meta-assignee { color: var(--primary-700); }
+.meta-related { color: var(--primary-700); }
 
 /* 列表�?*/
 .list-container { flex: 1; padding: 20rpx 32rpx; width: 100%; box-sizing: border-box; }
@@ -54,7 +66,7 @@
 .tag.active { background: var(--rose-50); color: var(--rose-600); border-color: var(--rose-500); }
 
 /* 模态框通用 (与待办样式完全一致) */
-.modal-mask { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; }
+.modal-mask { position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.5); z-index: 999; }
 .modal-content { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 65vh; background: #fff; border-radius: 24rpx; z-index: 1000; overflow: hidden; display: flex; flex-direction: column; }
 .modal-header { padding: 32rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; font-size: 32rpx; font-weight: bold; color: var(--primary-900); flex-shrink: 0; position: relative; }
 .modal-header text { width: 100%; text-align: left; }

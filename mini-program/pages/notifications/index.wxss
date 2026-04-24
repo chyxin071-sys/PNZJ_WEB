@@ -119,11 +119,11 @@
 }
 
 .btn-star {
-  background: var(--amber-600);
+  background: var(--amber-500); /* 施工中的黄色 */
 }
 
 .btn-delete {
-  background: var(--rose-600);
+  background: var(--rose-500); /* 红色，参考工地删除按钮 */
 }
 
 .movable-view {

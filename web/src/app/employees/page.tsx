@@ -45,6 +45,7 @@ export default function EmployeesPage() {
     sales: { label: "销售", color: "text-blue-700", bg: "bg-blue-50", dept: "销售部" },
     designer: { label: "设计师", color: "text-emerald-700", bg: "bg-emerald-50", dept: "设计部" },
     manager: { label: "项目经理", color: "text-amber-700", bg: "bg-amber-50", dept: "工程部" },
+    finance: { label: "财务", color: "text-rose-700", bg: "bg-rose-50", dept: "财务部" },
   };
 
   const fetchEmployees = async () => {
@@ -265,6 +266,7 @@ export default function EmployeesPage() {
     sales: employees.filter(e => e.role === 'sales').length,
     designer: employees.filter(e => e.role === 'designer').length,
     manager: employees.filter(e => e.role === 'manager').length,
+    finance: employees.filter(e => e.role === 'finance').length,
   };
 
   const isAdmin = currentUser?.role === 'admin';
@@ -335,7 +337,7 @@ export default function EmployeesPage() {
         {isAdmin && (
         <div className="bg-white p-5 rounded-xl border border-primary-100 shadow-sm flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex space-x-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 hide-scrollbar">
-            {["all", "sales", "designer", "manager", "admin"].map((tab) => (
+            {["all", "sales", "designer", "manager", "finance", "admin"].map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}

@@ -8,4 +8,6 @@
       <text class="tab-text">{{item.text}}</text>
     </view>
   </view>
+  <!-- 遮罩层，用于和页面的全屏遮罩融为一体 -->
+  <view class="tab-bar-mask" wx:if="{{showMask}}" catchtap="noop"></view>
 </view>

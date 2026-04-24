@@ -4,50 +4,149 @@
       <view class="text-lg font-bold text-gray-900">{{lead.name}}的项目资料</view>
       <view class="text-sm text-gray-500 mt-1">{{lead.address}}</view>
     </view>
-    <view class="text-xs text-gray-400">共 {{files.length}} 份</view>
+  </view>
+
+  <!-- 顶部 Tab 切换 -->
+  <view style="display: flex; background: #fff; border-bottom: 1rpx solid #f1f5f9; margin-bottom: 24rpx; padding: 0 40rpx;">
+    <view bindtap="switchTab" data-tab="files" style="flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; font-weight: {{activeTab === 'files' ? 'bold' : 'normal'}}; color: {{activeTab === 'files' ? 'var(--primary-900)' : '#64748b'}}; border-bottom: 4rpx solid {{activeTab === 'files' ? 'var(--primary-900)' : 'transparent'}};">
+      文件图纸
+    </view>
+    <view bindtap="switchTab" data-tab="materials" style="flex: 1; text-align: center; padding: 24rpx 0; font-size: 28rpx; font-weight: {{activeTab === 'materials' ? 'bold' : 'normal'}}; color: {{activeTab === 'materials' ? 'var(--primary-900)' : '#64748b'}}; border-bottom: 4rpx solid {{activeTab === 'materials' ? 'var(--primary-900)' : 'transparent'}};">
+      材料清单
+    </view>
   </view>
 
   <scroll-view scroll-y class="flex-1 w-full px-4 box-border">
-    <!-- 空状态 -->
-    <view wx:if="{{files.length === 0}}" class="flex flex-col items-center justify-center py-20">
-      <view class="w-24 h-24 mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-        <text class="text-gray-400 text-3xl">📄</text>
+    <!-- === 文件图纸 Tab === -->
+    <block wx:if="{{activeTab === 'files'}}">
+      <!-- 空状态 -->
+      <view wx:if="{{files.length === 0}}" class="flex flex-col items-center justify-center py-20">
+        <view class="w-24 h-24 mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+          <text class="text-gray-400 text-3xl">📄</text>
+        </view>
+        <text class="text-gray-500 text-sm">暂无项目资料，请点击下方按钮上传</text>
       </view>
-      <text class="text-gray-500 text-sm">暂无项目资料，请点击下方按钮上传</text>
-    </view>
 
-    <!-- 文件列表 -->
-    <view wx:for="{{files}}" wx:key="fileID" class="mb-4" style="border-radius: 32rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); border: 2rpx solid #f3f4f6; background: #fff;">
-      <scroll-view scroll-x="true" scroll-with-animation="true" show-scrollbar="{{false}}" paging-enabled="true" style="width: 100%; white-space: nowrap; background: #fff;">
-        <view style="display: flex; flex-direction: row; width: 100%;">
-          <!-- 顶层可滑动内容区 -->
-          <view class="bg-white p-4 flex items-center" style="width: 100%; flex-shrink: 0; box-sizing: border-box;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
-            <!-- 文件信息 -->
-            <view class="flex-1 overflow-hidden pl-2">
-              <view class="text-sm font-bold text-gray-900 mb-1 truncate" style="white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{{item.name}}</view>
-              <view class="text-xs text-gray-500 flex items-center">
-                <text class="mr-2">{{item.sizeStr}}</text>
-                <text class="text-gray-300 mr-2">|</text>
-                <text class="mr-2">{{item.uploader || '未知'}}</text>
-                <text class="text-gray-300 mr-2">|</text>
-                <text>{{item.displayTime}}</text>
+      <!-- 文件列表 -->
+      <view wx:for="{{files}}" wx:key="fileID" class="mb-4" style="border-radius: 32rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); border: 2rpx solid #f3f4f6; background: #fff;">
+        <scroll-view scroll-x="true" scroll-with-animation="true" show-scrollbar="{{false}}" paging-enabled="true" style="width: 100%; white-space: nowrap; background: #fff;">
+          <view style="display: flex; flex-direction: row; width: 100%;">
+            <!-- 顶层可滑动内容区 -->
+            <view class="bg-white p-4 flex items-center" style="width: 100%; flex-shrink: 0; box-sizing: border-box;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
+              <!-- 文件信息 -->
+              <view class="flex-1 overflow-hidden pl-2">
+                <view class="text-sm font-bold text-gray-900 mb-1 truncate" style="white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{{item.name}}</view>
+                <view class="text-xs text-gray-500 flex items-center">
+                  <text class="mr-2">{{item.sizeStr}}</text>
+                  <text class="text-gray-300 mr-2">|</text>
+                  <text class="mr-2">{{item.uploader || '未知'}}</text>
+                  <text class="text-gray-300 mr-2">|</text>
+                  <text>{{item.displayTime}}</text>
+                </view>
+              </view>
+            </view>
+            
+            <!-- 右侧滑动删除按钮 -->
+            <view wx:if="{{isUploader}}" catchtap="deleteFile" data-index="{{index}}" style="width: 160rpx; background: var(--rose-600); color: white; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: bold; flex-shrink: 0;">
+              删除
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+    </block>
+
+    <!-- === 材料清单 Tab === -->
+    <block wx:if="{{activeTab === 'materials'}}">
+      <view wx:if="{{materials.length === 0}}" class="flex flex-col items-center justify-center py-20">
+        <view class="w-24 h-24 mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+          <text class="text-gray-400 text-3xl">📦</text>
+        </view>
+        <text class="text-gray-500 text-sm">暂无材料记录，请点击下方按钮添加</text>
+      </view>
+
+      <block wx:for="{{groupedMaterials}}" wx:key="category" wx:for-item="group" wx:for-index="catIndex">
+        <view style="margin-bottom: 40rpx;">
+          <!-- 分类标题 -->
+          <view style="display: flex; align-items: center; gap: 12rpx; margin-bottom: 24rpx;">
+            <view style="width: 8rpx; height: 32rpx; background: var(--primary-600); border-radius: 4rpx;"></view>
+            <view style="font-size: 32rpx; font-weight: bold; color: var(--primary-900);">{{group.category}}</view>
+            <view style="font-size: 24rpx; color: #94a3b8; margin-left: 8rpx;">{{group.items.length}} 项</view>
+          </view>
+          
+          <!-- 分类下的材料列表 -->
+          <view wx:for="{{group.items}}" wx:key="id" class="mb-4" style="border-radius: 16rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); border: 1rpx solid #e2e8f0; background: #fff;">
+            <view style="padding: 24rpx;">
+              <view style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1rpx dashed #f1f5f9; padding-bottom: 16rpx; margin-bottom: 16rpx;">
+                <view style="display: flex; align-items: center; gap: 12rpx;">
+                  <view style="font-size: 28rpx; font-weight: bold; color: #1e293b;">{{item.name}}</view>
+                </view>
+                <view wx:if="{{isUploader}}" style="display: flex; gap: 20rpx;">
+                  <view catchtap="openEditMaterial" data-catindex="{{catIndex}}" data-index="{{index}}" style="font-size: 24rpx; color: var(--primary-600);">编辑</view>
+                  <view catchtap="deleteMaterial" data-catindex="{{catIndex}}" data-index="{{index}}" style="font-size: 24rpx; color: var(--rose-600);">删除</view>
+                </view>
+              </view>
+              <view style="display: flex; flex-direction: column; gap: 8rpx; font-size: 24rpx; color: #64748b;">
+                <view style="display: flex; align-items: center; gap: 40rpx;">
+                  <view style="flex: 1; display: flex; overflow: hidden;"><text style="color: #94a3b8; margin-right: 12rpx; flex-shrink: 0;">品牌型号</text><text class="truncate">{{item.brandModel || '-'}}</text></view>
+                  <view style="flex: 1; display: flex; overflow: hidden;"><text style="color: #94a3b8; margin-right: 12rpx; flex-shrink: 0;">数量单位</text><text class="truncate">{{item.quantity || '-'}}</text></view>
+                </view>
+                <view wx:if="{{item.remark}}" style="display: flex;"><text style="color: #94a3b8; margin-right: 12rpx; flex-shrink: 0;">补充备注</text><text style="flex: 1;">{{item.remark}}</text></view>
               </view>
             </view>
           </view>
-          
-          <!-- 右侧滑动删除按钮 -->
-          <view wx:if="{{isUploader}}" catchtap="deleteFile" data-index="{{index}}" style="width: 160rpx; background: var(--rose-600); color: white; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: bold; flex-shrink: 0;">
-            删除
-          </view>
         </view>
-      </scroll-view>
-    </view>
+      </block>
+    </block>
   </scroll-view>
 
   <!-- 底部固定上传按钮 -->
   <view style="position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; display: flex; gap: 24rpx; box-sizing: border-box;">
-    <view bindtap="chooseAndUpload" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);" class="active:opacity-80 transition-opacity">
+    <view wx:if="{{activeTab === 'files' && isUploader}}" bindtap="chooseAndUpload" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);" class="active:opacity-80 transition-opacity">
       上传资料
+    </view>
+    <view wx:if="{{activeTab === 'materials' && isUploader}}" bindtap="openAddMaterial" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);" class="active:opacity-80 transition-opacity">
+      添加材料记录
+    </view>
+  </view>
+
+  <!-- 添加/编辑材料弹窗 -->
+  <view wx:if="{{showMaterialModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; justify-content: center; align-items: center;">
+    <view style="background: #fff; width: 85%; border-radius: 24rpx; overflow: hidden;">
+      <view style="padding: 32rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+        <view style="font-size: 32rpx; font-weight: bold;">{{editMaterialIndex === -1 ? '添加材料记录' : '编辑材料记录'}}</view>
+        <view bindtap="closeMaterialModal" style="font-size: 40rpx; color: #94a3b8; line-height: 1;">×</view>
+      </view>
+      <view style="padding: 32rpx; display: flex; flex-direction: column; gap: 24rpx;">
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">分类</view>
+          <picker mode="selector" range="{{categories}}" bindchange="onCategoryChange">
+            <view style="background: #f8fafc; padding: 20rpx; border-radius: 8rpx; font-size: 28rpx; color: #334155; display: flex; justify-content: space-between;">
+              <text>{{materialForm.category || '请选择分类'}}</text>
+              <text style="color: #94a3b8;">▼</text>
+            </view>
+          </picker>
+        </view>
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">材料名称 <text style="color: var(--rose-600);">*</text></view>
+          <input placeholder="如：客卫地砖" value="{{materialForm.name}}" bindinput="onMaterialFormInput" data-field="name" style="background: #f8fafc; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        </view>
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">品牌及型号 <text style="color: var(--rose-600);">*</text></view>
+          <input placeholder="如：马可波罗 800x800" value="{{materialForm.brandModel}}" bindinput="onMaterialFormInput" data-field="brandModel" style="background: #f8fafc; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        </view>
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">数量及单位</view>
+          <input placeholder="如：30 平米" value="{{materialForm.quantity}}" bindinput="onMaterialFormInput" data-field="quantity" style="background: #f8fafc; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        </view>
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">补充备注</view>
+          <input placeholder="如：含送货上门" value="{{materialForm.remark}}" bindinput="onMaterialFormInput" data-field="remark" style="background: #f8fafc; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        </view>
+      </view>
+      <view style="display: flex; border-top: 1rpx solid #f1f5f9;">
+        <view bindtap="closeMaterialModal" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; color: #64748b;">取消</view>
+        <view bindtap="saveMaterial" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; font-weight: bold; color: #fff; background: var(--primary-900);">保存</view>
+      </view>
     </view>
   </view>
 </view>

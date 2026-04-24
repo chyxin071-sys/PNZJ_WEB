@@ -140,10 +140,14 @@ Page({
         notes: ''
       }
     });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: true });
   },
 
   closeAddModal() {
     this.setData({ showAddModal: false });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: false });
   },
 
   onNewLeadInput(e) {
@@ -245,7 +249,7 @@ Page({
       const newLeadId = res._id;
       const now = new Date();
       const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-      
+
       db.collection('followUps').add({
         data: {
           leadId: newLeadId,
@@ -259,7 +263,14 @@ Page({
       }).catch(err => {
         console.error('添加创建跟进记录失败', err);
       });
-      
+
+      // 更新客户的 lastFollowUp 字段
+      db.collection('leads').doc(newLeadId).update({
+        data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+      }).catch(err => {
+        console.error('更新lastFollowUp失败', err);
+      });
+
       wx.hideLoading();
       wx.showToast({ title: '添加成功', icon: 'success' });
       this.closeAddModal();
@@ -299,20 +310,20 @@ Page({
       });
     });
 
-    // 2. 获取所有线索
+    // 2. 获取所有线索，红点用本地存储判断
+    const userInfo = wx.getStorageSync('userInfo');
+    const myName = userInfo ? userInfo.name : '';
+    const isAdmin = userInfo && userInfo.role === 'admin';
+
     db.collection('leads').get().then(res => {
       wx.hideNavigationBarLoading();
       wx.stopPullDownRefresh();
-      
-      const userInfo = wx.getStorageSync('userInfo');
-      const myName = userInfo ? userInfo.name : '';
-      const isAdmin = userInfo && userInfo.role === 'admin';
 
       // 按照创建时间倒序，并进行数据脱敏
       const list = res.data.map(l => {
         const isRelated = isAdmin || l.creatorName === myName || l.sales === myName || l.designer === myName || l.manager === myName || l.signer === myName;
         const isVisible = isRelated || l.status === '已签单';
-        
+
         if (!isVisible) {
           l._isMasked = true;
           l.name = maskName(l.name);
@@ -325,6 +336,14 @@ Page({
         l._isRelated = isRelated;
         l._statusIndex = ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'].indexOf(l.status);
         if (l._statusIndex === -1) l._statusIndex = 0;
+
+        // 如果没有 lastFollowUp 时间，显示默认值
+        if (!l.lastFollowUp) {
+          l.lastFollowUp = '暂无跟进';
+        }
+
+        l.hasUnread = (l.lastFollowUpAt || 0) > (wx.getStorageSync('followup_read_' + l._id) || 0);
+
         return l;
       }).sort((a, b) => {
         const getTime = (dateVal) => {
@@ -339,7 +358,7 @@ Page({
         };
         return getTime(b.createdAt) - getTime(a.createdAt);
       });
-      
+
       this.setData({ allLeads: list }, () => {
         this.filterLeads();
       });
@@ -401,18 +420,41 @@ Page({
       });
     }
 
-    // 时间范围过滤 (以 lastFollowUp 为主)
+    // 时间范围过滤 (以 createdAt 为主)
     if (this.data.timeFilterIndex > 0) {
       const now = new Date();
       const currentYear = now.getFullYear();
-      
+
       filtered = filtered.filter(l => {
-        if (!l.lastFollowUp) return true;
-        const followUpDate = new Date(l.lastFollowUp.replace(/-/g, '/'));
-        
+        // 如果没有创建时间，排除该客户
+        if (!l.createdAt) return false;
+
+        // 解析创建时间（兼容多种格式）
+        const parseCreatedAtTime = (createdAt) => {
+          if (!createdAt) return 0;
+          if (typeof createdAt === 'object' && createdAt.$date) {
+            return createdAt.$date;
+          }
+          if (typeof createdAt === 'number') {
+            return createdAt;
+          }
+          if (typeof createdAt === 'string') {
+            return new Date(createdAt.replace(/-/g, '/')).getTime();
+          }
+          if (createdAt instanceof Date) {
+            return createdAt.getTime();
+          }
+          return 0;
+        };
+
+        const createdTimestamp = parseCreatedAtTime(l.createdAt);
+        if (createdTimestamp === 0) return false;
+
+        const createdDate = new Date(createdTimestamp);
+
         if (this.data.timeFilterIndex === 3) {
           // 今年
-          return followUpDate.getFullYear() === currentYear;
+          return createdDate.getFullYear() === currentYear;
         } else {
           // 最近一周 (1), 最近一月 (2)
           const filterMs = {
@@ -420,7 +462,7 @@ Page({
             2: 30 * 24 * 3600 * 1000
           };
           const limitMs = filterMs[this.data.timeFilterIndex];
-          const diff = now.getTime() - followUpDate.getTime();
+          const diff = now.getTime() - createdTimestamp;
           return diff >= 0 && diff <= limitMs;
         }
       });
@@ -585,10 +627,6 @@ Page({
         signerIndex: signerIndex,
         signer: signersList.length > 0 ? signersList[signerIndex] : currentUserName
       });
-      if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-        this.getTabBar().setData({ hidden: true });
-      }
-      wx.hideTabBar();
       return;
     }
     
@@ -639,6 +677,13 @@ Page({
       }
     });
 
+    // 更新客户的 lastFollowUp 和 lastFollowUpAt 字段
+    db.collection('leads').doc(leadId).update({
+      data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+    }).catch(err => {
+      console.error('更新lastFollowUp失败', err);
+    });
+
     db.collection('leads').doc(leadId).get().then(res => {
       const lead = res.data;
       if (lead) {
@@ -664,16 +709,20 @@ Page({
         });
 
         if (operatorName !== 'admin') {
-          db.collection('notifications').add({
-            data: {
-              type: 'lead',
-              title: '客户有新系统记录',
-              content: `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
-              targetUser: 'admin',
-              isRead: false,
-              createTime: db.serverDate(),
-              link: `/pages/leadDetail/index?id=${leadId}`
-            }
+          db.collection('users').where({ role: 'admin' }).get().then(res => {
+            res.data.forEach(u => {
+              db.collection('notifications').add({
+                data: {
+                  type: 'lead',
+                  title: '客户有新系统记录',
+                  content: `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+                  targetUser: u.name,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/leadDetail/index?id=${leadId}`
+                }
+              });
+            });
           });
         }
       }
@@ -695,10 +744,6 @@ Page({
 
   closeSignModal() {
     this.setData({ showSignModal: false, currentSignLeadId: null });
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ hidden: false });
-    }
-    wx.showTabBar();
   },
 
   confirmSign() {
@@ -708,10 +753,6 @@ Page({
     }
     
     this.setData({ showSignModal: false });
-    if (typeof this.getTabBar === 'function' && this.getTabBar()) {
-      this.getTabBar().setData({ hidden: false });
-    }
-    wx.showTabBar();
     this.updateLeadStatusInList(currentSignLeadId, '已签单', { signDate, signer });
     
     // 全员通知
@@ -771,10 +812,14 @@ Page({
 
   openFilterModal() {
     this.setData({ showFilterModal: true });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: true });
   },
 
   closeFilterModal() {
     this.setData({ showFilterModal: false });
+    const tabbar = this.getTabBar();
+    if (tabbar) tabbar.setData({ showMask: false });
   },
 
   toggleEmployee(e) {

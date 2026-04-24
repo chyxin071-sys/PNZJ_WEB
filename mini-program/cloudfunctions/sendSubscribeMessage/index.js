@@ -12,7 +12,7 @@ exports.main = async (event, context) => {
     templateId,
     page,
     data,
-    miniprogramState = 'developer'
+    miniprogramState = 'formal'
   } = event;
 
   try {
@@ -25,6 +25,12 @@ exports.main = async (event, context) => {
     if (!user || !user.wechatOpenId) {
       console.warn('该用户没有绑定微信 OpenID，无法发送通知：', receiverUserId);
       return { success: false, reason: 'no_openid' };
+    }
+
+    // 屏蔽自己给自己发通知的情况
+    if (user.wechatOpenId === OPENID) {
+      console.log('检测到自己操作，无需下发微信通知：', receiverUserId);
+      return { success: true, reason: 'self_action_skipped' };
     }
 
     const result = await cloud.openapi.subscribeMessage.send({

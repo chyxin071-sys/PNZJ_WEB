@@ -14,6 +14,58 @@
 
 ---
 
+## v1.1.0（2026-04-24）正式发布
+
+### 新功能
+- **客户查看权限申请系统**：外部用户（客户家属/朋友）通过分享链接查看工地进度时需申请权限，员工审批后放行；业主本人手机号验证自动通过
+  - 新增 `shareAccessManage` 页面（申请管理）
+  - 新增 `getPhoneNumber` 云函数（获取手机号）
+  - 新增 `shareAccess` 数据库集合
+  - 工地详情页快捷操作区改为 2x2 网格，新增"查看申请"入口
+  - 订阅消息：申请提交通知员工、审批结果通知申请人
+- **微信订阅消息通知**：接入微信订阅消息，关键操作自动推送通知
+- **跟进记录红点未读提示**：
+  - 客户列表卡片、客户详情 tab、工地详情按钮三处统一显示红点
+  - 任意一处点开跟进记录即标记已读，三处同步消除红点
+  - 机制：`leads.lastFollowUpAt` 时间戳 vs 本地 `followup_read_${leadId}` 对比判断
+
+### Bug 修复（2026-04-22 第一批）
+- **BUG-02**：所有 API 的 `docData` 换行符转义正则写错（`.replace(/\\n/g, '\\\\n')` → `.replace(/\n/g, '\\n')`），影响 6 个文件（leads/projects/followUps 的 route.ts 和 [id]/route.ts）
+- **BUG-02**：`projects/[id]/page.tsx` localStorage key 错误（`'user'` → `'pnzj_user'`）
+- **BUG-01**：`employees/[id]/route.ts` 名字同步补充了 `leads.manager` 字段
+- **BUG-03**：客户详情页项目经理卡片改为始终显示；工地编辑弹窗项目经理改为下拉选择器
+- **BUG-15**：客户详情页 API 失败时加了 `leadNotFound` 状态，不再无限转圈
+- **BUG-06**：跟进记录前端加了 sort 确保倒序显示
+- **BUG-04**：todos 页面"指派"用词改为"执行人"/"未分配"
+- **BUG-16**：报价单新建保存后跳转到 `/quotes/{id}` 而非列表页
+- **BUG-17/18**：`quotes/[id]/page.tsx` handleSave 改为真实调 PUT API；quotes API POST 返回 `_id`；`quotes/[id]/route.ts` 补充换行符转义修复
+
+### Bug 修复（2026-04-22 第二批）
+- **BUG-20**：新建待办执行人默认为自己
+- **BUG-21**：新建客户时根据创建人角色自动填入对应字段
+- **BUG-22**：已签单客户信息全员可见（只读）
+- **BUG-23**：报价单保存时自动写入跟进记录
+- **BUG-24**：新建工地时自动写入跟进记录
+- **BUG-25**：客户来源选项更新，支持"其他"附加输入
+- **BUG-26**：待办筛选关联客户按权限过滤，避免隐私泄露
+- **BUG-27**：现场影像改为 3 列 grid 布局
+- **BUG-28**：材料库新增重名校验
+- **BUG-31**：上传图片前压缩（quality: 80）
+
+### Bug 修复（2026-04-24）
+- 分享页底部操作栏多余 Logo 已删除
+- 工地详情页（小程序+Web）子工序 `current` 状态 UI 未显示黄色"施工中"标签 → 已修复两端渲染逻辑
+- **跟进记录时间解析**：`createdAt` 字段存在三种格式（`{ $date: 毫秒 }`、纯数字时间戳、字符串），Web 端新增 `parseFollowUpTime` 函数统一兼容，修复小程序写入的系统跟进记录时间解析失败、排序乱掉的问题
+- **跟进记录排序**（小程序）：`leadDetail/index.js` 和 `index/index.js` 新增 `parseCreatedAtTime()` 函数，改用时间戳数值比较排序，替代字符串比较
+- **订阅消息授权**：在客户状态变更、开启设计工作流、完成设计节点、工地开工等关键操作前添加 `await requestSubscribe()` 静默请求授权
+- **云函数环境**：`sendSubscribeMessage/index.js` 的 `miniprogramState` 从 `'developer'` 改为 `'formal'`
+- **待办详情页样式**：修复查看模式下创建日期颜色和字体大小不一致问题
+- **权限泄露修复**：待办列表关联客户名称改为批量查询后按权限实时脱敏（`index/index.js:188-247`）
+- **待办详情权限**：补充 `manager` 字段的权限判断（`todoForm/index.js:140-150`）
+- **密码同步**：小程序修改密码时同时更新 `passwordPlain` 和 `passwordHash`；管理员重置密码时 Web 端 API 同步更新两个字段
+
+---
+
 ## v1.0.0（2026-04-17）正式发布
 
 ### 核心功能
@@ -25,7 +77,7 @@
 - **待办任务**：创建、分配、完成、关联线索/项目
 - **员工管理**：员工增删改查、启用/停用、角色管理
 - **通知中心**：消息查看、已读/未读、收藏
-- **合同管理**：页面框架（数据为 mock，待 1.1 版本接入真实数据）
+- **合同管理**：页面框架（数据为 mock，待后续版本接入真实数据）
 - **数据看板**：线索转化率图表、项目状态统计
 
 ### 技术架构
@@ -35,47 +87,62 @@
 - 文件存储：微信云开发 COS
 - 认证：JWT（网页端）+ 云数据库直查（小程序端）
 
-### 已知问题（待后续版本修复）
-- 合同模块数据为 mock，未接入真实数据库
-- 报价单与线索/项目无关联字段
-- 员工 PATCH 接口 `tcbQuery` 未导入（Bug）
-- 密码以明文存储（安全风险）
-- AppSecret 硬编码在代码中（安全风险）
-- 通知系统无自动触发机制
-
 ---
 
-## v1.0.1（计划中）- Bug 修复
+## 技术说明
 
-### 待修复
-- [ ] `web/src/app/api/employees/[id]/route.ts` 补充 `tcbQuery` 导入
-- [ ] `web/src/app/profile/page.tsx` 修正待办统计字段名（`assignedTo` → `assignees`）
-- [ ] AppSecret 移入 `.env.local` 环境变量
+### 跟进记录时间字段格式
 
----
+数据库中 `createdAt` 字段存在四种格式混用，所有读取时间的地方必须用 `parseCreatedAtTime()` 函数处理：
 
-## v1.1.0（计划中）- 安全加固 + 合同模块
+| 格式 | 来源 | 示例 |
+|------|------|------|
+| `{ $date: 毫秒数 }` | Web 端 API 写入 | `{ $date: 1745500000000 }` |
+| 纯数字时间戳 | 小程序 `db.serverDate()` 写入后读出 | `1745500000000` |
+| 字符串 | 手动写入或 `displayTime` 字段 | `"2026-04-24 14:30"` |
+| Date 对象 | 极少数情况 | `new Date(...)` |
 
-### 计划功能
-- [ ] 密码改为 bcrypt 哈希存储（全端统一）
-- [ ] 合同模块接入真实数据（`contracts` 集合 + 付款节点）
-- [ ] 报价单增加 `leadId` 关联字段
-- [ ] 数据查询增加分页支持
+### 数据同步机制
 
----
+**员工姓名修改时同步的字段：**
+- `leads`：creatorName, sales, designer, manager, signer
+- `projects`：manager, sales, designer, creatorName
+- `quotes`：sales, modifier
+- `todos`：creatorName, assignees[].name
+- `followUps`：createdBy
+- `notifications`：senderName, targetUser
 
-## v1.2.0（计划中）- 通知自动化 + 埋点
+**客户信息修改时同步的字段：**
+- `quotes`：customer, phone, address, sales, designer, manager, area, budget, requirementType
+- `projects`：customer, phone, address, sales, designer
+- `todos`：relatedTo.name（仅姓名变化时）
+- `notifications`：content（仅姓名变化时）
 
-### 计划功能
-- [ ] 关键业务事件自动触发通知（线索分配、节点完成、待办到期）
-- [ ] 数据埋点系统（`events` 集合 + track 函数）
-- [ ] 线索转项目自动联通
+### 微信订阅消息通知触点
+
+| 触点 | 文件 | 通知对象 |
+|------|------|---------|
+| 手动添加/编辑跟进记录 | addFollowUp | sales + designer + manager + creatorName + 所有admin |
+| 客户状态变更（非签单） | leadDetail | sales + creatorName + 所有admin |
+| 客户状态变更→已签单 | leadDetail | 全员广播 |
+| 开启设计工作流 | leadDetail | designer + 所有admin |
+| 调整设计排期 | leadDetail | sales + creatorName + 所有admin |
+| 完成设计节点 | leadDetail | sales + creatorName + 所有admin |
+| 工地开工 | projectDetail | manager + sales + designer + creatorName + 所有admin |
+| 工序验收 | projectDetail | manager + sales + designer + creatorName + 所有admin |
+| 调整施工排期 | projectDetail | manager + sales + designer + creatorName + 所有admin |
+| 新建工地 | projects | sales + designer + manager + creatorName + 所有admin |
+| 报价操作 | quoteDetail | sales + designer + manager + creatorName + 所有admin |
+| 待办完成（关联客户） | index | sales + designer + manager + creatorName + 所有admin |
+| 业主验收签字 | projectShare | manager + sales + designer + 所有admin |
+| 查看权限申请提交 | projectShare | 工地相关员工 + 所有admin |
+| 查看权限审批结果 | shareAccessManage | 申请人（如有订阅） |
+
+**注意**：修改评级、编辑客户资料（leadForm）、客户创建目前只写跟进记录，不发订阅消息通知。
 
 ---
 
 ## 如何提交版本
-
-每次发布新版本时，按以下步骤操作：
 
 ```bash
 # 1. 确保代码已提交
@@ -83,7 +150,7 @@ git add .
 git commit -m "feat: 描述本次更新内容"
 
 # 2. 打版本标签
-git tag -a v1.0.1 -m "v1.0.1: 修复员工接口 tcbQuery 未导入的 bug"
+git tag -a v1.1.0 -m "v1.1.0: 客户查看权限申请功能 + 订阅消息通知"
 
 # 3. 推送
 git push origin main

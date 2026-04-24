@@ -99,7 +99,7 @@ Page({
 
         // 写入系统跟进记录
         const startDateStr = this.data.project.startDate || '未定';
-        this.addSystemFollowUpToLead(`修改并重算了工地排期\n预计开工：${startDateStr}\n预计完工：${expectedEndDate}`);
+        this.addSystemFollowUpToLead(`调整了施工排期\n开工日期：${startDateStr}\n预计完工：${expectedEndDate}`);
       }).catch(() => {
         wx.hideLoading();
         wx.showToast({ title: '保存失败', icon: 'error' });
@@ -308,6 +308,15 @@ Page({
     db.collection('projects').doc(this.data.id).update({
       data: updateData
     }).then(() => {
+      // 同步更新客户的项目经理字段
+      if (this.data.project.leadId) {
+        db.collection('leads').doc(this.data.project.leadId).update({
+          data: { manager: editProjectManager }
+        }).catch(err => {
+          console.error('同步客户项目经理失败', err);
+        });
+      }
+
       wx.hideLoading();
       wx.showToast({ title: '修改成功', icon: 'success' });
       // 如果设置了开工日期且原来没有，则认为是启动项目，添加跟进记录
@@ -476,6 +485,38 @@ Page({
           subNodes: (n.subNodes || []).map(s => typeof s === 'string' ? { name: s, duration: 1, status: "pending", startDate: "", endDate: "", records: [] } : s),
           delayRecords: n.delayRecords || []
         }));
+
+        // ---- 修复历史遗留脏数据：确保整个项目中只有一个子工序是 'current' ----
+        let hasActiveCurrent = false;
+        let isDirty = false;
+        projectNodes.forEach((majorNode) => {
+          majorNode.subNodes.forEach((sub) => {
+            if (sub.status === 'completed' || sub.status === 'awaiting_signature') {
+              // 已经完成的保持原样
+            } else {
+              // 未完成的节点，只有在当前大节点是 current，且还没遇到过 current 子节点时，才设为 current
+              if (majorNode.status === 'current' && !hasActiveCurrent) {
+                if (sub.status !== 'current') {
+                  sub.status = 'current';
+                  isDirty = true;
+                }
+                hasActiveCurrent = true;
+              } else {
+                if (sub.status !== 'pending') {
+                  sub.status = 'pending';
+                  isDirty = true;
+                }
+              }
+            }
+          });
+        });
+
+        // 如果发现脏数据，静默修复数据库
+        if (isDirty && p.status !== '已竣工') {
+          wx.cloud.database().collection('projects').doc(this.data.id).update({
+            data: { nodesData: projectNodes }
+          });
+        }
       }
 
       this.setData({ 
@@ -487,10 +528,26 @@ Page({
         isRelated: isRelated
       });
       wx.hideLoading();
+      
+      this.checkUnreadNotifications();
+
+      // 自动生成分享图
+      this.generateProjectShareImage();
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '加载失败', icon: 'none' });
     });
+  },
+
+  checkUnreadNotifications() {
+    const leadId = this.data.project.leadId || this.data.project.customerNo;
+    if (!leadId) return;
+    const db = wx.cloud.database();
+    db.collection('leads').doc(leadId).get().then(res => {
+      const lastFollowUpAt = res.data.lastFollowUpAt || 0;
+      const lastReadAt = wx.getStorageSync('followup_read_' + leadId) || 0;
+      this.setData({ hasUnreadFollowUp: lastFollowUpAt > lastReadAt });
+    }).catch(err => console.error('获取未读状态失败', err));
   },
 
   toggleNode(e) {
@@ -592,7 +649,7 @@ Page({
             return new Promise((resolve) => {
               wx.compressImage({
                 src: file.tempFilePath,
-                quality: 80, // 压缩质量
+                quality: 60, // 强压缩，加快加载速度
                 success: (compressedRes) => {
                   resolve({
                     url: compressedRes.tempFilePath,
@@ -625,9 +682,24 @@ Page({
 
   removeUploadPhoto(e) {
     const idx = e.currentTarget.dataset.index;
-    const files = [...this.data.uploadFiles];
-    files.splice(idx, 1);
-    this.setData({ uploadFiles: files });
+    const photos = [...this.data.uploadFiles];
+    photos.splice(idx, 1);
+    this.setData({ uploadFiles: photos });
+  },
+
+  previewUploadPhoto(e) {
+    const idx = e.currentTarget.dataset.index;
+    const item = this.data.uploadFiles[idx];
+    const isVideo = item.type === 'video';
+
+    if (isVideo) {
+      wx.previewMedia({
+        sources: [{ url: item.url || item, type: 'video' }]
+      });
+    } else {
+      const urls = this.data.uploadFiles.filter(p => !p.type || p.type === 'image').map(p => p.url || p);
+      wx.previewImage({ urls, current: item.url || item, showmenu: true });
+    }
   },
 
   recalculateGantt(nodes, baseDate) {
@@ -850,12 +922,25 @@ Page({
   onStartDateChange(e) {
     this.setData({ baseStartDate: e.detail.value });
   },
-  confirmStartProject() {
+  async confirmStartProject() {
     if (!this.data.baseStartDate) return wx.showToast({ title: '请选择日期', icon: 'none' });
+
+    // 静默请求订阅授权
+    await requestSubscribe();
+
     wx.showLoading({ title: '处理中' });
     
     let nodes = [...this.data.nodesList];
     nodes[0].status = 'current';
+    if (!nodes[0].actualStartDate) {
+      nodes[0].actualStartDate = this.data.baseStartDate;
+    }
+    if (nodes[0].subNodes && nodes[0].subNodes.length > 0) {
+      nodes[0].subNodes[0].status = 'current';
+      if (!nodes[0].subNodes[0].actualStartDate) {
+        nodes[0].subNodes[0].actualStartDate = this.data.baseStartDate;
+      }
+    }
     nodes = this.recalculateGantt(nodes, this.data.baseStartDate);
 
     const expectedEndDate = nodes[nodes.length - 1].endDate;
@@ -937,10 +1022,172 @@ Page({
       popupSub: { ...subNode },
       popupMajorNode: { ...node }
     });
+
+    // 如果工序是待确认或已完成，每次打开浮窗时自动预生成一下分享卡片，避免没拿到最新的
+    if (subNode.status === 'awaiting_signature' || subNode.status === 'completed') {
+      setTimeout(() => {
+        this.generateShareImage(subNode);
+      }, 300);
+    }
   },
 
   closeSubNodePopup() {
     this.setData({ showSubNodePopup: false });
+  },
+
+  generateShareImage(subNode) {
+    const query = wx.createSelectorQuery();
+    query.select('#shareCanvas')
+      .fields({ node: true, size: true })
+      .exec((res) => {
+        if (!res[0] || !res[0].node) return;
+        const canvas = res[0].node;
+        const ctx = canvas.getContext('2d');
+        const dpr = wx.getSystemInfoSync().pixelRatio;
+        
+        // 缩放以支持高清
+        canvas.width = res[0].width * dpr;
+        canvas.height = res[0].height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        // 绘制背景 #ffffff
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 500, 400);
+
+        if (subNode.status === 'awaiting_signature') {
+          // 需要签字的工序
+          ctx.fillStyle = '#fffbeb';
+          ctx.beginPath();
+          ctx.arc(250, 90, 44, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.fillStyle = '#d97706';
+          ctx.font = 'bold 48px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('!', 250, 95);
+
+          ctx.fillStyle = '#1e293b';
+          ctx.font = 'bold 40px sans-serif';
+          ctx.fillText(`【${subNode.name}】待确认`, 250, 180);
+
+          const address = this.data.project.address || '工地记录';
+          ctx.fillStyle = '#64748b';
+          ctx.font = '28px sans-serif';
+          ctx.fillText(address, 250, 240);
+        } else {
+          // 不用签字确认的工序 或 已确认
+          ctx.fillStyle = '#ecfdf5';
+          ctx.beginPath();
+          ctx.arc(250, 90, 40, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.fillStyle = '#059669';
+          ctx.font = 'bold 44px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('✓', 250, 95);
+
+          ctx.fillStyle = '#1e293b';
+          ctx.font = 'bold 36px sans-serif';
+          
+          let titleText = `【${subNode.name}】已完工`;
+          // 如果是需要签字的工序且状态已经是 completed，显示为“已确认”
+          if (this.data.popupSubIdx === 0 || this.data.popupSubIdx === this.data.nodesList[this.data.popupMajorIdx].subNodes.length - 1) {
+            titleText = `【${subNode.name}】已确认`;
+          }
+          ctx.fillText(titleText, 250, 160);
+
+          const manager = this.data.project.manager || '未知';
+          ctx.fillStyle = '#64748b';
+          ctx.font = '26px sans-serif';
+          ctx.fillText(`项目经理：${manager}`, 250, 215);
+
+          const endDate = subNode.actualEndDate || subNode.endDate || '未知时间';
+          ctx.fillText(`完工时间：${endDate}`, 250, 260);
+        }
+        
+        // 4. 绘制底部品牌 Logo (往下压，不重叠)
+        const logoImg = canvas.createImage();
+        logoImg.src = '../../assets/icons/LOGO2.png'; // 使用相对路径以确保Canvas可以读取
+        logoImg.onload = () => {
+          const imgW = logoImg.width;
+          const imgH = logoImg.height;
+          const targetW = 200;
+          const targetH = targetW * (imgH / imgW);
+          const lx = (500 - targetW) / 2;
+          const ly = 380 - targetH;
+
+          ctx.drawImage(logoImg, lx, ly, targetW, targetH);
+
+          setTimeout(() => {
+            wx.canvasToTempFilePath({
+              canvas,
+              success: (res) => {
+                this.setData({ shareImageUrl: res.tempFilePath });
+              }
+            });
+          }, 150);
+        };
+        logoImg.onerror = () => {
+          setTimeout(() => {
+            wx.canvasToTempFilePath({
+              canvas,
+              success: (res) => {
+                this.setData({ shareImageUrl: res.tempFilePath });
+              }
+            });
+          }, 150);
+        };
+      });
+  },
+
+  generateProjectShareImage() {
+    const query = wx.createSelectorQuery();
+    query.select('#projectShareCanvas')
+      .fields({ node: true, size: true })
+      .exec((res) => {
+        if (!res[0] || !res[0].node) return;
+        const canvas = res[0].node;
+        const ctx = canvas.getContext('2d');
+        const dpr = wx.getSystemInfoSync().pixelRatio;
+        
+        canvas.width = res[0].width * dpr;
+        canvas.height = res[0].height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        // 绘制背景 #ffffff
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, 500, 400);
+
+        const logoImg = canvas.createImage();
+        logoImg.src = '../../assets/icons/LOGO2.png'; // 使用相对路径
+        logoImg.onload = () => {
+          const imgW = logoImg.width || 500;
+          const imgH = logoImg.height || 500;
+          // 调整Logo在画板中的占比，原240放大30%约等于312
+          let targetW = 312;
+          let targetH = targetW * (imgH / imgW);
+          if (targetH > 260) {
+            targetH = 260;
+            targetW = targetH * (imgW / imgH);
+          }
+          const lx = (500 - targetW) / 2;
+          const ly = (400 - targetH) / 2;
+
+          ctx.drawImage(logoImg, lx, ly, targetW, targetH);
+
+          setTimeout(() => {
+            wx.canvasToTempFilePath({
+              canvas,
+              success: (res) => {
+                this.setData({ projectShareImageUrl: res.tempFilePath });
+              }
+            });
+          }, 300);
+        };
+        logoImg.onerror = () => {
+          console.error('Logo 图片加载失败');
+        };
+      });
   },
 
   // ==== 编辑排期弹窗 ====
@@ -997,18 +1244,36 @@ Page({
     nodes = this._recalculateFromSubNode(nodes, popupMajorIdx, popupSubIdx);
     const expectedEndDate = nodes[nodes.length - 1].endDate;
 
+    // 如果修改的是第一个大节点的第一个子工序，同步更新工地的整体开工日期
+    const updateData = { nodesData: nodes, expectedEndDate };
+    if (popupMajorIdx === 0 && popupSubIdx === 0) {
+      updateData.startDate = editSubStartDate;
+    }
+
     const db = wx.cloud.database();
     db.collection('projects').doc(this.data.id).update({
-      data: { nodesData: nodes, expectedEndDate }
+      data: updateData
     }).then(() => {
-      this.setData({
+      const newState = {
         nodesList: nodes,
         'project.expectedEndDate': expectedEndDate,
         showSubNodeEdit: false,
         showSubNodePopup: false
-      });
+      };
+
+      // 如果更新了开工日期，也要更新到 state
+      if (updateData.startDate) {
+        newState['project.startDate'] = updateData.startDate;
+      }
+
+      this.setData(newState);
       wx.hideLoading();
       wx.showToast({ title: '排期已更新', icon: 'success' });
+
+      // 写入系统跟进记录
+      const majorNode = nodes[popupMajorIdx];
+      const subNode = majorNode.subNodes[popupSubIdx];
+      this.addSystemFollowUpToLead(`调整了施工排期\n【${majorNode.name} - ${subNode.name}】\n开工：${editSubStartDate}\n完工：${editSubEndDate}\n工期：${editSubDuration}天\n预计总完工：${expectedEndDate}`);
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '保存失败', icon: 'none' });
@@ -1033,9 +1298,12 @@ Page({
       nextStart = formatDate(getNextWorkingDay(new Date(s.endDate.replace(/-/g, '/'))));
     }
 
-    // 更新大节点的 endDate 为最后一个子节点的 endDate
+    // 更新大节点的 startDate 和 endDate
     const subs = nodes[majorIdx].subNodes;
     if (subs.length > 0) {
+      // 大节点的开工日期 = 第一个子节点的开工日期
+      nodes[majorIdx].startDate = subs[0].startDate;
+      // 大节点的完工日期 = 最后一个子节点的完工日期
       nodes[majorIdx].endDate = subs[subs.length - 1].endDate;
     }
 
@@ -1058,6 +1326,7 @@ Page({
         nextStart = formatDate(getNextWorkingDay(new Date(s.endDate.replace(/-/g, '/'))));
       }
       if (node.subNodes.length > 0) {
+        node.startDate = node.subNodes[0].startDate;
         node.endDate = node.subNodes[node.subNodes.length - 1].endDate;
       }
     }
@@ -1065,19 +1334,51 @@ Page({
   },
 
   // ==== 验收弹窗 ====
-  openAcceptance() {
-    const sub = this.data.popupSub;
+  openAcceptance(e) {
+    const majorIdx = e.currentTarget.dataset.majorIdx;
+    const subIdx = e.currentTarget.dataset.subIdx;
+    
+    // 通过事件传参进来的（去填写逾期原因），或者是通过底部弹窗进来的
+    const mIdx = majorIdx !== undefined ? majorIdx : this.data.popupMajorIdx;
+    const sIdx = subIdx !== undefined ? subIdx : this.data.popupSubIdx;
+    
+    const node = this.data.nodesList[mIdx];
+    const sub = node.subNodes[sIdx];
     const isEdit = sub.status === 'completed' && sub.acceptanceRecord;
+    const isEditingDraft = !isEdit && sub.draft && (sub.draft.remark || sub.draft.delayReason || (sub.draft.photos && sub.draft.photos.length > 0));
+    
     this.setData({
       showAcceptanceModal: true,
       showSubNodePopup: false,
-      acceptanceMode: isEdit ? 'edit' : 'new',
-      acceptanceRemark: isEdit ? (sub.acceptanceRecord.remark || '') : '',
-      acceptancePhotos: isEdit ? (sub.acceptanceRecord.photos || []) : []
+      popupMajorIdx: mIdx,
+      popupSubIdx: sIdx,
+      popupSub: { ...sub },
+      acceptanceMode: isEdit ? 'edit' : (isEditingDraft ? 'draft' : 'new'),
+      acceptanceRemark: isEdit ? (sub.acceptanceRecord.remark || '') : (isEditingDraft ? sub.draft.remark : ''),
+      acceptancePhotos: isEdit ? (sub.acceptanceRecord.photos || []) : (isEditingDraft ? sub.draft.photos : []),
+      delayReason: isEdit ? (sub.acceptanceRecord.delayReason || '') : (isEditingDraft ? sub.draft.delayReason : '')
     });
   },
 
   closeAcceptance() {
+    // 暂存草稿到内存中，避免误触关闭丢失数据
+    if (this.data.acceptanceMode === 'new') {
+      const mIdx = this.data.popupMajorIdx;
+      const sIdx = this.data.popupSubIdx;
+      if (mIdx !== null && sIdx !== null) {
+        let nodes = this.data.nodesList;
+        if (!nodes[mIdx].subNodes[sIdx].draft) {
+          nodes[mIdx].subNodes[sIdx].draft = {};
+        }
+        nodes[mIdx].subNodes[sIdx].draft = {
+          remark: this.data.acceptanceRemark,
+          delayReason: this.data.delayReason,
+          photos: this.data.acceptancePhotos
+        };
+        // 不保存到云端，只存在页面内存，重新进页面草稿会清空，但当前会话保留
+        this.setData({ nodesList: nodes });
+      }
+    }
     this.setData({ showAcceptanceModal: false });
   },
 
@@ -1104,8 +1405,40 @@ Page({
       sourceType: ['album', 'camera'],
       sizeType: ['compressed'], // 强制压缩
       success: (res) => {
-        const newFiles = res.tempFiles.map(f => ({ url: f.tempFilePath, type: f.fileType || 'image' }));
-        this.setData({ acceptancePhotos: [...this.data.acceptancePhotos, ...newFiles] });
+        const tempFiles = res.tempFiles;
+        wx.showLoading({ title: '压缩处理中...' });
+        const compressedPromises = tempFiles.map(file => {
+          if (file.fileType === 'image') {
+            return new Promise((resolve) => {
+              wx.compressImage({
+                src: file.tempFilePath,
+                quality: 60, // 高强度压缩，兼顾清晰度
+                success: (compressedRes) => {
+                  resolve({
+                    url: compressedRes.tempFilePath,
+                    type: file.fileType
+                  });
+                },
+                fail: () => {
+                  resolve({
+                    url: file.tempFilePath,
+                    type: file.fileType
+                  });
+                }
+              });
+            });
+          } else {
+            return Promise.resolve({
+              url: file.tempFilePath,
+              type: file.fileType
+            });
+          }
+        });
+
+        Promise.all(compressedPromises).then(newFiles => {
+          wx.hideLoading();
+          this.setData({ acceptancePhotos: [...this.data.acceptancePhotos, ...newFiles] });
+        });
       }
     });
   },
@@ -1119,17 +1452,37 @@ Page({
 
   previewAcceptancePhoto(e) {
     const idx = e.currentTarget.dataset.index;
-    const item = this.data.popupSub.acceptanceRecord.photos[idx];
-    const isVideo = item.type === 'video';
     
+    // 如果是在编辑/新增现场影像的弹窗内，图片来源是 acceptancePhotos
+    // 否则在子工序详情展示态，图片来源是 popupSub.acceptanceRecord.photos
+    const sourceArray = this.data.showAcceptanceModal 
+      ? this.data.acceptancePhotos 
+      : (this.data.popupSub && this.data.popupSub.acceptanceRecord && this.data.popupSub.acceptanceRecord.photos) || [];
+      
+    if (!sourceArray || sourceArray.length === 0) return;
+
+    const item = sourceArray[idx];
+    if (!item) return;
+
+    const isVideo = item.type === 'video';
+
     if (isVideo) {
       wx.previewMedia({
         sources: [{ url: item.url || item, type: 'video' }]
       });
     } else {
-      const urls = this.data.popupSub.acceptanceRecord.photos.filter(p => !p.type || p.type === 'image').map(p => p.url || p);
+      const urls = sourceArray.filter(p => !p.type || p.type === 'image').map(p => p.url || p);
       wx.previewImage({ urls, current: item.url || item, showmenu: true });
     }
+  },
+
+  previewSignature(e) {
+    const url = e.currentTarget.dataset.url;
+    wx.previewImage({
+      urls: [url],
+      current: url,
+      showmenu: true
+    });
   },
 
   async submitAcceptance() {
@@ -1142,7 +1495,7 @@ Page({
 
     wx.showLoading({ title: '提交中' });
 
-    const { popupMajorIdx, popupSubIdx, acceptanceRemark, acceptancePhotos, acceptanceMode, userName } = this.data;
+    const { popupMajorIdx, popupSubIdx, acceptanceRemark, acceptancePhotos, acceptanceMode, userName, delayReason } = this.data;
     const nowStr = new Date().toISOString().split('T')[0];
     const nowFull = (() => {
       const d = new Date();
@@ -1169,6 +1522,7 @@ Page({
 
       const record = {
         remark: acceptanceRemark,
+        delayReason: delayReason || '',
         photos: fileIDs,
         inspector: userName,
         createdAt: acceptanceMode === 'new' ? nowFull : (sub.acceptanceRecord?.createdAt || nowFull),
@@ -1180,12 +1534,25 @@ Page({
 
       let newExpectedEndDate = this.data.project.expectedEndDate;
 
-      if (acceptanceMode === 'new') {
-        sub.status = 'completed';
+      // 不管是 new 还是 draft，都是第一次真正提交
+      if (acceptanceMode === 'new' || acceptanceMode === 'draft') {
+        // 提交成功后清除草稿
+        delete sub.draft;
+
+        // 判断是否是首尾节点（交底 / 验收），如果是，则状态变更为待确认，否则直接已完成
+        const isFirstOrLast = popupSubIdx === 0 || popupSubIdx === nodes[popupMajorIdx].subNodes.length - 1;
+        sub.status = isFirstOrLast ? 'awaiting_signature' : 'completed';
+        
         if (!sub.actualStartDate) sub.actualStartDate = nowStr;
         sub.actualEndDate = nowStr;
         
         // 动态排期：只要有工序完成，就根据其实际完成时间重新推算后续所有工序的排期
+        // 如果当前大节点还没完成，则推进下一个子工序的状态为 current
+        if (popupSubIdx + 1 < nodes[popupMajorIdx].subNodes.length) {
+          nodes[popupMajorIdx].subNodes[popupSubIdx + 1].status = 'current';
+          nodes[popupMajorIdx].subNodes[popupSubIdx + 1].actualStartDate = nowStr;
+        }
+
         nodes = this.recalculateGantt(nodes, this.data.project.startDate);
         newExpectedEndDate = nodes[nodes.length - 1].endDate;
       }
@@ -1195,13 +1562,23 @@ Page({
       let newProjectStatus = this.data.project.status;
 
       const allCompleted = nodes[popupMajorIdx].subNodes.every(s => s.status === 'completed');
-      if (allCompleted && acceptanceMode === 'new') {
+      if (allCompleted && (acceptanceMode === 'new' || acceptanceMode === 'draft')) {
         nodes[popupMajorIdx].status = 'completed';
         nodes[popupMajorIdx].endDate = nowStr;
         nodes[popupMajorIdx].actualEndDate = nowStr;
+        // 设置大节点的实际开始时间（如果还没有）
+        if (!nodes[popupMajorIdx].actualStartDate) {
+          nodes[popupMajorIdx].actualStartDate = nodes[popupMajorIdx].startDate;
+        }
         if (popupMajorIdx + 1 < nodes.length) {
           nodes[popupMajorIdx + 1].status = 'current';
-          nodes[popupMajorIdx + 1].startDate = nowStr;
+          nodes[popupMajorIdx + 1].actualStartDate = nowStr;
+          
+          // 给下一个大节点的第一个子工序赋予 actualStartDate 和 current 状态
+          if (nodes[popupMajorIdx + 1].subNodes && nodes[popupMajorIdx + 1].subNodes.length > 0) {
+            nodes[popupMajorIdx + 1].subNodes[0].status = 'current';
+            nodes[popupMajorIdx + 1].subNodes[0].actualStartDate = nowStr;
+          }
           newCurrentNode = popupMajorIdx + 2;
         }
         nodes = this.recalculateGantt(nodes, this.data.project.startDate);
@@ -1217,16 +1594,31 @@ Page({
         this.setData({
           nodesList: nodes,
           showAcceptanceModal: false,
+          showSubNodePopup: true, // 提交后自动打开详情浮层，方便直接点击分享按钮
+          popupMajorIdx: popupMajorIdx, // 补齐这三个必要的索引参数
+          popupSubIdx: popupSubIdx,
+          popupMajorNode: nodes[popupMajorIdx],
+          popupSub: sub,
           currentNodeIndex: newCurrentNode - 1,
           'project.status': newProjectStatus,
           'project.expectedEndDate': newExpectedEndDate
         });
+
+        // 提交成功自动弹出后，也需要生成分享卡片
+        if (sub.status === 'awaiting_signature' || sub.status === 'completed') {
+          setTimeout(() => {
+            this.generateShareImage(sub);
+          }, 300);
+        }
         
         // --- 触发通知和跟进记录逻辑 ---
-        if (acceptanceMode === 'new') {
+        if (acceptanceMode === 'new' || acceptanceMode === 'draft') {
           const p = this.data.project;
           const leadId = p.leadId || p.customerNo;
-          const content = `工地【${p.address || p.customer || '未知'}】的【${sub.name}】工序已验收完成。${acceptanceRemark ? '现场说明：' + acceptanceRemark : ''}`;
+          let content = `工地【${p.address || p.customer || '未知'}】的【${sub.name}】工序已验收完成。`;
+          if (acceptanceRemark) {
+            content += `现场说明：${acceptanceRemark.trim()}`;
+          }
           
           if (leadId) {
             // 自动在客户跟进中更新跟进记录并触发通知
@@ -1265,7 +1657,15 @@ Page({
         }
 
         wx.hideLoading();
-        wx.showToast({ title: acceptanceMode === 'edit' ? '记录已更新' : '验收通过', icon: 'success' });
+        const toastTitle = acceptanceMode === 'edit' ? '记录已更新' : (sub.status === 'awaiting_signature' ? '已提交，待客户确认' : '已验收通过');
+        wx.showToast({ title: toastTitle, icon: 'success' });
+        
+        // 当用户提交了需要客户签字确认的工序验收记录时，直接唤起原生的转发给好友面板
+        if ((sub.status === 'awaiting_signature' || sub.status === 'completed') && (acceptanceMode === 'new' || acceptanceMode === 'draft' || acceptanceMode === 'edit')) {
+          setTimeout(() => {
+            this.generateShareImage(sub); // 提前生成Canvas缓存图
+          }, 300);
+        }
       });
     }).catch(err => {
       console.error('验收提交失败', err);
@@ -1339,7 +1739,7 @@ Page({
     });
 
     db.collection('leads').doc(this.data.project.leadId).update({
-      data: { lastFollowUp: nowStr }
+      data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
     }).catch(() => {});
 
     // 全局通知
@@ -1402,6 +1802,12 @@ Page({
             res.data.forEach(userDoc => {
               if (userDoc.name === operatorName) return; // 不要发给自己
               
+              let thing7Content = shortContent;
+              const match = content.match(/的【([^】]+)】工序/);
+              if (match) {
+                thing7Content = `【${match[1]}】工序有更新`;
+              }
+              
               wx.cloud.callFunction({
                 name: 'sendSubscribeMessage',
                 data: {
@@ -1413,7 +1819,7 @@ Page({
                     time2: { value: nowStr }, // 更新时间
                     thing4: { value: operatorName.substring(0, 20) }, // 操作员
                     thing6: { value: '请及时点击进入小程序查看详情' }, // 备注
-                    thing7: { value: shortContent.substring(0, 20) } // 更新内容
+                    thing7: { value: thing7Content.substring(0, 20) } // 更新内容
                   }
                 }
               }).catch(console.error);
@@ -1422,5 +1828,41 @@ Page({
         });
       });
     });
+  },
+
+  onShareAppMessage(options) {
+    const defaultLogoUrl = '/assets/icons/LOGO2.png'; // 公司的默认 Logo 占位图
+
+    if (options.from === 'button') {
+      const target = options.target;
+      if (target.dataset.shareType === 'node') {
+        const majorIdx = target.dataset.majorIdx;
+        const subIdx = target.dataset.subIdx;
+        const subNode = this.data.nodesList[majorIdx].subNodes[subIdx];
+        
+        let titleSuffix = '已完工';
+        if (subNode.status === 'awaiting_signature') {
+          titleSuffix = '待确认';
+        } else if (subNode.status === 'completed') {
+          if (subIdx === 0 || subIdx === this.data.nodesList[majorIdx].subNodes.length - 1) {
+            titleSuffix = '已确认';
+          } else {
+            titleSuffix = '验收通过';
+          }
+        }
+        
+        return {
+          title: `【${subNode.name}】${titleSuffix} - ${this.data.project.address}`,
+          path: `/pages/projectShare/index?id=${this.data.id}&majorIdx=${majorIdx}&subIdx=${subIdx}`,
+          imageUrl: this.data.shareImageUrl || defaultLogoUrl
+        };
+      }
+    }
+
+    return {
+      title: `工地进度汇报：${this.data.project ? this.data.project.address : '施工动态'}`,
+      path: `/pages/projectShare/index?id=${this.data.id}`,
+      imageUrl: this.data.projectShareImageUrl || defaultLogoUrl // 使用自动缩放适配的 Logo 画板
+    };
   }
 });

@@ -70,18 +70,38 @@ Page({
       baseWhere.isRead = _.neq(true);
     } else if (this.data.activeTab === 'starred') {
       baseWhere.isStarred = true;
+    } else if (this.data.activeTab === 'all') {
+      // “全部消息”仅保留一个月内的消息
+      const oneMonthAgo = new Date();
+      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+      baseWhere.createTime = _.gte(oneMonthAgo);
     }
 
     query = query.where(baseWhere);
 
-    query
-      .orderBy('createTime', 'desc')
-      .limit(100)
-      .get()
-      .then(res => {
-        wx.stopPullDownRefresh();
-        
-        let list = res.data.map(item => {
+    query.count().then(countRes => {
+      const total = countRes.total;
+      const MAX_LIMIT = 20;
+      const batchTimes = Math.ceil(total / MAX_LIMIT);
+      const tasks = [];
+      for (let i = 0; i < batchTimes; i++) {
+        tasks.push(
+          query.orderBy('createTime', 'desc').skip(i * MAX_LIMIT).limit(MAX_LIMIT).get()
+        );
+      }
+      
+      if (tasks.length === 0) {
+        return Promise.resolve([]);
+      }
+      return Promise.all(tasks);
+    })
+    .then(results => {
+      wx.stopPullDownRefresh();
+      
+      // 合并所有批次的数据
+      const allData = results.reduce((acc, cur) => acc.concat(cur ? cur.data : []), []);
+      
+      let list = allData.map(item => {
           // 格式化时间
           const date = new Date(item.createTime);
           const now = new Date();

@@ -1,6 +1,6 @@
 # CM1.0 问题清单 & 风险评估
 
-> 版本：1.0 | 更新日期：2026-04-17
+> 版本：1.1 | 更新日期：2026-04-25
 
 ---
 
@@ -115,3 +115,68 @@
 - [ ] 线索转项目自动联通
 - [ ] 客户编号并发冲突修复
 - [ ] 导入功能编号规范化
+
+---
+
+## 四、权限审计（2026-04-24）
+
+### 角色定义
+
+- **admin**：系统管理员，全权限
+- **sales**：销售
+- **designer**：设计师
+- **manager**：项目经理
+
+### 小程序端权限矩阵
+
+| 页面 | 权限变量 | 数据可见性 |
+|------|---------|-----------|
+| 客户详情（leadDetail） | `isRelated = isAdmin \|\| creatorName/sales/designer/manager/signer === myName` | 已签单：全员可见；未签单：相关人员完整，非相关人员脱敏 |
+| 工地详情（projectDetail） | `isRelated = isAdmin \|\| manager/sales/designer/creatorName === myName` | 相关人员可见，非相关人员需通过分享页申请 |
+| 待办详情（todoForm） | `isRelated = isAdmin \|\| creatorName/assignees[].name === myName` | 关联客户按权限脱敏 |
+
+#### 客户详情操作权限
+| 操作 | 权限要求 |
+|------|---------|
+| 修改评级 | `isAdmin \|\| isRelated` |
+| 修改状态 | `isAdmin \|\| isRelated` |
+| 签单操作 | `isAdmin \|\| isRelated` |
+| 开启设计工作流 | `isDesigner \|\| isAdmin` |
+| 完成设计节点 | `isDesigner \|\| isAdmin` |
+| 编辑/删除跟进记录 | `isAdmin \|\| item.createdBy === currentUserName` |
+
+### Web 端页面访问权限
+
+| 路由 | 权限要求 | 控制位置 |
+|------|---------|---------|
+| /analytics | admin 专属 | MainLayout 中检查 |
+| /inventory | admin, manager | MainLayout 中检查 |
+| /employees | 全部（非admin只读） | 页面内控制 |
+| 其他页面 | 全部 | — |
+
+### 已修复的权限问题
+
+1. **待办关联客户筛选逻辑不一致**（2026-04-22）
+   - 位置：`mini-program/pages/todoForm/index.js`
+   - 修复：统一为"与自己相关的客户 + 已签单客户"
+
+2. **待办列表关联客户权限泄露**（2026-04-24）
+   - 位置：`mini-program/pages/index/index.js:188-247`
+   - 修复：改为批量查询所有关联客户信息，根据用户是否是客户相关人员决定是否脱敏
+
+3. **待办详情页客户权限判断不完整**（2026-04-24）
+   - 位置：`mini-program/pages/todoForm/index.js:140-150`
+   - 修复：补充了 `l.manager === myName` 判断
+
+### 已确认安全的入口
+
+- 客户列表/详情：脱敏逻辑正确
+- 通知消息：只发送给客户相关人员，不泄露信息
+- 工地信息：只有相关人员可见
+- 签单通知（全员）：签单后客户对所有人可见，不需要脱敏
+
+### 低优先级改进建议
+
+- 抽取公共权限判断工具函数 `utils/permission.js`，避免各页面重复编写
+- 添加敏感操作权限日志，便于审计
+- 确保小程序端和 Web 端权限逻辑一致性

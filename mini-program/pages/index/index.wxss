@@ -105,12 +105,12 @@
 .icon-clip::before { content: ''; position: absolute; top: -6rpx; left: 1rpx; width: 6rpx; height: 10rpx; border: 3rpx solid #94a3b8; border-bottom: none; border-radius: 4rpx 4rpx 0 0; }
 
 /* 底部区域 (对齐 Web 细节) */
-.card-footer { padding-left: 64rpx; border-top: 1rpx solid #f1f5f9; padding-top: 24rpx; display: flex; flex-direction: column; align-items: flex-start; gap: 16rpx; }
+.card-footer { padding-left: 0; border-top: 1rpx solid #f1f5f9; padding-top: 24rpx; display: flex; flex-direction: row; justify-content: space-between; align-items: center; gap: 16rpx; width: 100%; box-sizing: border-box; }
 
-.meta-stack { width: 100%; }
+.meta-stack { width: 100%; display: flex; flex-direction: column; gap: 12rpx; align-items: flex-start; }
 
 .meta-badge { display: inline-flex; align-items: center; padding: 8rpx 20rpx; border-radius: 12rpx; font-size: 26rpx; font-weight: 500; max-width: 100%; }
-.meta-related { background: #f5f5f5; color: #1f2937; }
+.meta-related { background: #f8fafc; color: #475569; border: 1rpx solid #e2e8f0; }
 /* 截止日期颜色 */
 .meta-date { color: var(--primary-600); background: #f8fafc; border-color: #e2e8f0; }
 .meta-date.date-today { color: var(--amber-600); background: #fffbeb; border-color: var(--amber-100); }
@@ -135,7 +135,7 @@
 .icon-target::after { content: ''; position: absolute; width: 6rpx; height: 6rpx; background: currentColor; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
 /* �?CSS 绘制日历图标 (截止日期) */
-.icon-calendar { width: 22rpx; height: 20rpx; border: 3rpx solid currentColor; border-radius: 4rpx; position: relative; margin-right: 10rpx; margin-top: 4rpx; flex-shrink: 0; }
+.icon-calendar { width: 22rpx; height: 20rpx; border: 3rpx solid currentColor; border-radius: 4rpx; position: relative; margin-right: 10rpx; flex-shrink: 0; }
 .icon-calendar::before { content: ''; position: absolute; top: -6rpx; left: 4rpx; width: 4rpx; height: 6rpx; background: currentColor; border-radius: 2rpx; box-shadow: 10rpx 0 0 currentColor; }
 .icon-calendar::after { content: ''; position: absolute; top: 4rpx; left: 0; right: 0; border-top: 3rpx solid currentColor; }
 
@@ -144,11 +144,11 @@
 .icon-check-circle::after { content: ''; position: absolute; top: 2rpx; left: 6rpx; width: 6rpx; height: 12rpx; border: 3rpx solid currentColor; border-top: none; border-left: none; transform: rotate(45deg); }
 
 /* 执行人与派发人信�?*/
-.meta-assignee { display: flex; align-items: center; font-size: 26rpx; color: #4b5563; padding-left: 8rpx; margin-top: 4rpx; }
+.meta-assignee { display: flex; align-items: center; font-size: 26rpx; color: #78716c; padding-left: 8rpx; margin-top: 4rpx; line-height: 1; }
 
 /* �?CSS 绘制用户图标 (人员) */
-.icon-user { width: 12rpx; height: 12rpx; border: 3rpx solid currentColor; border-radius: 50%; position: relative; margin-right: 16rpx; flex-shrink: 0; margin-bottom: 8rpx; }
-.icon-user::after { content: ''; position: absolute; top: 14rpx; left: 50%; transform: translateX(-50%); width: 20rpx; height: 10rpx; border: 3rpx solid currentColor; border-bottom: none; border-radius: 10rpx 10rpx 0 0; }
+.icon-user { width: 14rpx; height: 14rpx; border: 3rpx solid currentColor; border-radius: 50%; position: relative; margin-right: 12rpx; flex-shrink: 0; transform: translateY(-4rpx); }
+.icon-user::after { content: ''; position: absolute; top: 16rpx; left: 50%; transform: translateX(-50%); width: 22rpx; height: 10rpx; border: 3rpx solid currentColor; border-bottom: none; border-radius: 12rpx 12rpx 0 0; }
 
 .mt-3 { margin-top: 20rpx; }
 .flex { display: flex; }
@@ -173,6 +173,7 @@
 .hover-scale { transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1); }
 .hover-scale:active { transform: scale(0.95); }
 
+.modal-mask { position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.5); z-index: 999; }
 .modal-content { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 65vh; background: #fff; border-radius: 24rpx; z-index: 1000; overflow: hidden; display: flex; flex-direction: column; }
 .modal-header { padding: 32rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; font-size: 32rpx; font-weight: bold; color: var(--primary-900); flex-shrink: 0; }
 .btn-close { font-size: 28rpx; color: #94a3b8; font-weight: normal; padding: 10rpx; margin: -10rpx; }

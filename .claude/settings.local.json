@@ -6,7 +6,9 @@
       "Bash(npx tsc:*)",
       "Bash(\"E:/XIN Lab/PNZJ/CM1.0/web/.env.local\":*)",
       "Bash(grep:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(rm:*)"
     ]
   }
 }

@@ -154,7 +154,12 @@ Page({
           // 此处临时更新 passwordPlain 以匹配小程序当前的简单登录逻辑
           db.collection('users').doc(id).update({
             data: { passwordPlain: '888888' }
-          }).then(() => {
+          }).then((res) => {
+            if (res.stats && res.stats.updated === 0) {
+              wx.hideLoading();
+              wx.showToast({ title: '权限不足', icon: 'none' });
+              return;
+            }
             wx.hideLoading();
             wx.showToast({ title: '重置成功', icon: 'success' });
           }).catch(() => {
@@ -172,7 +177,12 @@ Page({
     const db = wx.cloud.database();
     db.collection('users').doc(id).update({
       data: { status: newStatus }
-    }).then(() => {
+    }).then((res) => {
+      if (res.stats && res.stats.updated === 0) {
+        wx.hideLoading();
+        wx.showToast({ title: '权限不足', icon: 'none' });
+        return;
+      }
       wx.hideLoading();
       wx.showToast({ title: '状态已更新', icon: 'success' });
       this.fetchEmployees();
@@ -235,73 +245,114 @@ Page({
   saveEmployee() {
     const { modalType, formData, roleIndex, roleOptions, currentEditId } = this.data;
     const db = wx.cloud.database();
+    const _ = db.command;
     const roleKey = roleOptions[roleIndex].key;
 
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.account.trim() || !formData.joinDate) {
+    const name = formData.name.trim();
+    const phone = formData.phone.trim();
+    const account = formData.account.trim();
+
+    if (!name || !phone || !account || !formData.joinDate) {
       return wx.showToast({ title: '请填写完整信息', icon: 'none' });
     }
 
-    wx.showLoading({ title: '保存中' });
+    wx.showLoading({ title: '校验中' });
 
-    if (modalType === 'add') {
-      const date = new Date();
-      db.collection('users').add({
-        data: {
-          name: formData.name.trim(),
-          phone: formData.phone.trim(),
-          account: formData.account.trim(),
-          role: roleKey,
-          status: 'active',
-          joinDate: formData.joinDate,
-          passwordPlain: '888888',
-          passwordHash: '$2a$10$tK9i/O7q/U8T.w8/lQ8L8.6k5M1y7B1x4M4b9y3L2T7A4k6Z8u2G', // 888888的预设哈希值，方便网页端共用
-          createdAt: date.toISOString()
-        }
-      }).then(() => {
-        wx.hideLoading();
-        wx.showToast({ title: '添加成功', icon: 'success' });
-        this.closeModal();
-        this.fetchEmployees();
-      }).catch(err => {
-        wx.hideLoading();
-        console.error(err);
-        wx.showToast({ title: '添加失败', icon: 'none' });
-      });
-    } else {
-      // 修改员工
-      db.collection('users').doc(currentEditId).update({
-        data: { 
-          name: formData.name.trim(),
-          phone: formData.phone.trim(),
-          account: formData.account.trim(),
-          role: roleKey,
-          joinDate: formData.joinDate
-        }
-      }).then(() => {
-        wx.hideLoading();
-        wx.showToast({ title: '修改成功', icon: 'success' });
-        
-        // 如果修改的是当前登录用户自己，同步更新本地缓存
-        if (currentEditId === this.data.currentUserId) {
-          const userInfo = wx.getStorageSync('userInfo');
-          userInfo.name = formData.name.trim();
-          userInfo.phone = formData.phone.trim();
-          userInfo.account = formData.account.trim();
-          userInfo.role = roleKey;
-          wx.setStorageSync('userInfo', userInfo);
-        }
+    // 校验账号和手机号唯一性
+    db.collection('users').where(_.or([
+      { account: account },
+      { phone: phone }
+    ])).get().then(res => {
+      const existUsers = res.data;
+      // 编辑模式下，排除当前正在修改的员工本身
+      const conflictUsers = modalType === 'edit' 
+        ? existUsers.filter(u => u._id !== currentEditId)
+        : existUsers;
 
-        // 同步更新 leads 和 projects 中的员工信息
-        this.syncEmployeeReferences(currentEditId, formData.name.trim(), this.data.oldName);
-
-        this.closeModal();
-        this.fetchEmployees();
-      }).catch(err => {
+      if (conflictUsers.length > 0) {
         wx.hideLoading();
-        console.error(err);
-        wx.showToast({ title: '修改失败', icon: 'none' });
-      });
-    }
+        const accountConflict = conflictUsers.some(u => u.account === account);
+        const phoneConflict = conflictUsers.some(u => u.phone === phone);
+        if (accountConflict && phoneConflict) {
+          return wx.showToast({ title: '账号和手机号均已被使用', icon: 'none' });
+        } else if (accountConflict) {
+          return wx.showToast({ title: '该账号已被其他员工使用', icon: 'none' });
+        } else {
+          return wx.showToast({ title: '该手机号已被其他员工使用', icon: 'none' });
+        }
+      }
+
+      wx.showLoading({ title: '保存中' });
+
+      if (modalType === 'add') {
+        const date = new Date();
+        db.collection('users').add({
+          data: {
+            name: name,
+            phone: phone,
+            account: account,
+            role: roleKey,
+            status: 'active',
+            joinDate: formData.joinDate,
+            passwordPlain: '888888',
+            passwordHash: '$2a$10$tK9i/O7q/U8T.w8/lQ8L8.6k5M1y7B1x4M4b9y3L2T7A4k6Z8u2G', // 888888的预设哈希值，方便网页端共用
+            createdAt: date.toISOString()
+          }
+        }).then(() => {
+          wx.hideLoading();
+          wx.showToast({ title: '添加成功', icon: 'success' });
+          this.closeModal();
+          this.fetchEmployees();
+        }).catch(err => {
+          wx.hideLoading();
+          console.error(err);
+          wx.showToast({ title: '添加失败', icon: 'none' });
+        });
+      } else {
+        // 修改员工
+        db.collection('users').doc(currentEditId).update({
+          data: { 
+            name: name,
+            phone: phone,
+            account: account,
+            role: roleKey,
+            joinDate: formData.joinDate
+          }
+        }).then((res) => {
+          if (res.stats && res.stats.updated === 0) {
+            wx.hideLoading();
+            wx.showToast({ title: '权限不足，只有该员工的创建者可修改', icon: 'none', duration: 3000 });
+            return;
+          }
+          wx.hideLoading();
+          wx.showToast({ title: '修改成功', icon: 'success' });
+          
+          // 如果修改的是当前登录用户自己，同步更新本地缓存
+          if (currentEditId === this.data.currentUserId) {
+            const userInfo = wx.getStorageSync('userInfo');
+            userInfo.name = name;
+            userInfo.phone = phone;
+            userInfo.account = account;
+            userInfo.role = roleKey;
+            wx.setStorageSync('userInfo', userInfo);
+          }
+
+          // 同步更新 leads 和 projects 中的员工信息
+          this.syncEmployeeReferences(currentEditId, name, this.data.oldName);
+
+          this.closeModal();
+          this.fetchEmployees();
+        }).catch(err => {
+          wx.hideLoading();
+          console.error(err);
+          wx.showToast({ title: '修改失败', icon: 'none' });
+        });
+      }
+    }).catch(err => {
+      wx.hideLoading();
+      wx.showToast({ title: '校验失败，请重试', icon: 'none' });
+      console.error(err);
+    });
   },
 
   // 同步更新员工引用
@@ -310,62 +361,99 @@ Page({
     const _ = db.command;
 
     // 更新 leads 中的 sales, designer, manager
-    const updateLeads = db.collection('leads').where(_.or([
-      { 'sales._id': employeeId },
-      { 'designer._id': employeeId },
-      { 'manager._id': employeeId }
-    ])).update({
-      data: {
-        'sales.name': _.eq('sales._id', employeeId).then(newName),
-        'designer.name': _.eq('designer._id', employeeId).then(newName),
-        'manager.name': _.eq('manager._id', employeeId).then(newName)
-      }
+    // Note: 小程序端 db.command 无法在 update 中使用 then 这种条件判断，需通过拉取后循环更新
+    db.collection('leads').where(_.or([
+      { 'sales': oldName },
+      { 'designer': oldName },
+      { 'manager': oldName }
+    ])).get().then(res => {
+      res.data.forEach(item => {
+        let updateData = {};
+        if (item.sales === oldName) updateData.sales = newName;
+        if (item.designer === oldName) updateData.designer = newName;
+        if (item.manager === oldName) updateData.manager = newName;
+        db.collection('leads').doc(item._id).update({ data: updateData });
+      });
     });
 
     // 更新 projects 中的 manager
-    const updateProjects = db.collection('projects').where({
-      'manager._id': employeeId
-    }).update({
-      data: {
-        'manager.name': newName
-      }
+    db.collection('projects').where({
+      manager: oldName
+    }).get().then(res => {
+      res.data.forEach(item => {
+        db.collection('projects').doc(item._id).update({
+          data: { manager: newName }
+        });
+      });
     });
 
-    // 执行更新（静默，不显示loading）
-    Promise.all([updateLeads, updateProjects]).then(() => {
-      console.log('员工引用同步更新完成');
-      // 如果名字改变，添加跟进记录
-      if (oldName && newName !== oldName) {
-        this.addFollowUpForEmployeeChange(employeeId, oldName, newName);
-      }
-    }).catch(err => {
-      console.error('同步更新失败:', err);
+    // 更新 todos 中的 creatorName, assignees
+    db.collection('todos').where(_.or([
+      { creatorName: oldName },
+      { 'assignees.name': oldName }
+    ])).get().then(res => {
+      res.data.forEach(item => {
+        let updateData = {};
+        if (item.creatorName === oldName) updateData.creatorName = newName;
+        if (item.assignees) {
+          let assignees = item.assignees.map(a => a.name === oldName ? { ...a, name: newName } : a);
+          updateData.assignees = assignees;
+          updateData.assignedNames = assignees.map(a => a.name).join(', ');
+        }
+        db.collection('todos').doc(item._id).update({ data: updateData });
+      });
     });
+
+    // 更新 followUps 中的 createdBy（记录人）
+    if (oldName && newName !== oldName) {
+      db.collection('followUps').where({ createdBy: oldName }).limit(1000).get().then(res => {
+        res.data.forEach(item => {
+          db.collection('followUps').doc(item._id).update({
+            data: { createdBy: newName }
+          }).catch(err => {
+            console.error('同步跟进记录记录人失败:', item._id, err);
+          });
+        });
+      }).catch(err => {
+        console.error('查询跟进记录失败:', err);
+      });
+    }
+
+    // 执行更新（静默，不显示loading）
+    console.log('员工引用同步更新完成');
+    // 如果名字改变，添加跟进记录
+    if (oldName && newName !== oldName) {
+      this.addFollowUpForEmployeeChange(employeeId, oldName, newName);
+    }
   },
 
   addFollowUpForEmployeeChange(employeeId, oldName, newName) {
     const db = wx.cloud.database();
     const _ = db.command;
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 
     // 查询受影响的leads
     db.collection('leads').where(_.or([
-      { 'sales._id': employeeId },
-      { 'designer._id': employeeId },
-      { 'manager._id': employeeId }
+      { 'sales': oldName },
+      { 'designer': oldName },
+      { 'manager': oldName }
     ])).get().then(res => {
       const leads = res.data;
       const followUps = leads.map(lead => {
         let role = '';
-        if (lead.sales && lead.sales._id === employeeId) role = '销售';
-        else if (lead.designer && lead.designer._id === employeeId) role = '设计师';
-        else if (lead.manager && lead.manager._id === employeeId) role = '项目经理';
+        if (lead.sales && lead.sales === oldName) role = '销售';
+        else if (lead.designer && lead.designer === oldName) role = '设计师';
+        else if (lead.manager && lead.manager === oldName) role = '项目经理';
 
         return {
           leadId: lead._id,
           content: `${role}人员变更：${oldName} → ${newName}`,
-          type: 'system',
-          creator: '系统',
-          createdAt: db.serverDate()
+          method: '系统记录',
+          createdBy: '系统',
+          createdAt: db.serverDate(),
+          displayTime: nowStr,
+          timestamp: db.serverDate()
         };
       });
 
@@ -374,6 +462,15 @@ Page({
         const promises = followUps.map(f => db.collection('followUps').add({ data: f }));
         Promise.all(promises).then(() => {
           console.log('员工变更跟进记录添加完成');
+
+          // 批量更新客户的 lastFollowUp 和 lastFollowUpAt
+          leads.forEach(lead => {
+            db.collection('leads').doc(lead._id).update({
+              data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+            }).catch(err => {
+              console.error('更新lastFollowUp失败:', lead._id, err);
+            });
+          });
         }).catch(err => {
           console.error('添加跟进记录失败:', err);
         });

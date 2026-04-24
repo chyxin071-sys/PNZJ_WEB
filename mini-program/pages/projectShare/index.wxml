@@ -1,0 +1,468 @@
+<!--pages/projectShare/index.wxml-->
+<wxs src="../../utils/format.wxs" module="format" />
+<wxs module="ganttUtil">
+  module.exports = {
+    getDelayDays: function(actualEndDate, expectedEndDate) {
+      if (!actualEndDate || !expectedEndDate) return 0;
+      var actual = getDate(actualEndDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      var expected = getDate(expectedEndDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      if (actual <= expected) return 0;
+      return Math.floor((actual - expected) / (1000 * 60 * 60 * 24));
+    },
+    getActualDays: function(actualStartDate, actualEndDate) {
+      if (!actualStartDate || !actualEndDate) return 0;
+      var start = getDate(actualStartDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      var end = getDate(actualEndDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      return Math.max(1, Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1);
+    },
+    formatDateRange: function(start, end) {
+      if (!start || !end) return start + ' ~ ' + end;
+      var startParts = start.split('-');
+      var endParts = end.split('-');
+      if (startParts.length !== 3 || endParts.length !== 3) return start + ' ~ ' + end;
+      
+      if (startParts[0] === endParts[0]) {
+        return start + ' ~ ' + endParts[1] + '-' + endParts[2];
+      }
+      return start + ' ~ ' + end;
+    }
+  };
+</wxs>
+
+<!-- ====== 加载中 ====== -->
+<view wx:if="{{loading}}" style="height: 100vh; display: flex; align-items: center; justify-content: center; background: #f8fafc;">
+  <view style="text-align: center;">
+    <view style="font-size: 28rpx; color: #94a3b8;">加载中...</view>
+  </view>
+</view>
+
+<!-- ====== 手机号验证 ====== -->
+<view wx:elif="{{accessStatus === 'verify_phone'}}" style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; padding: 60rpx;">
+  <image src="/assets/icons/LOGO2.png" style="width: 240rpx; height: 48rpx; margin-bottom: 60rpx;" mode="aspectFit"></image>
+  <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx;">查看工地进度</view>
+  <view style="font-size: 28rpx; color: #64748b; text-align: center; margin-bottom: 60rpx; line-height: 1.6;">请验证手机号，业主本人可直接查看</view>
+  <button open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 28rpx 0; margin: 0 0 24rpx; border: none;">
+    微信一键验证手机号
+  </button>
+  <view style="font-size: 26rpx; color: #94a3b8; text-align: center; line-height: 1.6;">非业主本人？点下方申请查看权限</view>
+  <view bindtap="skipToApply" style="margin-top: 16rpx; font-size: 28rpx; color: #4a403a; font-weight: bold; padding: 16rpx 40rpx;">申请查看</view>
+</view>
+
+<!-- ====== 申请表单 ====== -->
+<view wx:elif="{{accessStatus === 'apply'}}" style="min-height: 100vh; background: #f8fafc; padding: 60rpx 40rpx;">
+  <image src="/assets/icons/LOGO2.png" style="width: 200rpx; height: 40rpx; margin-bottom: 48rpx; display: block;" mode="aspectFit"></image>
+  <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 12rpx;">申请查看工地进度</view>
+  <view style="font-size: 26rpx; color: #64748b; margin-bottom: 48rpx; line-height: 1.6;">填写信息后，工地负责人将审核您的申请</view>
+
+  <view style="background: #fff; border-radius: 20rpx; padding: 40rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.04);">
+    <view style="margin-bottom: 32rpx;">
+      <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">您的姓名 <text style="color: var(--rose-600);">*</text></view>
+      <input bindinput="onApplyInput" data-field="name" value="{{applyForm.name}}" placeholder="请输入您的真实姓名" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+    </view>
+    <view style="margin-bottom: 32rpx;">
+      <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">与业主关系 <text style="color: var(--rose-600);">*</text></view>
+      <input bindinput="onApplyInput" data-field="relation" value="{{applyForm.relation}}" placeholder="如：家属、朋友、监理等" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+    </view>
+    <view style="margin-bottom: 40rpx;">
+      <view style="font-size: 26rpx; color: #64748b; margin-bottom: 12rpx;">联系电话（选填）</view>
+      <input bindinput="onApplyInput" data-field="phone" value="{{applyForm.phone}}" placeholder="方便工作人员联系您" type="number" style="background: #f8fafc; border-radius: 12rpx; padding: 24rpx; font-size: 30rpx; color: #1e293b; border: 1rpx solid #e2e8f0;" />
+    </view>
+    <button bindtap="submitApply" style="width: 100%; background: #1e293b; color: #fff; font-size: 32rpx; font-weight: bold; border-radius: 16rpx; padding: 28rpx 0; margin: 0; border: none;">
+      提交申请
+    </button>
+  </view>
+</view>
+
+<!-- ====== 待审核 ====== -->
+<view wx:elif="{{accessStatus === 'pending'}}" style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; padding: 60rpx;">
+  <view style="width: 120rpx; height: 120rpx; background: var(--amber-50); border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 40rpx;">
+    <text style="font-size: 64rpx;">⏳</text>
+  </view>
+  <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx;">申请已提交</view>
+  <view style="font-size: 28rpx; color: #64748b; text-align: center; line-height: 1.8;">工地负责人正在审核您的申请<br/>审核通过后即可查看工地进度</view>
+</view>
+
+<!-- ====== 已拒绝 ====== -->
+<view wx:elif="{{accessStatus === 'rejected'}}" style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f8fafc; padding: 60rpx;">
+  <view style="width: 120rpx; height: 120rpx; background: var(--rose-50); border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin-bottom: 40rpx;">
+    <text style="font-size: 64rpx; color: var(--rose-600);">✕</text>
+  </view>
+  <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx;">申请未通过</view>
+  <view style="font-size: 28rpx; color: #64748b; text-align: center; line-height: 1.8;">如有疑问请联系工地负责人</view>
+</view>
+
+<!-- ====== 正常内容（已授权） ====== -->
+<view class="page-container" wx:elif="{{accessStatus === 'granted' && !loading && project}}">
+  
+  <!-- ====== 节点验收报告模式 ====== -->
+  <block wx:if="{{showMode === 'report' && reportNode}}">
+    <!-- 将报告页改为占满全屏的滚动结构 -->
+    <view style="height: 100vh; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; right: 0; background: #f8fafc;">
+
+      <!-- 中间可滚动的内容区 -->
+      <scroll-view scroll-y="{{true}}" style="flex: 1; width: 100%; height: 0;">
+        <view style="padding: 32rpx; padding-bottom: 120rpx; box-sizing: border-box;">
+          
+          <!-- 顶部状态卡片 -->
+          <view class="card" style="background: #fff; border-radius: 20rpx; padding: 60rpx 40rpx; margin-top: 20rpx; text-align: center; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);">
+            <view style="width: 120rpx; height: 120rpx; background: {{reportNode.status === 'awaiting_signature' ? 'var(--amber-50)' : 'var(--emerald-50)'}}; border-radius: 60rpx; display: flex; align-items: center; justify-content: center; margin: 0 auto 32rpx;">
+              <text wx:if="{{reportNode.status === 'awaiting_signature'}}" style="color: var(--amber-500); font-size: 64rpx; font-weight: bold;">!</text>
+              <text wx:else style="color: var(--emerald-600); font-size: 64rpx; font-weight: bold;">✓</text>
+            </view>
+
+            <view style="font-size: 40rpx; font-weight: bold; color: #1e293b; margin-bottom: 16rpx; display: flex; align-items: center; justify-content: center; gap: 12rpx;">
+              <text>{{reportNode.name}}</text>
+              <text wx:if="{{reportNode.status === 'awaiting_signature'}}" style="font-size: 28rpx; color: var(--rose-600); background: var(--rose-50); padding: 4rpx 16rpx; border-radius: 20rpx;">待确认</text>
+              <text wx:elif="{{reportMajorIdx !== null && (reportSubIdx === 0 || reportSubIdx === project.nodesData[reportMajorIdx].subNodes.length - 1)}}" style="font-size: 28rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 4rpx 16rpx; border-radius: 20rpx;">已确认</text>
+              <text wx:else style="font-size: 28rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 4rpx 16rpx; border-radius: 20rpx;">验收通过</text>
+            </view>
+            <view style="font-size: 26rpx; color: #64748b; margin-bottom: 8rpx;">{{project.address}}</view>
+            <view style="font-size: 26rpx; color: #64748b;">
+              <text wx:if="{{reportMajorIdx !== null && (reportSubIdx === 0 || reportSubIdx === project.nodesData[reportMajorIdx].subNodes.length - 1)}}">记录人：</text>
+              <text wx:else>验收人：</text>
+              {{reportNode.acceptanceRecord.inspector || project.manager || '项目经理'}} · {{reportNode.acceptanceRecord.createdAt}}
+            </view>
+          </view>
+
+          <!-- 验收说明与影像 -->
+          <view style="background: #fff; border-radius: 20rpx; padding: 40rpx; margin-top: 32rpx; box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);">
+            <view style="font-size: 30rpx; font-weight: bold; color: #1e293b; margin-bottom: 32rpx; display: flex; align-items: center;">
+              <view style="width: 8rpx; height: 28rpx; background: #4a403a; border-radius: 4rpx; margin-right: 16rpx;"></view>
+              现场记录
+            </view>
+            <view style="font-size: 28rpx; color: #334155; line-height: 1.6; margin-bottom: 32rpx;" wx:if="{{reportNode.acceptanceRecord.remark}}">
+              {{reportNode.acceptanceRecord.remark}}
+            </view>
+            <view style="font-size: 28rpx; color: #94a3b8; margin-bottom: 32rpx;" wx:else>无文字说明</view>
+
+            <view wx:if="{{reportNode.acceptanceRecord.photos && reportNode.acceptanceRecord.photos.length > 0}}" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16rpx; margin-bottom: 32rpx;">
+              <view wx:for="{{reportNode.acceptanceRecord.photos}}" wx:key="*this" style="width: 100%; padding-bottom: 100%; position: relative;">
+                <image wx:if="{{!item.type || item.type === 'image'}}" src="{{format.formatImageUrl(item.url || item)}}" mode="aspectFill" lazy-load="{{true}}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 12rpx; border: 1rpx solid #e2e8f0;" bindtap="previewPhoto" data-url="{{item.url || item}}"></image>
+                <video wx:if="{{item.type === 'video'}}" src="{{item.url}}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 12rpx;" bindtap="previewPhoto" data-url="{{item.url}}"></video>
+              </view>
+            </view>
+
+            <!-- 客户签字 -->
+            <view wx:if="{{reportNode.signature && reportNode.signature.url}}" style="margin-top: 32rpx; padding-top: 32rpx; border-top: 1rpx solid #f1f5f9;">
+              <view style="font-size: 26rpx; color: #64748b; margin-bottom: 16rpx; font-weight: 500;">客户签字确认</view>
+              <view style="display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 24rpx;">
+                <view style="width: 280rpx; height: 140rpx; background: #f8fafc; border-radius: 12rpx; border: 2rpx solid var(--emerald-200); padding: 12rpx; box-sizing: border-box; display: flex; align-items: center; justify-content: center;">
+                  <image src="{{format.formatImageUrl(reportNode.signature.url)}}" mode="aspectFit" style="width: 100%; height: 100%;" />
+                </view>
+                <view style="text-align: right;">
+                  <view style="font-size: 22rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 6rpx 16rpx; border-radius: 12rpx; display: inline-block; margin-bottom: 8rpx;">已签字</view>
+                  <view style="font-size: 20rpx; color: #94a3b8;">{{reportNode.signature.time}}</view>
+                </view>
+              </view>
+
+              <!-- 客户反馈 -->
+              <view wx:if="{{reportNode.signature.feedback}}" style="background: #f8fafc; padding: 20rpx 24rpx; border-radius: 12rpx; border-left: 4rpx solid var(--primary-600);">
+                <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx; font-weight: 500;">客户反馈</view>
+                <view style="font-size: 26rpx; color: #334155; line-height: 1.6;">{{reportNode.signature.feedback}}</view>
+              </view>
+            </view>
+          </view>
+
+          <!-- 底部 Logo -->
+          <view style="display: flex; align-items: center; justify-content: center; padding: 40rpx 0; margin-top: 20rpx; padding-bottom: calc(140rpx + env(safe-area-inset-bottom));">
+            <image src="/assets/icons/LOGO2.png" style="width: 360rpx; height: 72rpx; opacity: 0.85;" mode="aspectFit"></image>
+          </view>
+
+        </view>
+      </scroll-view>
+
+      <!-- 底部固定操作栏 -->
+      <view style="position: absolute; bottom: 0; left: 0; right: 0; padding: 24rpx 32rpx calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.02); display: flex; gap: 24rpx;">
+        <button bindtap="viewFullTimeline" style="flex: 1; background: #f1f5f9; color: #475569; font-size: 30rpx; font-weight: bold; border-radius: 16rpx; padding: 24rpx 0; border: none; margin: 0; line-height: normal;">查看工地完整进度</button>
+        <button wx:if="{{reportNode.status === 'awaiting_signature'}}" bindtap="openSignatureBoard" data-major="{{reportMajorIdx}}" data-sub="{{reportSubIdx}}" style="flex: 1; background: var(--rose-600); color: #fff; font-size: 30rpx; font-weight: bold; border-radius: 16rpx; padding: 24rpx 0; border: none; margin: 0; line-height: normal; box-shadow: 0 4rpx 12rpx rgba(225, 29, 72, 0.2);">去签字确认</button>
+      </view>
+
+    </view>
+  </block>
+
+  <!-- ====== 完整时间轴模式 ====== -->
+  <block wx:if="{{showMode === 'timeline'}}">
+    <!-- 顶部项目概览卡片 -->
+    <view style="background: #fff; border-radius: 20rpx; padding: 32rpx; margin: 20rpx; box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04); position: relative;">
+      <!-- 标题和健康状态 -->
+      <view style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0;">
+        <view style="font-size: 36rpx; font-weight: bold; color: #1e293b; flex: 1; padding-right: 20rpx; line-height: 1.4;">{{project.address || '未知地址'}}</view>
+      </view>
+
+      <!-- 核心数据网格 -->
+      <view style="display: flex; flex-direction: column; gap: 16rpx; background: #f8fafc; padding: 24rpx; border-radius: 12rpx;">
+        <!-- 第一行：开工日期和耗时 -->
+        <view style="display: flex; justify-content: space-around; align-items: center;">
+          <view style="display: flex; flex-direction: column; align-items: center;">
+            <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">开工日期</text>
+            <text style="font-size: 28rpx; font-weight: bold; color: #334155;">{{project.startDate || '未开工'}}</text>
+          </view>
+          <view style="display: flex; flex-direction: column; align-items: center;">
+            <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">已耗工期</text>
+            <view style="display: flex; align-items: baseline;">
+              <text style="font-size: 32rpx; font-weight: bold; color: var(--amber-600);">{{project.daysElapsed || 0}}</text>
+              <text style="font-size: 22rpx; color: var(--amber-600); margin-left: 4rpx;">天</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 第二行：项目团队 -->
+        <view style="display: flex; justify-content: space-around; align-items: center; padding-top: 16rpx; border-top: 1rpx solid #e2e8f0;">
+          <view style="display: flex; flex-direction: column; align-items: center;">
+            <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">项目经理</text>
+            <text style="font-size: 26rpx; font-weight: 500; color: #334155;">{{project.manager || '-'}}</text>
+          </view>
+          <view style="display: flex; flex-direction: column; align-items: center;">
+            <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">销售</text>
+            <text style="font-size: 26rpx; font-weight: 500; color: #334155;">{{project.sales || '-'}}</text>
+          </view>
+          <view style="display: flex; flex-direction: column; align-items: center;">
+            <text style="font-size: 20rpx; color: #94a3b8; margin-bottom: 6rpx;">设计师</text>
+            <text style="font-size: 26rpx; font-weight: 500; color: #334155;">{{project.designer || '-'}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 客户可见选项卡：施工进度 / 材料清单 -->
+    <view style="display: flex; background: transparent; margin: 0 20rpx 24rpx;">
+      <view bindtap="switchTab" data-tab="progress" style="flex: 1; text-align: center; padding: 24rpx 0; font-size: 30rpx; font-weight: {{activeTab === 'progress' ? 'bold' : 'normal'}}; color: {{activeTab === 'progress' ? '#1e293b' : '#94a3b8'}}; border-bottom: 6rpx solid {{activeTab === 'progress' ? '#1e293b' : 'transparent'}}; transition: 0.3s;">
+        施工进度
+      </view>
+      <view bindtap="switchTab" data-tab="materials" style="flex: 1; text-align: center; padding: 24rpx 0; font-size: 30rpx; font-weight: {{activeTab === 'materials' ? 'bold' : 'normal'}}; color: {{activeTab === 'materials' ? '#1e293b' : '#94a3b8'}}; border-bottom: 6rpx solid {{activeTab === 'materials' ? '#1e293b' : 'transparent'}}; transition: 0.3s;">
+        材料清单
+      </view>
+    </view>
+
+<wxs module="ganttUtil">
+  module.exports = {
+    getDelayDays: function(actualEndDate, expectedEndDate) {
+      if (!actualEndDate || !expectedEndDate) return 0;
+      var actual = getDate(actualEndDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      var expected = getDate(expectedEndDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      if (actual <= expected) return 0;
+      return Math.floor((actual - expected) / (1000 * 60 * 60 * 24));
+    },
+    getActualDays: function(actualStartDate, actualEndDate) {
+      if (!actualStartDate || !actualEndDate) return 0;
+      var start = getDate(actualStartDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      var end = getDate(actualEndDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      return Math.max(1, Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1);
+    },
+    formatDateRange: function(start, end) {
+      if (!start || !end) return start + ' ~ ' + end;
+      var startParts = start.split('-');
+      var endParts = end.split('-');
+      if (startParts.length !== 3 || endParts.length !== 3) return start + ' ~ ' + end;
+
+      if (startParts[0] === endParts[0]) {
+        return start + ' ~ ' + endParts[1] + '-' + endParts[2];
+      }
+      return start + ' ~ ' + end;
+    }
+  };
+</wxs>
+
+    <!-- === 施工动态时间轴 Tab === -->
+    <view wx:if="{{activeTab === 'progress'}}" style="position: relative;">
+      <!-- 时间轴容器 -->
+      <view style="padding: 20rpx; position: relative;">
+        <!-- 左侧贯穿连接线 -->
+        <view style="position: absolute; left: 56rpx; top: 50rpx; bottom: 50rpx; width: 4rpx; background: #f1f5f9; border-radius: 2rpx; z-index: 0;"></view>
+
+        <view wx:for="{{nodesList}}" wx:key="name" wx:for-index="idx" style="position: relative; z-index: 1; display: flex; margin-bottom: 40rpx;">
+
+          <!-- 左侧状态图标圈 -->
+          <view style="width: 52rpx; flex-shrink: 0; display: flex; justify-content: center; margin-right: 20rpx; padding-top: 8rpx;">
+            <view wx:if="{{item.status === 'completed'}}" style="width: 48rpx; height: 48rpx; background: var(--emerald-600); border-radius: 24rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid #fff; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);">
+              <text style="color: #fff; font-size: 24rpx; font-weight: bold;">✓</text>
+            </view>
+            <view wx:elif="{{item.status === 'current'}}" style="width: 48rpx; height: 48rpx; background: var(--amber-600); border-radius: 24rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid var(--amber-50);">
+              <text style="color: #fff; font-size: 24rpx; font-weight: bold;">•</text>
+            </view>
+            <view wx:else style="width: 48rpx; height: 48rpx; background: #f1f5f9; border-radius: 24rpx; display: flex; align-items: center; justify-content: center; border: 4rpx solid #fff;">
+              <text style="color: #94a3b8; font-size: 22rpx; font-weight: bold; font-family: monospace;">{{idx + 1}}</text>
+            </view>
+          </view>
+
+          <!-- 右侧内容卡片 -->
+          <view style="flex: 1; background: {{item.status === 'current' ? '#fff' : (item.status === 'completed' ? '#fff' : '#f8fafc')}}; border: 1rpx solid {{item.status === 'current' ? 'rgba(245,158,11,0.3)' : '#f1f5f9'}}; border-radius: 16rpx; overflow: hidden; transition: all 0.3s; box-shadow: {{item.status === 'current' ? '0 8rpx 24rpx rgba(245,158,11,0.12)' : 'none'}};">
+
+          <!-- 卡片头部 (可点击展开) -->
+          <view bindtap="toggleNode" data-index="{{idx}}" style="padding: 24rpx; display: flex; justify-content: space-between; align-items: center;">
+            <view style="flex: 1;">
+              <view style="display: flex; align-items: center; gap: 12rpx;">
+                <view style="font-size: 30rpx; font-weight: bold; color: {{item.status === 'current' ? 'var(--amber-600)' : (item.status === 'completed' ? 'var(--emerald-600)' : '#94a3b8')}};">
+                  {{item.name}}
+                </view>
+                <!-- 状态标签 -->
+                <view wx:if="{{item.status === 'completed'}}" style="font-size: 20rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold;">已完成</view>
+                <view wx:elif="{{item.status === 'current'}}" style="font-size: 20rpx; color: var(--amber-600); background: var(--amber-50); padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold; border: 1rpx solid var(--amber-200);">施工中</view>
+                <view wx:else style="font-size: 20rpx; color: #94a3b8; background: #f1f5f9; padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold;">待开始</view>
+              </view>
+              <view wx:if="{{item.actualStartDate || item.actualEndDate}}" style="font-size: 22rpx; color: #64748b; display: flex; flex-direction: column; gap: 8rpx; margin-top: 8rpx;">
+                <view style="display: flex; align-items: center;">
+                  <view style="width: 70rpx;">实际：</view>
+                  <view>{{ganttUtil.formatDateRange(item.actualStartDate || item.startDate, item.actualEndDate || '至今')}}</view>
+                </view>
+              </view>
+            </view>
+            <view style="display: flex; align-items: center; gap: 16rpx;">
+              <view style="transform: {{item.expanded !== false ? 'rotate(180deg)' : 'rotate(0)'}}; transition: 0.3s; font-size: 24rpx; color: #cbd5e1;">▼</view>
+            </view>
+          </view>
+
+          <!-- 展开显示所有子工序记录 -->
+          <view wx:if="{{item.expanded !== false && item.subNodes && item.subNodes.length > 0}}" style="padding: 0 24rpx 24rpx; border-top: 1rpx solid #f1f5f9; padding-top: 20rpx;">
+            <!-- 小工序列表 -->
+            <view style="display: flex; flex-direction: column; gap: 16rpx;">
+              <view wx:for="{{item.subNodes}}" wx:for-item="sub" wx:key="name" wx:for-index="subIdx"
+                    style="background: #f8fafc; border-radius: 12rpx; padding: 20rpx 24rpx; position: relative; border: 0.5px solid {{(subIdx === 0 || subIdx === item.subNodes.length - 1) ? (sub.status === 'completed' ? 'var(--emerald-500)' : (sub.status === 'awaiting_signature' ? 'var(--amber-500)' : '#cbd5e1')) : 'transparent'}};">
+                <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx;">
+                  <view style="display: flex; align-items: center; gap: 12rpx;">
+                    <text style="font-size: 28rpx; font-weight: bold; color: {{sub.status==='completed' ? '#334155' : ((sub.status==='current' || sub.status==='awaiting_signature') ? 'var(--amber-600)' : '#475569')}};">{{sub.name}}</text>
+                  </view>
+                  <view style="display: flex; align-items: center; gap: 8rpx;">
+                    <view wx:if="{{sub.status==='completed'}}" style="font-size: 20rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold;">
+                      {{(subIdx === 0 || subIdx === item.subNodes.length - 1) ? '已确认' : '已完成'}}
+                    </view>
+                    <view wx:elif="{{sub.status==='awaiting_signature'}}" style="font-size: 20rpx; color: var(--rose-600); background: var(--rose-50); padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold; border: 1rpx solid var(--rose-200); animation: pulse 2s infinite;">待确认</view>
+                    <view wx:elif="{{sub.status==='current'}}" style="font-size: 20rpx; color: var(--amber-600); background: var(--amber-50); padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold; border: 1rpx solid var(--amber-200);">施工中</view>
+                  </view>
+                </view>
+
+                <!-- 日期显示 -->
+                <view wx:if="{{sub.actualStartDate || sub.actualEndDate}}" style="display: flex; flex-direction: column; gap: 10rpx; margin-bottom: 0;">
+                  <view style="display: flex; align-items: center; font-size: 22rpx; color: #64748b; line-height: 1;">
+                    <view style="width: 70rpx;">实际：</view>
+                    <view>{{ganttUtil.formatDateRange(sub.actualStartDate || sub.startDate, sub.actualEndDate || '至今')}}</view>
+                  </view>
+                </view>
+
+                <!-- 现场说明 -->
+                <view wx:if="{{(sub.status === 'completed' || sub.status === 'awaiting_signature') && sub.acceptanceRecord.remark}}" style="font-size: 24rpx; color: #475569; line-height: 1.6; word-break: break-all; margin-top: 16rpx; margin-bottom: 0;">
+                  {{sub.acceptanceRecord.remark}}
+                </view>
+
+                <!-- 施工影像缩略图 -->
+                <view wx:if="{{(sub.status === 'completed' || sub.status === 'awaiting_signature') && sub.acceptanceRecord.photos && sub.acceptanceRecord.photos.length > 0}}" style="display: flex; flex-wrap: wrap; gap: 8rpx; margin-top: 16rpx;">
+                  <block wx:for="{{sub.acceptanceRecord.photos}}" wx:for-item="photo" wx:key="*this">
+                    <image wx:if="{{!photo.type || photo.type === 'image'}}" src="{{format.formatImageUrl(photo.url || photo)}}" mode="aspectFill" lazy-load="{{true}}" style="width: 100rpx; height: 100rpx; border-radius: 8rpx; border: 1rpx solid #e2e8f0; flex-shrink: 0;" bindtap="previewPhoto" data-url="{{photo.url || photo}}" data-major-idx="{{idx}}" data-sub-idx="{{subIdx}}"></image>
+                    <view wx:if="{{photo.type === 'video'}}" style="width: 100rpx; height: 100rpx; border-radius: 8rpx; background: #000; position: relative; flex-shrink: 0; display: flex; align-items: center; justify-content: center;" bindtap="previewPhoto" data-url="{{photo.url}}" data-major-idx="{{idx}}" data-sub-idx="{{subIdx}}">
+                      <text style="color: #fff; font-size: 20rpx;">▶</text>
+                    </view>
+                  </block>
+                </view>
+
+                <!-- 签字按钮 -->
+                <view wx:if="{{sub.status === 'awaiting_signature'}}" style="margin-top: 16rpx;">
+                  <button bindtap="openSignatureBoard" data-major="{{idx}}" data-sub="{{subIdx}}" style="width: 100%; background: var(--rose-600); color: #fff; font-size: 28rpx; font-weight: bold; border-radius: 12rpx; padding: 16rpx 0; margin: 0; border: none; box-shadow: 0 4rpx 12rpx rgba(225, 29, 72, 0.2);">
+                    去签字确认
+                  </button>
+                </view>
+              </view>
+            </view>
+          </view>
+        </view>
+        </view>
+      </view>
+
+      <!-- 底部 Logo -->
+      <view style="display: flex; align-items: center; justify-content: center; padding: 40rpx 0; margin-top: 20rpx; padding-bottom: calc(40rpx + env(safe-area-inset-bottom));">
+        <image src="/assets/icons/LOGO2.png" style="width: 360rpx; height: 72rpx; opacity: 0.85;" mode="aspectFit"></image>
+      </view>
+    </view>
+
+    <!-- === 材料清单 Tab === -->
+    <view wx:if="{{activeTab === 'materials'}}" style="margin: 0 20rpx; display: flex; flex-direction: column; min-height: 50vh; justify-content: space-between;">
+      <view style="flex: 1;">
+        <!-- 无数据状态 -->
+        <view wx:if="{{!materials || materials.length === 0}}" style="text-align: center; padding: 100rpx 0;">
+          <view style="font-size: 28rpx; color: #94a3b8;">暂无材料清单记录</view>
+        </view>
+
+        <!-- 数据列表 -->
+        <block wx:for="{{groupedMaterials}}" wx:key="category" wx:for-item="group">
+          <view style="margin-bottom: 40rpx;">
+            <!-- 分类标题 -->
+            <view style="display: flex; align-items: center; gap: 12rpx; margin-bottom: 24rpx;">
+              <view style="width: 8rpx; height: 32rpx; background: var(--primary-600); border-radius: 4rpx;"></view>
+              <view style="font-size: 32rpx; font-weight: bold; color: var(--primary-900);">{{group.category}}</view>
+              <view style="font-size: 24rpx; color: #94a3b8; margin-left: 8rpx;">{{group.items.length}} 项</view>
+            </view>
+
+            <!-- 分类下的材料列表 -->
+            <view wx:for="{{group.items}}" wx:key="id" style="background: #fff; border-radius: 16rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.03); border: 1rpx solid #f1f5f9; overflow: hidden;">
+              <view style="padding: 24rpx;">
+                <view style="display: flex; justify-content: space-between; align-items: flex-start;">
+                  <view style="flex: 1;">
+                    <view style="font-size: 28rpx; font-weight: bold; color: #1e293b; margin-bottom: 6rpx;">{{item.name}}</view>
+                    <view style="display: flex; flex-wrap: wrap; gap: 16rpx; font-size: 24rpx; color: #64748b;">
+                      <view wx:if="{{item.brandModel}}"><text style="color: #94a3b8; margin-right: 8rpx;">型号:</text>{{item.brandModel}}</view>
+                      <view wx:if="{{item.quantity}}"><text style="color: #94a3b8; margin-right: 8rpx;">数量:</text>{{item.quantity}}</view>
+                    </view>
+                    <view wx:if="{{item.remark}}" style="font-size: 24rpx; color: #64748b; margin-top: 8rpx;"><text style="color: #94a3b8; margin-right: 8rpx;">备注:</text>{{item.remark}}</view>
+                  </view>
+                </view>
+              </view>
+            </view>
+          </view>
+        </block>
+      </view>
+
+      <!-- 底部 Logo -->
+      <view style="display: flex; align-items: center; justify-content: center; padding: 40rpx 0; margin-top: auto; padding-bottom: calc(40rpx + env(safe-area-inset-bottom));">
+        <image src="/assets/icons/LOGO2.png" style="width: 360rpx; height: 72rpx; opacity: 0.85;" mode="aspectFit"></image>
+      </view>
+    </view>
+  </block>
+</view>
+
+<!-- 错误状态 -->
+<view wx:if="{{!loading && !project}}" style="padding: 100rpx 0; text-align: center;">
+  <text style="font-size: 28rpx; color: #94a3b8;">未找到该工地信息或分享链接已失效</text>
+</view>
+
+<!-- 签字画板弹窗 -->
+<view wx:if="{{showSignatureBoard}}" catchtouchmove="preventTouchMove" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9998; display: flex; flex-direction: column; background: #f8fafc;">
+  <view style="padding: 40rpx 32rpx; background: #fff; box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05); z-index: 10; display: flex; justify-content: space-between; align-items: center; padding-top: calc(40rpx + env(safe-area-inset-top));">
+    <view bindtap="closeSignatureBoard" style="font-size: 32rpx; color: #64748b; padding: 10rpx 20rpx; margin-left: -20rpx;">取消</view>
+    <view style="font-size: 36rpx; font-weight: bold; color: #1e293b;">签字确认</view>
+    <view bindtap="clearSignature" style="font-size: 30rpx; color: var(--rose-600); padding: 10rpx 20rpx; margin-right: -20rpx;">重写</view>
+  </view>
+
+  <scroll-view scroll-y style="flex: 1; width: 100%;">
+    <view style="padding: 32rpx; display: flex; flex-direction: column; min-height: 100%;">
+      <!-- 签字区域 -->
+      <view style="margin-bottom: 32rpx;">
+        <view style="font-size: 28rpx; color: #64748b; margin-bottom: 24rpx; text-align: center;">请在下方空白区域手写签名</view>
+        <view style="width: 100%; height: 400rpx; background: #fff; border-radius: 24rpx; border: 2rpx dashed #cbd5e1; overflow: hidden; position: relative;">
+          <canvas type="2d" id="signatureCanvas" style="width: 100%; height: 100%;" disable-scroll="true" bindtouchstart="signatureTouchStart" bindtouchmove="signatureTouchMove" bindtouchend="signatureTouchEnd"></canvas>
+        </view>
+      </view>
+
+      <!-- 客户反馈区域 -->
+      <view style="margin-bottom: 32rpx;">
+        <view style="font-size: 28rpx; color: #64748b; margin-bottom: 16rpx;">
+          <text style="color: #1e293b; font-weight: 500;">客户反馈</text>
+          <text style="font-size: 24rpx; color: #94a3b8; margin-left: 12rpx;">(选填)</text>
+        </view>
+        <textarea
+          placeholder="请填写您对本次施工的意见、建议或评价，帮助我们改进服务质量..."
+          bindinput="onFeedbackInput"
+          value="{{customerFeedback}}"
+          style="width: 100%; min-height: 200rpx; background: #fff; padding: 24rpx; border-radius: 16rpx; font-size: 28rpx; box-sizing: border-box; border: 2rpx solid #e2e8f0; color: #1e293b; line-height: 1.6;"
+          maxlength="500"
+          show-confirm-bar="{{false}}"
+        ></textarea>
+        <view style="font-size: 22rpx; color: #94a3b8; text-align: right; margin-top: 8rpx;">{{customerFeedback.length}}/500</view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view style="padding: 32rpx 40rpx calc(32rpx + env(safe-area-inset-bottom)); background: #fff; box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.05);">
+    <button bindtap="submitSignature" style="width: 100%; background: var(--emerald-600); color: #fff; font-size: 34rpx; font-weight: bold; border-radius: 16rpx; padding: 28rpx 0; margin: 0; border: none;">
+      提交签字
+    </button>
+  </view>
+</view>
