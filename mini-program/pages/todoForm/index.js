@@ -443,21 +443,46 @@ Page({
           const newAssigneeNames = (updateData.assignees || []).map(a => a.name);
           const allTargets = Array.from(new Set([...oldAssigneeNames, ...newAssigneeNames, 'admin']));
           
-          allTargets.forEach(targetName => {
-            if (targetName && targetName !== operatorName) {
-              db.collection('notifications').add({
-                data: {
-                  type: 'todo',
-                  title: '待办任务已更新',
-                  content: `${operatorName} 更新了待办任务：【${updateData.title}】的执行人或内容。`,
-                  targetUser: targetName,
-                  isRead: false,
-                  createTime: db.serverDate(),
-                  link: `/pages/todoForm/index?id=${this.data.id}`
+          if (userInfo.role === 'admin') {
+            // 管理员修改的待办，通知全员
+            db.collection('users').get().then(allUsersRes => {
+              allUsersRes.data.forEach(u => {
+                if (u.name !== operatorName) {
+                  db.collection('notifications').add({
+                    data: {
+                      type: 'todo',
+                      title: '全局待办任务已更新',
+                      content: `${operatorName} 更新了待办任务：【${updateData.title}】的执行人或内容。`,
+                      senderName: operatorName,
+                      senderRole: userInfo.role || 'default',
+                      targetUser: u.name,
+                      isRead: false,
+                      createTime: db.serverDate(),
+                      link: `/pages/todoForm/index?id=${this.data.id}`
+                    }
+                  });
                 }
               });
-            }
-          });
+            });
+          } else {
+            allTargets.forEach(targetName => {
+              if (targetName && targetName !== operatorName) {
+                db.collection('notifications').add({
+                  data: {
+                    type: 'todo',
+                    title: '待办任务已更新',
+                    content: `${operatorName} 更新了待办任务：【${updateData.title}】的执行人或内容。`,
+                    senderName: operatorName,
+                    senderRole: userInfo.role || 'default',
+                    targetUser: targetName,
+                    isRead: false,
+                    createTime: db.serverDate(),
+                    link: `/pages/todoForm/index?id=${this.data.id}`
+                  }
+                });
+              }
+            });
+          }
           
           wx.hideLoading();
           wx.showToast({ title: '修改成功', icon: 'success' });
@@ -513,24 +538,46 @@ Page({
           }
         });
         
-        // 抄送给管理员
-        if (userInfo.role !== 'admin') {
-          db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
-            adminRes.data.forEach(u => {
+      // 抄送给管理员或全员
+      if (userInfo.role === 'admin') {
+        db.collection('users').get().then(allUsersRes => {
+          allUsersRes.data.forEach(u => {
+            if (u.name !== operatorName) {
               db.collection('notifications').add({
                 data: {
                   type: 'todo',
-                  title: '新建了待办任务',
-                  content: `${operatorName} 创建了待办任务：【${updateData.title}】。`,
+                  title: '收到新的全局待办',
+                  content: `${operatorName} 发布了全局待办任务：【${updateData.title}】。`,
+                  senderName: operatorName,
+                  senderRole: userInfo.role || 'default',
                   targetUser: u.name,
                   isRead: false,
                   createTime: db.serverDate(),
                   link: `/pages/todoForm/index?id=${newTodoId}`
                 }
               });
+            }
+          });
+        });
+      } else {
+        db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+          adminRes.data.forEach(u => {
+            db.collection('notifications').add({
+              data: {
+                type: 'todo',
+                title: '新建了待办任务',
+                content: `${operatorName} 创建了待办任务：【${updateData.title}】。`,
+                senderName: operatorName,
+                senderRole: userInfo.role || 'default',
+                targetUser: u.name,
+                isRead: false,
+                createTime: db.serverDate(),
+                link: `/pages/todoForm/index?id=${newTodoId}`
+              }
             });
           });
-        }
+        });
+      }
 
         wx.hideLoading();
         wx.showToast({ title: '新建成功', icon: 'success' });

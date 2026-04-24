@@ -498,7 +498,7 @@ Page({
                 data: {
                   type: 'lead',
                   title: '客户资料已更新',
-                  content: `${operatorName} 更新了客户资料：${followContent}`,
+                  content: `${operatorName} 更新了客户【${d.name}】的资料。`,
                   senderName: operatorName,
                   senderRole: userInfo.role || 'default',
                   targetUser: u,

@@ -579,60 +579,72 @@ Page({
         const userInfo = wx.getStorageSync('userInfo');
         const operatorName = userInfo.name || '未知人员';
         
-        // 找出任务相关人员（除了操作者本人）
-        const notifyUsers = new Set();
-        
-        // 如果有创建者，且创建者不是当前操作人，通知创建者
-        if (todo.creatorName && todo.creatorName !== operatorName) {
-          notifyUsers.add(todo.creatorName);
-        }
-        
-        // 通知其他执行人
-        if (todo.assignees && todo.assignees.length > 0) {
-          todo.assignees.forEach(a => {
-            if (a.name !== operatorName) {
-              notifyUsers.add(a.name);
-            }
-          });
-        }
-        
-        // 发送通知
-        notifyUsers.forEach(userName => {
-          db.collection('notifications').add({
-            data: {
-              type: 'todo',
-              title: '待办任务已完成',
-              content: `${operatorName} 已完成了待办任务：【${todo.title}】。`,
-              senderName: operatorName,
-              senderRole: userInfo.role || 'default',
-              targetUser: userName,
-              isRead: false,
-              createTime: db.serverDate(),
-              link: `/pages/todoForm/index?id=${id}`
-            }
-          });
-        });
-        
-        // 抄送管理员
-        if (userInfo.role !== 'admin') {
-          db.collection('users').where({ role: 'admin' }).get().then(res => {
-            res.data.forEach(u => {
-              db.collection('notifications').add({
-                data: {
-                  type: 'todo',
-                  title: '待办任务已完成',
-                  content: `${operatorName} 完成了待办任务：【${todo.title}】。`,
-                  senderName: operatorName,
-                  senderRole: userInfo.role || 'default',
-                  targetUser: u.name,
-                  isRead: false,
-                  createTime: db.serverDate(),
-                  link: `/pages/todoForm/index?id=${id}`
+        // 判断创建者是否为管理员
+        db.collection('users').where({ name: todo.creatorName }).get().then(creatorRes => {
+          const isCreatorAdmin = creatorRes.data && creatorRes.data.length > 0 && creatorRes.data[0].role === 'admin';
+          
+          if (isCreatorAdmin || userInfo.role === 'admin') {
+            // 管理员设置的代办（或管理员自己完成的代办），通知全员
+            db.collection('users').get().then(allUsersRes => {
+              allUsersRes.data.forEach(u => {
+                if (u.name !== operatorName) {
+                  db.collection('notifications').add({
+                    data: {
+                      type: 'todo',
+                      title: '全局待办已完成',
+                      content: `${operatorName} 已完成了待办任务：【${todo.title}】。`,
+                      senderName: operatorName,
+                      senderRole: userInfo.role || 'default',
+                      targetUser: u.name,
+                      isRead: false,
+                      createTime: db.serverDate(),
+                      link: `/pages/todoForm/index?id=${id}`
+                    }
+                  });
                 }
               });
             });
-          });
-        }
+          } else {
+            // 普通待办，仅通知相关人员和管理员
+            const notifyUsers = new Set();
+            
+            if (todo.creatorName && todo.creatorName !== operatorName) {
+              notifyUsers.add(todo.creatorName);
+            }
+            
+            if (todo.assignees && todo.assignees.length > 0) {
+              todo.assignees.forEach(a => {
+                if (a.name !== operatorName) {
+                  notifyUsers.add(a.name);
+                }
+              });
+            }
+            
+            // 抄送管理员
+            db.collection('users').where({ role: 'admin' }).get().then(res => {
+              res.data.forEach(u => {
+                if (u.name !== operatorName) notifyUsers.add(u.name);
+              });
+              
+              notifyUsers.forEach(userName => {
+                db.collection('notifications').add({
+                  data: {
+                    type: 'todo',
+                    title: '待办任务已完成',
+                    content: `${operatorName} 已完成了待办任务：【${todo.title}】。`,
+                    senderName: operatorName,
+                    senderRole: userInfo.role || 'default',
+                    targetUser: userName,
+                    isRead: false,
+                    createTime: db.serverDate(),
+                    link: `/pages/todoForm/index?id=${id}`
+                  }
+                });
+              });
+            });
+          }
+        }).catch(err => console.error('查询创建者角色失败', err));
+
         
         // 自动添加客户跟进记录（仅关联了客户的待办完成时）
         if (todo.relatedTo && todo.relatedTo.type === 'lead' && todo.relatedTo.id) {
@@ -958,15 +970,37 @@ Page({
         }
       });
       
-      // 抄送给管理员
-      if (userInfo.role !== 'admin') {
-        db.collection('users').where({ role: 'admin' }).get().then(res => {
-          res.data.forEach(u => {
+      // 抄送给管理员或全员
+      if (userInfo.role === 'admin') {
+        db.collection('users').get().then(allUsersRes => {
+          allUsersRes.data.forEach(u => {
+            if (u.name !== operatorName) {
+              db.collection('notifications').add({
+                data: {
+                  type: 'todo',
+                  title: '收到新的全局待办',
+                  content: `${operatorName} 发布了全局待办任务：【${title.trim()}】。`,
+                  senderName: operatorName,
+                  senderRole: userInfo.role || 'default',
+                  targetUser: u.name,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/todoForm/index?id=${newTodoId}`
+                }
+              });
+            }
+          });
+        });
+      } else {
+        db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+          adminRes.data.forEach(u => {
             db.collection('notifications').add({
               data: {
                 type: 'todo',
                 title: '新建了待办任务',
                 content: `${operatorName} 创建了待办任务：【${title.trim()}】。`,
+                senderName: operatorName,
+                senderRole: userInfo.role || 'default',
                 targetUser: u.name,
                 isRead: false,
                 createTime: db.serverDate(),
