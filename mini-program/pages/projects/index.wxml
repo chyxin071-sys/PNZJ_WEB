@@ -67,8 +67,8 @@
 
   <!-- 工地列表区 -->
   <view class="list-container">
-    <view class="swipe-container" wx:for="{{projects}}" wx:key="_id" style="margin-bottom: 24rpx; border-radius: 24rpx; overflow: hidden; transform: translateZ(0);">
-      <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{true}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
+    <view class="swipe-container" wx:for="{{projects}}" wx:key="_id" style="margin-bottom: 24rpx; transform: translateZ(0);">
+      <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{true}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory; padding: 10rpx 0; margin: -10rpx 0;">
         <view class="swipe-view" style="display: inline-flex; min-width: 100%;">
           
           <!-- 表面内容卡片 (滚动对齐点) -->
@@ -91,7 +91,7 @@
               项目经理: {{item.manager || '未分配'}} | 销售: {{item.sales || '未分配'}} | 设计: {{item.designer || '未分配'}}
             </view>
           </view>
-          <view class="health-badge {{item.health === '严重延期' ? 'badge-red' : (item.health === '预警' ? 'badge-yellow' : 'badge-green')}}" style="flex-shrink: 0; font-size: 24rpx; padding: 4rpx 16rpx; border-radius: 8rpx; margin-left: 20rpx;">
+          <view class="health-badge {{item.health === '逾期' ? 'badge-red' : (item.health === '预警' ? 'badge-yellow' : 'badge-green')}}" style="flex-shrink: 0; font-size: 24rpx; padding: 4rpx 16rpx; border-radius: 8rpx; margin-left: 20rpx;">
             {{item.health}}
           </view>
         </view>

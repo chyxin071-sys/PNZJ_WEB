@@ -187,8 +187,20 @@ Page({
         const nodesList = ["开工", "水电", "木工", "瓦工", "墙面", "定制", "软装", "交付"];
         const currentNode = p.currentNode || 1;
         
+        // 计算预计完工时间
+        let expectedEndDate = '-';
+        let expectedEndDateObj = null;
+        if (p.endDate) {
+          expectedEndDate = p.endDate;
+          expectedEndDateObj = new Date(p.endDate.replace(/-/g, '/'));
+        } else if (p.startDate) {
+          const sd = new Date(p.startDate.replace(/-/g, '/'));
+          sd.setDate(sd.getDate() + 90);
+          expectedEndDateObj = sd;
+          expectedEndDate = `${sd.getFullYear()}-${String(sd.getMonth()+1).padStart(2,'0')}-${String(sd.getDate()).padStart(2,'0')}`;
+        }
+        
         let health = p.health || '正常';
-        if (p.status === '已停工') health = '严重延期';
         
         // 动态计算当前状态
         let dynamicStatus = p.status;
@@ -203,19 +215,20 @@ Page({
            }
         }
         
+        if (dynamicStatus === '已停工') {
+          health = '停工';
+        } else if (dynamicStatus !== '已竣工' && expectedEndDateObj) {
+          expectedEndDateObj.setHours(23, 59, 59, 999);
+          if (now.getTime() > expectedEndDateObj.getTime()) {
+            health = '逾期';
+          } else if (health === '严重延期' || health === '逾期') {
+            health = '正常';
+          }
+        } else if (dynamicStatus === '已竣工') {
+          health = '正常';
+        }
+
         // 计算已耗天数 (开工后才算)
-        let daysElapsed = 0;
-        if (dynamicStatus !== '未开工' && p.startDate) {
-          daysElapsed = Math.ceil((new Date().getTime() - new Date(p.startDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24));
-        }
-        
-        // 计算预计完工时间 (默认开工后 90 天)
-        let expectedEndDate = '-';
-        if (p.startDate) {
-          const sd = new Date(p.startDate.replace(/-/g, '/'));
-          sd.setDate(sd.getDate() + 90);
-          expectedEndDate = `${sd.getFullYear()}-${String(sd.getMonth()+1).padStart(2,'0')}-${String(sd.getDate()).padStart(2,'0')}`;
-        }
         
         return {
           ...p,

@@ -417,11 +417,47 @@ Page({
       }
       
       let expectedEndDate = '-';
-      if (p.startDate) {
+      let expectedEndDateObj = null;
+      if (p.endDate) {
+        expectedEndDate = p.endDate;
+        expectedEndDateObj = new Date(p.endDate.replace(/-/g, '/'));
+      } else if (p.startDate) {
         const sd = new Date(p.startDate.replace(/-/g, '/'));
         sd.setDate(sd.getDate() + 90);
+        expectedEndDateObj = sd;
         expectedEndDate = `${sd.getFullYear()}-${String(sd.getMonth()+1).padStart(2,'0')}-${String(sd.getDate()).padStart(2,'0')}`;
       }
+
+      // 动态计算健康状态
+      let health = p.health || '正常';
+      const now = new Date();
+      now.setHours(0,0,0,0);
+      
+      let dynamicStatus = p.status;
+      if (p.startDate && p.status !== '已竣工' && p.status !== '已停工') {
+         const startDateObj = new Date(p.startDate.replace(/-/g, '/'));
+         startDateObj.setHours(0,0,0,0);
+         if (now.getTime() < startDateObj.getTime()) {
+           dynamicStatus = '未开工';
+         } else if (now.getTime() >= startDateObj.getTime()) {
+           dynamicStatus = '施工中';
+         }
+      }
+
+      if (dynamicStatus === '已停工') {
+        health = '停工';
+      } else if (dynamicStatus !== '已竣工' && expectedEndDateObj) {
+        expectedEndDateObj.setHours(23, 59, 59, 999);
+        if (now.getTime() > expectedEndDateObj.getTime()) {
+          health = '逾期';
+        } else if (health === '严重延期' || health === '逾期') {
+          health = '正常';
+        }
+      } else if (dynamicStatus === '已竣工') {
+        health = '正常';
+      }
+
+      p.health = health;
       
       // 生成或恢复 8 个大节点数据
       const templateNodes = [
