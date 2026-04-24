@@ -112,11 +112,22 @@ Page({
 
           let senderName = item.senderName;
           if (!senderName && item.content) {
-            const match = item.content.match(/^([^\s]+)\s*(更新|指派|创建|删除)/);
+            // 尝试从内容开头提取操作人名字
+            const match = item.content.match(/^([^\s【】]+)\s*(更新|指派|创建|删除|完成|取消)/);
             if (match) {
               senderName = match[1];
             }
+            // 如果内容以【系统】开头，强制认为是系统
+            if (item.content.startsWith('【系统】') || item.content.includes('系统记录')) {
+              senderName = '系统';
+            }
           }
+          
+          // 如果名字被错误地提取成了带括号的，去掉括号
+          if (senderName && typeof senderName === 'string' && senderName.startsWith('【') && senderName.endsWith('】')) {
+            senderName = senderName.slice(1, -1);
+          }
+
           item.senderName = senderName || null;
           
           // 给默认角色，如果后续需要精准角色可以在这加联查，这里先用默认的即可
