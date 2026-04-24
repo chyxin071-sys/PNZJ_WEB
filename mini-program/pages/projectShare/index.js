@@ -100,18 +100,18 @@ Page({
                 if (r2.data.length > 0) {
                   this.setData({ accessStatus: 'pending', loading: false });
                 } else {
-                  // 新用户，直接显示申请表单
-                  this.setData({ accessStatus: 'apply', loading: false });
+                  // 新用户，显示 verify_phone
+                  this.setData({ accessStatus: 'verify_phone', loading: false });
                 }
               });
             }
           });
         }
       }).catch(() => {
-        this.setData({ accessStatus: 'apply', loading: false });
+        this.setData({ accessStatus: 'verify_phone', loading: false });
       });
     }).catch(() => {
-      this.setData({ accessStatus: 'apply', loading: false });
+      this.setData({ accessStatus: 'verify_phone', loading: false });
     });
   },
 
@@ -164,9 +164,7 @@ Page({
 
         const leadId = projRes.data.leadId;
         if (!leadId) { 
-          wx.hideLoading(); 
-          this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
-          wx.showToast({ title: '手机号已获取', icon: 'success' });
+          this.handleMismatch(phone);
           return; 
         }
 
@@ -176,19 +174,13 @@ Page({
             wx.hideLoading();
             this._grantAccess({ name: lead.name || '业主本人', relation: '业主本人', phone: phone.replace(/\D/g, '').slice(-11), autoApproved: true });
           } else {
-            wx.hideLoading();
-            this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
-            wx.showToast({ title: '手机号已获取', icon: 'success' });
+            this.handleMismatch(phone);
           }
         }).catch(() => { 
-          wx.hideLoading(); 
-          this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
-          wx.showToast({ title: '手机号已获取', icon: 'success' });
+          this.handleMismatch(phone);
         });
       }).catch(() => { 
-        wx.hideLoading(); 
-        this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
-        wx.showToast({ title: '手机号已获取', icon: 'success' });
+        this.handleMismatch(phone);
       });
 
     }).catch((err) => {
@@ -196,6 +188,24 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: '获取失败', icon: 'error' });
     });
+  },
+
+  handleMismatch(phone) {
+    wx.hideLoading();
+    if (this.data.accessStatus === 'verify_phone') {
+      wx.showModal({
+        title: '提示',
+        content: '未匹配到项目业主登记的手机号，请提交申请以供工作人员审核。',
+        showCancel: false,
+        confirmText: '去申请',
+        success: () => {
+          this.setData({ accessStatus: 'apply', 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
+        }
+      });
+    } else {
+      this.setData({ 'applyForm.phone': phone.replace(/\D/g, '').slice(-11) });
+      wx.showToast({ title: '手机号已获取', icon: 'success' });
+    }
   },
 
   _grantAccess(info) {
