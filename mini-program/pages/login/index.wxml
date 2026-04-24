@@ -16,8 +16,8 @@
     </view>
     <view class="input-wrap">
       <view class="icon-lock"></view>
-      <input class="input" type="{{showPassword ? 'text' : 'password'}}" placeholder="请输入密码" placeholder-class="ph" value="{{password}}" bindinput="onInput" data-field="password" />
-      <view class="icon-eye {{showPassword ? 'open' : 'closed'}}" bindtap="togglePassword"></view>
+      <input class="input" type="text" password="{{!showPassword}}" placeholder="请输入密码" placeholder-class="ph" value="{{password}}" bindinput="onInput" data-field="password" />
+      <view class="icon-eye {{showPassword ? 'open' : 'closed'}}" catchtap="togglePassword"></view>
     </view>
     
     <view class="btn-login hover-scale" bindtap="handleLogin">登 录</view>

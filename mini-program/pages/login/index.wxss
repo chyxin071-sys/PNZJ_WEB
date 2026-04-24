@@ -17,8 +17,8 @@ page {
 .input-wrap { display: flex; align-items: center; background: #fff; height: 100rpx; border-radius: 24rpx; padding: 0 32rpx; box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.02); border: 2rpx solid transparent; transition: all 0.2s; }
 .input-wrap:focus-within { border-color: var(--primary-900); }
 
-.icon-user { width: 32rpx; height: 32rpx; border: 4rpx solid var(--primary-400); border-radius: 50%; position: relative; margin-right: 20rpx; flex-shrink: 0; }
-.icon-user::after { content: ''; position: absolute; bottom: -16rpx; left: -8rpx; width: 40rpx; height: 16rpx; border: 4rpx solid var(--primary-400); border-bottom: none; border-radius: 20rpx 20rpx 0 0; }
+.icon-user { width: 24rpx; height: 24rpx; border: 4rpx solid var(--primary-400); border-radius: 50%; position: relative; margin-right: 20rpx; flex-shrink: 0; transform: translateY(-4rpx); }
+.icon-user::after { content: ''; position: absolute; bottom: -12rpx; left: -8rpx; width: 32rpx; height: 12rpx; border: 4rpx solid var(--primary-400); border-bottom: none; border-radius: 20rpx 20rpx 0 0; }
 
 .icon-lock { width: 28rpx; height: 24rpx; border: 4rpx solid var(--primary-400); border-radius: 4rpx; position: relative; margin-right: 20rpx; margin-top: 10rpx; flex-shrink: 0; }
 .icon-lock::before { content: ''; position: absolute; top: -14rpx; left: 4rpx; width: 12rpx; height: 12rpx; border: 4rpx solid var(--primary-400); border-bottom: none; border-radius: 8rpx 8rpx 0 0; }
