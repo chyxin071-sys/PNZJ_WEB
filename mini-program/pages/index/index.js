@@ -591,7 +591,7 @@ Page({
                   db.collection('notifications').add({
                     data: {
                       type: 'todo',
-                      title: '全局待办已完成',
+                      title: '待办任务已完成',
                       content: `${operatorName} 已完成了待办任务：【${todo.title}】。`,
                       senderName: operatorName,
                       senderRole: userInfo.role || 'default',
@@ -620,12 +620,25 @@ Page({
               });
             }
             
-            // 抄送管理员
-            db.collection('users').where({ role: 'admin' }).get().then(res => {
-              res.data.forEach(u => {
-                if (u.name !== operatorName) notifyUsers.add(u.name);
-              });
-              
+            const getAdmins = db.collection('users').where({ role: 'admin' }).get().then(res => res.data.map(u => u.name));
+            
+            let getLeadUsers = Promise.resolve([]);
+            if (todo.relatedTo && todo.relatedTo.type === 'lead' && todo.relatedTo.id) {
+              getLeadUsers = db.collection('leads').doc(todo.relatedTo.id).get().then(res => {
+                const l = res.data;
+                const users = [];
+                if (l.sales) users.push(...l.sales.split(',').map(s=>s.trim()));
+                if (l.designer) users.push(...l.designer.split(',').map(s=>s.trim()));
+                if (l.manager) users.push(...l.manager.split(',').map(s=>s.trim()));
+                if (l.creatorName) users.push(l.creatorName);
+                return users;
+              }).catch(() => []);
+            }
+
+            Promise.all([getAdmins, getLeadUsers]).then(([admins, leadUsers]) => {
+              admins.forEach(u => { if (u !== operatorName) notifyUsers.add(u); });
+              leadUsers.forEach(u => { if (u && u !== operatorName) notifyUsers.add(u); });
+
               notifyUsers.forEach(userName => {
                 db.collection('notifications').add({
                   data: {
@@ -978,8 +991,8 @@ Page({
               db.collection('notifications').add({
                 data: {
                   type: 'todo',
-                  title: '收到新的全局待办',
-                  content: `${operatorName} 发布了全局待办任务：【${title.trim()}】。`,
+                  title: '收到新的待办任务',
+                  content: `${operatorName} 创建了待办任务：【${title.trim()}】。`,
                   senderName: operatorName,
                   senderRole: userInfo.role || 'default',
                   targetUser: u.name,
@@ -992,21 +1005,43 @@ Page({
           });
         });
       } else {
-        db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
-          adminRes.data.forEach(u => {
-            db.collection('notifications').add({
-              data: {
-                type: 'todo',
-                title: '新建了待办任务',
-                content: `${operatorName} 创建了待办任务：【${title.trim()}】。`,
-                senderName: operatorName,
-                senderRole: userInfo.role || 'default',
-                targetUser: u.name,
-                isRead: false,
-                createTime: db.serverDate(),
-                link: `/pages/todoForm/index?id=${newTodoId}`
-              }
-            });
+        const notifyUsers = new Set();
+        
+        const getAdmins = db.collection('users').where({ role: 'admin' }).get().then(res => res.data.map(u => u.name));
+        let getLeadUsers = Promise.resolve([]);
+        
+        if (relatedTo && relatedTo.type === 'lead' && relatedTo.id) {
+          getLeadUsers = db.collection('leads').doc(relatedTo.id).get().then(res => {
+            const l = res.data;
+            const users = [];
+            if (l.sales) users.push(...l.sales.split(',').map(s=>s.trim()));
+            if (l.designer) users.push(...l.designer.split(',').map(s=>s.trim()));
+            if (l.manager) users.push(...l.manager.split(',').map(s=>s.trim()));
+            if (l.creatorName) users.push(l.creatorName);
+            return users;
+          }).catch(() => []);
+        }
+
+        Promise.all([getAdmins, getLeadUsers]).then(([admins, leadUsers]) => {
+          admins.forEach(u => notifyUsers.add(u));
+          leadUsers.forEach(u => { if (u) notifyUsers.add(u); });
+
+          notifyUsers.forEach(targetName => {
+            if (targetName && targetName !== operatorName) {
+              db.collection('notifications').add({
+                data: {
+                  type: 'todo',
+                  title: '新建了待办任务',
+                  content: `${operatorName} 创建了待办任务：【${title.trim()}】。`,
+                  senderName: operatorName,
+                  senderRole: userInfo.role || 'default',
+                  targetUser: targetName,
+                  isRead: false,
+                  createTime: db.serverDate(),
+                  link: `/pages/todoForm/index?id=${newTodoId}`
+                }
+              });
+            }
           });
         });
       }
