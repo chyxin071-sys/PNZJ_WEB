@@ -57,7 +57,7 @@ Page({
         const user = res.data[0];
         
         // 校验密码
-        if (user.passwordPlain !== password && user.passwordHash !== password && password !== '123456') {
+        if (user.passwordPlain !== password && user.passwordHash !== password) {
           wx.hideLoading();
           return wx.showToast({ title: '密码错误，请重新输入', icon: 'none' });
         }
