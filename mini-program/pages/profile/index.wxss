@@ -42,11 +42,13 @@
   display: flex;
   flex-direction: column;
   gap: 12rpx;
+  flex: 1;
 }
 .name-row {
   display: flex;
   align-items: center;
   gap: 16rpx;
+  flex-wrap: wrap;
 }
 .name {
   font-size: 44rpx;
@@ -69,7 +71,18 @@
   background: var(--primary-50);
   color: var(--primary-600);
   border: 1rpx solid #e2e8f0;
-  max-width: fit-content;
+  white-space: nowrap;
+}
+.join-days-badge {
+  display: inline-flex;
+  padding: 6rpx 20rpx;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  font-weight: bold;
+  background: var(--rose-50);
+  color: var(--rose-600);
+  border: 1rpx solid #ffe4e6;
+  white-space: nowrap;
 }
 
 /* 修改姓名与密码弹窗 - 居中浮窗样式 */
@@ -333,6 +346,19 @@
   height: 16rpx;
   background: var(--rose-600);
   border-radius: 50%;
+}
+
+.icon-calendar {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>');
+  background-size: 60%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: #f1f5f9;
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  display: block;
+  flex-shrink: 0;
 }
 
 /* 退出登�?*/

@@ -86,7 +86,16 @@ Page({
     wx.hideLoading();
     // 把本次登录使用的密码临时存起来用于校验状态，但不展示在UI
     userInfo._loginPassword = passwordUsed;
-    wx.setStorageSync('userInfo', userInfo);
+    
+    // 如果登录账号有关联最新的员工信息，同步最新数据到缓存
+    const db = wx.cloud.database();
+    db.collection('users').doc(userInfo._id || userInfo.id).get().then(res => {
+      const latestUser = res.data;
+      latestUser._loginPassword = passwordUsed;
+      wx.setStorageSync('userInfo', latestUser);
+    }).catch(() => {
+      wx.setStorageSync('userInfo', userInfo);
+    });
     
     // 每次重新登录时清空全局状态，防止上一个账号的筛选条件残留
     const app = getApp();

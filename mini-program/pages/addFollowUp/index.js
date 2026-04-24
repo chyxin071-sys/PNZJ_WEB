@@ -83,6 +83,8 @@ Page({
               type: 'lead',
               title: isEdit ? '客户跟进有更新' : '客户有新跟进',
               content: `${operatorName} 对客户【${lead.name}】${actionText}。`,
+              senderName: operatorName,
+              senderRole: (userInfo || {}).role || 'default',
               targetUser: userName,
               isRead: false,
               createTime: db.serverDate(),

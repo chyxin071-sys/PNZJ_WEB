@@ -171,26 +171,7 @@ Page({
       });
   },
 
-  onSwipeChange(e) {
-    if (e.detail.source === 'touch') {
-      const index = e.currentTarget.dataset.index;
-      this.setData({
-        [`notifications[${index}].x`]: e.detail.x
-      });
-    }
-  },
 
-  onSwipeEnd(e) {
-    const index = e.currentTarget.dataset.index;
-    const x = this.data.notifications[index].x;
-    
-    // 如果向左滑动（x为负数）超过一定阈值，就展开
-    if (x < -30) {
-      this.setData({ [`notifications[${index}].x`]: -140 }); // 完全展开
-    } else {
-      this.setData({ [`notifications[${index}].x`]: 0 }); // 收回
-    }
-  },
 
   toggleStar(e) {
     const id = e.currentTarget.dataset.id;

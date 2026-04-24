@@ -12,13 +12,17 @@ export async function sendNotification(
   title: string,
   content: string,
   link?: string,
-  type?: string
+  type?: string,
+  senderName: string = '系统',
+  senderRole: string = 'default'
 ) {
   try {
     const docData = JSON.stringify({
       targetUser,
       title,
       content,
+      senderName,
+      senderRole,
       link: link || '',
       type: type || (link?.includes('/projects') ? 'project' : 'lead'),
       isRead: false,
@@ -40,8 +44,10 @@ export async function sendNotifications(
   title: string,
   content: string,
   link?: string,
-  type?: string
+  type?: string,
+  senderName: string = '系统',
+  senderRole: string = 'default'
 ) {
   const unique = Array.from(new Set(targets.filter(Boolean))) as string[];
-  await Promise.all(unique.map(t => sendNotification(t, title, content, link, type)));
+  await Promise.all(unique.map(t => sendNotification(t, title, content, link, type, senderName, senderRole)));
 }

@@ -36,17 +36,18 @@
         <view class="card-left">
           <view class="avatar {{item.role}}">{{item.name[0]}}</view>
           <view class="info">
-            <view class="name-row">
-              <text class="name">{{item.name}}</text>
-              <text class="tag-me" wx:if="{{item._id === currentUserId}}">我</text>
-              <view class="role-badge role-{{item.role}}">
+            <view class="name-row" style="display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap;">
+              <text class="name" style="font-size: 32rpx; font-weight: bold; color: var(--primary-900);">{{item.name}}</text>
+              <text class="tag-me" wx:if="{{item._id === currentUserId}}" style="font-size: 20rpx; background: var(--amber-50); color: var(--amber-600); padding: 4rpx 10rpx; border-radius: 6rpx; font-weight: bold; height: 36rpx; line-height: 28rpx; box-sizing: border-box; display: inline-flex; align-items: center;">我</text>
+              <view class="role-badge role-{{item.role}}" style="padding: 0 12rpx; border-radius: 8rpx; font-size: 22rpx; font-weight: bold; height: 36rpx; display: inline-flex; align-items: center; box-sizing: border-box;">
                 {{item.role === 'admin' ? '管理员' : item.role === 'designer' ? '设计师' : item.role === 'sales' ? '销售' : item.role === 'manager' ? '项目经理' : item.role === 'finance' ? '财务' : '员工'}}
               </view>
-              <view class="status-badge {{item.status === 'active' ? 'active' : 'inactive'}}">
+              <view class="status-badge {{item.status === 'active' ? 'active' : 'inactive'}}" style="padding: 0 12rpx; border-radius: 8rpx; font-size: 22rpx; font-weight: bold; height: 36rpx; display: inline-flex; align-items: center; box-sizing: border-box;">
                 {{item.status === 'active' ? '在职' : '离职'}}
               </view>
+              <view wx:if="{{item.joinDays}}" style="display: inline-flex; align-items: center; justify-content: center; height: 36rpx; padding: 0 12rpx; border-radius: 8rpx; font-size: 22rpx; font-weight: bold; color: var(--rose-600); background: var(--rose-50); border: 1rpx solid #ffe4e6; white-space: nowrap; box-sizing: border-box;">第 {{item.joinDays}} 天</view>
             </view>
-            <view class="meta-row">
+            <view class="meta-row" style="display: flex; align-items: center; flex-wrap: wrap; margin-top: 8rpx;">
               <text class="meta-item">{{item.phone}}</text>
               <text class="divider">|</text>
               <text class="meta-item">入职: {{item.joinDate}}</text>
@@ -80,7 +81,10 @@
                 <text class="member-name">{{emp.name}}</text>
                 <text class="tag-me" wx:if="{{emp.isMe}}">我</text>
               </view>
-              <text class="member-phone">{{emp.phone || '暂无电话'}}</text>
+              <view style="display: flex; gap: 16rpx; align-items: center;">
+                <text class="member-phone">{{emp.phone || '暂无电话'}}</text>
+                <text wx:if="{{emp.joinDays}}" style="font-size: 22rpx; color: var(--rose-600); background: var(--rose-50); padding: 2rpx 12rpx; border-radius: 8rpx; border: 1rpx solid #ffe4e6;">入职 {{emp.joinDays}} 天</text>
+              </view>
             </view>
           </view>
         </view>

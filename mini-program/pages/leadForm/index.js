@@ -437,6 +437,8 @@ Page({
                   data: {
                     type: 'lead', title: '客户线索已更新',
                     content: `${operatorName} 更新了客户【${d.name}】的资料。`,
+                    senderName: operatorName,
+                    senderRole: userInfo.role || 'default',
                     targetUser: u.name, isRead: false, createTime: db.serverDate(),
                     link: `/pages/leadDetail/index?id=${this.data.id}`
                   }
@@ -495,8 +497,10 @@ Page({
               db.collection('notifications').add({
                 data: {
                   type: 'lead',
-                  title: '系统通知',
-                  content: `【系统自动记录】${followContent}`,
+                  title: '客户资料已更新',
+                  content: `${operatorName} 更新了客户资料：${followContent}`,
+                  senderName: operatorName,
+                  senderRole: userInfo.role || 'default',
                   targetUser: u,
                   isRead: false,
                   createTime: db.serverDate(),

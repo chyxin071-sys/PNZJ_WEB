@@ -699,8 +699,10 @@ Page({
           db.collection('notifications').add({
             data: {
               type: 'lead',
-              title: '客户有新系统记录',
-              content: `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+              title: '客户记录已更新',
+              content: `${operatorName} 对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+              senderName: operatorName,
+              senderRole: userInfo.role || 'default',
               targetUser: u,
               isRead: false,
               createTime: db.serverDate(),
@@ -715,8 +717,10 @@ Page({
               db.collection('notifications').add({
                 data: {
                   type: 'lead',
-                  title: '客户有新系统记录',
-                  content: `系统对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+                  title: '客户记录已更新',
+                  content: `${operatorName} 对客户【${lead.name}】生成了新记录：${content.substring(0, 20)}...`,
+                  senderName: operatorName,
+                  senderRole: userInfo.role || 'default',
                   targetUser: u.name,
                   isRead: false,
                   createTime: db.serverDate(),

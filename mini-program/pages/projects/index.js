@@ -836,8 +836,10 @@ Page({
           db.collection('notifications').add({
             data: {
               type: 'lead',
-              title: '系统通知',
-              content: `【系统自动记录】${content.substring(0, 30)}...`,
+              title: '跟进记录已更新',
+              content: `${operatorName} 添加了项目跟进记录：${content.substring(0, 30)}...`,
+              senderName: operatorName,
+              senderRole: userInfo.role || 'default',
               targetUser: u,
               isRead: false,
               createTime: db.serverDate(),

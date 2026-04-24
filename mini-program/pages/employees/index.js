@@ -46,11 +46,39 @@ Page({
   },
 
   fetchEmployees() {
-    wx.showLoading({ title: '加载中' });
+    this.setData({ loading: true });
     const db = wx.cloud.database();
     db.collection('users').get().then(res => {
       wx.hideLoading();
-      const list = res.data.sort((a, b) => (a.createdAt > b.createdAt ? -1 : 1));
+      
+      const currentUserId = this.data.currentUserId;
+      const now = new Date();
+      now.setHours(0, 0, 0, 0);
+      
+      const roleWeight = { admin: 1, manager: 2, designer: 3, sales: 4, finance: 5 };
+
+      const list = res.data.map(u => {
+        let joinDays = 0;
+        if (u.joinDate) {
+          const start = new Date(u.joinDate);
+          start.setHours(0, 0, 0, 0);
+          const diffTime = Math.abs(now - start);
+          joinDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        }
+        
+        return {
+          ...u,
+          isMe: u._id === currentUserId,
+          status: u.status || 'active',
+          joinDays
+        };
+      }).sort((a, b) => {
+        const wA = roleWeight[a.role] || 99;
+        const wB = roleWeight[b.role] || 99;
+        if (wA !== wB) return wA - wB;
+        return a.createdAt > b.createdAt ? -1 : 1;
+      });
+
       this.setData({ allEmployees: list }, () => {
         this.filterEmployees();
         this.buildDeptGroups();
@@ -200,11 +228,18 @@ Page({
   showAddModal() {
     const date = new Date();
     const today = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    
+    let defaultRoleIndex = 0;
+    if (this.data.activeTab !== 'all') {
+      const idx = this.data.roleOptions.findIndex(r => r.key === this.data.activeTab);
+      if (idx >= 0) defaultRoleIndex = idx;
+    }
+
     this.setData({
       showModal: true,
       modalType: 'add',
       formData: { name: '', phone: '', joinDate: today },
-      roleIndex: 0
+      roleIndex: defaultRoleIndex
     });
   },
 
@@ -338,6 +373,7 @@ Page({
             userInfo.phone = phone;
             userInfo.account = account;
             userInfo.role = roleKey;
+            userInfo.joinDate = formData.joinDate;
             wx.setStorageSync('userInfo', userInfo);
           }
 

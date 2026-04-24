@@ -13,6 +13,8 @@ Page({
     showPasswordModal: false,
     oldPassword: "",
     newPassword: "",
+    showPhoneModal: false,
+    editPhone: "",
     unreadCount: 0,
   },
 
@@ -26,8 +28,23 @@ Page({
         url: "/pages/login/index",
       });
     } else {
+      this.calculateJoinDays(userInfo);
       this.setData({ userInfo });
       this.fetchStats(userInfo);
+    }
+  },
+
+  calculateJoinDays(userInfo) {
+    if (userInfo.joinDate) {
+      const start = new Date(userInfo.joinDate);
+      const now = new Date();
+      start.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
+      const diffTime = Math.abs(now - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include the first day
+      userInfo.joinDays = diffDays;
+    } else {
+      userInfo.joinDays = 0;
     }
   },
 
@@ -92,6 +109,89 @@ Page({
   onNameInput(e) {
     this.setData({
       editName: e.detail.value,
+    });
+  },
+
+  openEditPhone() {
+    this.setData({
+      showPhoneModal: true,
+      editPhone: this.data.userInfo.phone || "",
+    });
+  },
+
+  closeEditPhone() {
+    this.setData({
+      showPhoneModal: false,
+      editPhone: "",
+    });
+  },
+
+  onPhoneInput(e) {
+    this.setData({
+      editPhone: e.detail.value,
+    });
+  },
+
+  savePhone() {
+    const newPhone = this.data.editPhone.trim();
+    if (!newPhone) {
+      wx.showToast({ title: "手机号不能为空", icon: "none" });
+      return;
+    }
+    
+    wx.showLoading({ title: "校验中" });
+    const db = wx.cloud.database();
+    
+    db.collection('users').where({ phone: newPhone }).get().then(res => {
+      const existUsers = res.data.filter(u => u._id !== (this.data.userInfo._id || this.data.userInfo.id));
+      if (existUsers.length > 0) {
+        wx.hideLoading();
+        return wx.showToast({ title: '该手机号已被使用', icon: 'none' });
+      }
+
+      db.collection('users').doc(this.data.userInfo._id || this.data.userInfo.id).update({
+        data: { phone: newPhone }
+      }).then(() => {
+        const updatedUser = { ...this.data.userInfo, phone: newPhone };
+        wx.setStorageSync("userInfo", updatedUser);
+        this.setData({
+          userInfo: updatedUser,
+          showPhoneModal: false,
+          editPhone: "",
+        });
+        wx.hideLoading();
+        wx.showToast({ title: "修改成功", icon: "success" });
+      }).catch(err => {
+        wx.hideLoading();
+        wx.showToast({ title: "修改失败", icon: "none" });
+      });
+    }).catch(err => {
+      wx.hideLoading();
+      wx.showToast({ title: "网络异常", icon: "none" });
+    });
+  },
+
+  onJoinDateChange(e) {
+    const newDate = e.detail.value;
+    if (!newDate) return;
+    
+    wx.showLoading({ title: "保存中" });
+    const db = wx.cloud.database();
+    
+    db.collection('users').doc(this.data.userInfo._id || this.data.userInfo.id).update({
+      data: { joinDate: newDate }
+    }).then(() => {
+      const updatedUser = { ...this.data.userInfo, joinDate: newDate };
+      this.calculateJoinDays(updatedUser);
+      wx.setStorageSync("userInfo", updatedUser);
+      this.setData({
+        userInfo: updatedUser,
+      });
+      wx.hideLoading();
+      wx.showToast({ title: "修改成功", icon: "success" });
+    }).catch(err => {
+      wx.hideLoading();
+      wx.showToast({ title: "修改失败", icon: "none" });
     });
   },
 

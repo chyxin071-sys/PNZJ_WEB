@@ -11,7 +11,10 @@
           <view class="name">{{userInfo.name || '未登录'}}</view>
           <view class="icon-edit" bindtap="openEditName"></view>
         </view>
-        <view class="role-badge">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'designer' ? '设计师' : userInfo.role === 'sales' ? '销售' : userInfo.role === 'manager' ? '项目经理' : userInfo.role === 'finance' ? '财务' : '员工'}}</view>
+        <view style="display: flex; gap: 16rpx; align-items: center; flex-wrap: wrap;">
+          <view class="role-badge">{{userInfo.role === 'admin' ? '管理员' : userInfo.role === 'designer' ? '设计师' : userInfo.role === 'sales' ? '销售' : userInfo.role === 'manager' ? '项目经理' : userInfo.role === 'finance' ? '财务' : '员工'}}</view>
+          <view class="join-days-badge" wx:if="{{userInfo.joinDays > 0}}">入职第 {{userInfo.joinDays}} 天</view>
+        </view>
       </view>
     </view>
   </view>
@@ -28,6 +31,21 @@
         <input class="input" placeholder="请输入新姓名" value="{{editName}}" bindinput="onNameInput" />
       </view>
       <view class="btn-save hover-scale" bindtap="saveName">保 存</view>
+    </view>
+  </view>
+
+  <!-- 修改手机号弹窗 -->
+  <view class="modal-mask" wx:if="{{showPhoneModal}}" bindtap="closeEditPhone"></view>
+  <view class="modal-content" wx:if="{{showPhoneModal}}">
+    <view class="modal-header">
+      <text>修改手机号</text>
+      <view class="btn-close" bindtap="closeEditPhone">取消</view>
+    </view>
+    <view class="modal-body">
+      <view class="input-wrap">
+        <input class="input" type="number" placeholder="请输入新手机号" value="{{editPhone}}" bindinput="onPhoneInput" />
+      </view>
+      <view class="btn-save hover-scale" bindtap="savePhone">保 存</view>
     </view>
   </view>
 
@@ -69,15 +87,29 @@
 
   <!-- 功能菜单列表 -->
   <view class="menu-list">
-    <view class="menu-item" hover-class="menu-hover">
+    <view class="menu-item" hover-class="menu-hover" bindtap="openEditPhone">
       <view class="menu-left">
         <view class="icon-menu icon-phone"></view>
         <text>手机号</text>
       </view>
       <view class="menu-right">
         <text class="menu-val">{{userInfo.phone || '未绑定'}}</text>
+        <view class="arrow-right"></view>
       </view>
     </view>
+    
+    <picker mode="date" value="{{userInfo.joinDate}}" bindchange="onJoinDateChange">
+      <view class="menu-item" hover-class="menu-hover">
+        <view class="menu-left">
+          <view class="icon-calendar"></view>
+          <text>入职时间</text>
+        </view>
+        <view class="menu-right">
+          <text class="menu-val">{{userInfo.joinDate || '未设置'}}</text>
+          <view class="arrow-right"></view>
+        </view>
+      </view>
+    </picker>
     
     <view class="menu-item" hover-class="menu-hover">
       <view class="menu-left">

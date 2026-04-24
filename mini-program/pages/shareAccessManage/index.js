@@ -128,6 +128,23 @@ Page({
             }
           }
         }).catch(() => {});
+        
+        // 同时发一条站内信通知申请人
+        const operatorName = wx.getStorageSync('userInfo')?.name || '管理员';
+        db.collection('notifications').add({
+          data: {
+            userId: userId,
+            targetUser: userRes.data[0].name || '未知',
+            type: 'system',
+            title: '查看申请结果',
+            content: `【${operatorName}】${statusText}了您查看工地【${address}】的申请。`,
+            senderName: operatorName,
+            senderRole: wx.getStorageSync('userInfo')?.role || 'admin',
+            link: `/pages/projectShare/index?id=${this.data.projectId}`,
+            isRead: false,
+            createTime: db.serverDate()
+          }
+        }).catch(() => {});
       }).catch(() => {});
     }).catch(() => {});
   }

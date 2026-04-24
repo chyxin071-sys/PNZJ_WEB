@@ -15,41 +15,37 @@
 
   <view class="list-container">
     <block wx:if="{{notifications.length > 0}}">
-      <view class="swipe-wrap" wx:for="{{notifications}}" wx:key="_id">
-        <movable-area class="movable-area">
-          <movable-view 
-            class="movable-view notification-item {{item.isRead ? 'read' : 'unread'}}" 
-            direction="horizontal" 
-            out-of-bounds="true"
-            animation="true"
-            x="{{item.x || 0}}"
-            bindchange="onSwipeChange"
-            bindtouchend="onSwipeEnd"
-            data-index="{{index}}"
-            bindtap="handleNotificationClick"
-            data-item="{{item}}"
-          >
-            <view class="item-icon">
-              <view class="avatar-circle avatar-bg-{{item.senderRole || 'default'}}" wx:if="{{item.senderName && item.senderName !== '系统'}}">{{item.senderName[0]}}</view>
-              <view class="avatar-circle avatar-bg-system" wx:elif="{{item.senderName === '系统' || !item.senderName}}">系</view>
-              <view class="icon-circle {{item.type}}" wx:else></view>
-            </view>
-            <view class="item-content">
-              <view class="item-header">
-                <view class="item-title-wrap">
-                  <text class="item-title">{{item.title}}</text>
-                  <text wx:if="{{item.isStarred}}" class="icon-star-filled">★</text>
-                </view>
-                <text class="item-time">{{item.createTimeStr}}</text>
+      <view class="swipe-wrap" wx:for="{{notifications}}" wx:key="_id" style="transform: translateZ(0);">
+        <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{true}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
+          <view class="swipe-view" style="display: inline-flex; min-width: 100%;">
+            
+            <!-- 表面内容卡片 (滚动对齐点) -->
+            <view class="notification-item {{item.isRead ? 'read' : 'unread'}}" style="width: calc(100vw - 48rpx); scroll-snap-align: start; flex-shrink: 0; white-space: normal; box-sizing: border-box;" bindtap="handleNotificationClick" data-item="{{item}}">
+              <view class="item-icon">
+                <view class="avatar-circle avatar-bg-{{item.senderRole || 'default'}}" wx:if="{{item.senderName && item.senderName !== '系统'}}">{{item.senderName[0]}}</view>
+                <view class="avatar-circle avatar-bg-system" wx:elif="{{item.senderName === '系统' || !item.senderName}}">系</view>
+                <view class="icon-circle {{item.type}}" wx:else></view>
               </view>
-              <view class="item-desc">{{item.content}}</view>
+              <view class="item-content">
+                <view class="item-header">
+                  <view class="item-title-wrap">
+                    <text class="item-title">{{item.title}}</text>
+                    <text wx:if="{{item.isStarred}}" class="icon-star-filled">★</text>
+                  </view>
+                  <text class="item-time">{{item.createTimeStr}}</text>
+                </view>
+                <view class="item-desc">{{item.content}}</view>
+              </view>
             </view>
-          </movable-view>
-          <view class="swipe-actions">
-            <view class="action-btn btn-star" catchtap="toggleStar" data-id="{{item._id}}" data-index="{{index}}">{{item.isStarred ? '取消收藏' : '收藏'}}</view>
-            <view class="action-btn btn-delete" catchtap="deleteNotification" data-id="{{item._id}}" data-index="{{index}}">删除</view>
+            
+            <!-- 右侧滑动按钮区域 (滚动对齐点) -->
+            <view class="swipe-actions" style="width: 280rpx; display: flex; flex-shrink: 0; scroll-snap-align: end; background: transparent;">
+              <view class="action-btn btn-star" catchtap="toggleStar" data-id="{{item._id}}" data-index="{{index}}">{{item.isStarred ? '取消收藏' : '收藏'}}</view>
+              <view class="action-btn btn-delete" catchtap="deleteNotification" data-id="{{item._id}}" data-index="{{index}}">删除</view>
+            </view>
+            
           </view>
-        </movable-area>
+        </scroll-view>
       </view>
     </block>
     

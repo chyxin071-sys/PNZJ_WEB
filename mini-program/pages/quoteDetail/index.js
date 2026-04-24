@@ -540,6 +540,8 @@ Page({
             type: 'quote',
             title: '报价单已更新',
             content: `${operatorName} 更新了客户【${q.customer || '未知'}】的报价单。`,
+            senderName: operatorName,
+            senderRole: userInfo.role || 'default',
             targetUser: u,
             isRead: false,
             createTime: db.serverDate(),
