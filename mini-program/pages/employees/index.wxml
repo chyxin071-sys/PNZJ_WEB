@@ -40,7 +40,7 @@
               <text class="name">{{item.name}}</text>
               <text class="tag-me" wx:if="{{item._id === currentUserId}}">我</text>
               <view class="role-badge role-{{item.role}}">
-                {{item.role === 'admin' ? '管理员' : item.role === 'designer' ? '设计师' : item.role === 'sales' ? '销售' : item.role === 'manager' ? '项目经理' : '员工'}}
+                {{item.role === 'admin' ? '管理员' : item.role === 'designer' ? '设计师' : item.role === 'sales' ? '销售' : item.role === 'manager' ? '项目经理' : item.role === 'finance' ? '财务' : '员工'}}
               </view>
               <view class="status-badge {{item.status === 'active' ? 'active' : 'inactive'}}">
                 {{item.status === 'active' ? '在职' : '离职'}}

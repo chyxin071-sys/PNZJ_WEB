@@ -11,6 +11,7 @@ Page({
       { key: 'sales', name: '销售' },
       { key: 'designer', name: '设计' },
       { key: 'manager', name: '工程' },
+      { key: 'finance', name: '财务' },
       { key: 'admin', name: '管理' }
     ],
     showModal: false,
@@ -27,6 +28,7 @@ Page({
       { key: 'sales', name: '销售' },
       { key: 'designer', name: '设计师' },
       { key: 'manager', name: '项目经理' },
+      { key: 'finance', name: '财务' },
       { key: 'admin', name: '管理员' }
     ],
     currentUserId: ''
@@ -65,6 +67,7 @@ Page({
     const currentUserId = this.data.currentUserId;
     const depts = [
       { key: 'admin', label: '管理组' },
+      { key: 'finance', label: '财务部' },
       { key: 'sales', label: '销售部' },
       { key: 'designer', label: '设计部' },
       { key: 'manager', label: '工程部' },
