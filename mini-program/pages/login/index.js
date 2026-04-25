@@ -99,13 +99,6 @@ Page({
     
     const db = wx.cloud.database();
     
-    // 将 sessionToken 更新到云端数据库中
-    db.collection('users').doc(userInfo._id || userInfo.id).update({
-      data: {
-        sessionToken: sessionToken
-      }
-    }).catch(err => console.error('更新 sessionToken 失败:', err));
-
     // 如果登录账号有关联最新的员工信息，同步最新数据到缓存
     db.collection('users').doc(userInfo._id || userInfo.id).get().then(res => {
       const latestUser = res.data;
@@ -121,10 +114,13 @@ Page({
 
     wx.showToast({ title: '登录成功', icon: 'success' });
 
-    // 绑定当前微信的 OpenID 到此账号，用于接收订阅消息
+    // 使用云函数绑定当前微信的 OpenID 到此账号，同时更新 sessionToken，绕过前端权限限制
     wx.cloud.callFunction({
       name: 'bindOpenId',
-      data: { userId: userInfo.id }
+      data: { 
+        userId: userInfo._id || userInfo.id,
+        sessionToken: sessionToken 
+      }
     }).catch(console.error);
 
     // 登录时请求订阅消息授权
