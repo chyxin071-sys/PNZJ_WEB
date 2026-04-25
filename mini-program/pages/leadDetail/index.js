@@ -39,9 +39,11 @@ function recalculateDesignGantt(nodes, startDateStr) {
       continue;
     }
 
-    // 如果用户手动指定了此节点的开始时间，且该时间晚于顺延的时间，则以此时间为准
+    // 优先使用实际开工时间，如果没有，则判断是否有手动顺延的开工时间
     let startToUse = currentStart;
-    if (node.manualStartDate) {
+    if (node.actualStartDate) {
+      startToUse = node.actualStartDate;
+    } else if (node.manualStartDate && new Date(node.manualStartDate.replace(/-/g, '/')) > new Date(currentStart.replace(/-/g, '/'))) {
       startToUse = node.manualStartDate;
     }
 
@@ -695,7 +697,7 @@ Page({
       id: Date.now() + i,
       name: n.name,
       duration: n.duration,
-      status: i === 0 ? 'current' : 'pending'
+      status: 'pending'
     }));
     
     // 自动计算一次时间，让界面有初始默认值展示
@@ -932,6 +934,68 @@ Page({
     });
   },
 
+  async startDesignNode(e) {
+    const userInfo = wx.getStorageSync('userInfo');
+    const userRole = userInfo ? userInfo.role : '';
+    if (userRole !== 'designer' && userRole !== 'admin') {
+      return wx.showToast({ title: '仅设计师可开始设计节点', icon: 'none' });
+    }
+
+    // 静默请求订阅授权
+    await requestSubscribe();
+
+    const idx = e.currentTarget.dataset.index;
+    const nowStr = new Date().toISOString().split('T')[0];
+
+    // 弹窗让用户选择实际开始日期
+    this.setData({
+      showDesignStartDateModal: true,
+      designStartIdx: idx,
+      designStartDateSelection: nowStr
+    });
+  },
+
+  onDesignStartDateSelectionChange(e) {
+    this.setData({ designStartDateSelection: e.detail.value });
+  },
+
+  closeDesignStartDateModal() {
+    this.setData({ showDesignStartDateModal: false });
+  },
+
+  confirmDesignStartWithDate() {
+    const idx = this.data.designStartIdx;
+    const actualStartDate = this.data.designStartDateSelection;
+    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
+    const nodeName = nodes[idx].name;
+
+    nodes[idx].status = 'current';
+    nodes[idx].actualStartDate = actualStartDate;
+
+    nodes = recalculateDesignGantt(nodes, this.data.lead.designStartDate || actualStartDate);
+
+    wx.showLoading({ title: '处理中...' });
+    const db = wx.cloud.database();
+    db.collection('leads').doc(this.data.leadId).update({
+      data: { designNodes: nodes }
+    }).then(() => {
+      this.setData({
+        'lead.designNodes': nodes,
+        showDesignStartDateModal: false
+      });
+      wx.hideLoading();
+      wx.showToast({ title: '节点已开始', icon: 'success' });
+
+      // 联动1：系统跟进记录
+      let followContent = `已开始设计出图节点：【${nodeName}】（实际开始：${actualStartDate}）`;
+      this.addSystemFollowUp(followContent);
+
+    }).catch(() => {
+      wx.hideLoading();
+      wx.showToast({ title: '操作失败', icon: 'none' });
+    });
+  },
+
   async completeDesignNode(e) {
     const userInfo = wx.getStorageSync('userInfo');
     const userRole = userInfo ? userInfo.role : '';
@@ -975,12 +1039,6 @@ Page({
       nodes[idx].actualStartDate = nodes[idx].startDate;
     }
 
-    if (idx + 1 < nodes.length) {
-      nodes[idx + 1].status = 'current';
-      nodes[idx + 1].startDate = actualEndDate;
-      nodes[idx + 1].actualStartDate = actualEndDate;
-    }
-
     nodes = recalculateDesignGantt(nodes, this.data.lead.designStartDate || actualEndDate);
 
     wx.showLoading({ title: '处理中...' });
@@ -996,10 +1054,7 @@ Page({
       wx.showToast({ title: '节点已完成', icon: 'success' });
 
       // 联动1：系统跟进记录
-      const nextNode = idx + 1 < nodes.length ? nodes[idx + 1] : null;
       let followContent = `已完成设计出图节点：【${nodeName}】（实际完成：${actualEndDate}）`;
-      if (nextNode) followContent += `\n下一阶段：【${nextNode.name}】，预计完成：${nextNode.endDate}`;
-      else followContent += '\n所有设计出图节点已全部完成 🎉';
       this.addSystemFollowUp(followContent);
 
       // 联动2：消息通知

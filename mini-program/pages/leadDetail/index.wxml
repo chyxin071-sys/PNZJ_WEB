@@ -61,7 +61,56 @@ module.exports = { getStatusClass: getStatusClass };
             phone="{{lead.phone}}" 
             customerNo="{{lead.customerNo || lead._id}}" 
           />
-        </view>
+          <!-- 完成设计节点日期选择弹窗 -->
+  <block wx:if="{{showDesignCompleteDateModal}}">
+    <view class="modal-mask" bindtap="closeDesignCompleteDateModal" style="position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;"></view>
+    <view class="modal-content" style="position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85%; background: #fff; border-radius: 32rpx; z-index: 10000; display: flex; flex-direction: column; overflow: hidden; padding: 48rpx;">
+      <view style="font-size: 32rpx; font-weight: bold; margin-bottom: 8rpx; text-align: center; color: #44403c;">确认完成时间</view>
+      <view style="font-size: 24rpx; color: #78716c; text-align: center; margin-bottom: 32rpx;">{{lead.designNodes[designCompleteIdx].name}}</view>
+
+      <view style="margin-bottom: 40rpx;">
+        <view style="font-size: 26rpx; color: #78716c; margin-bottom: 12rpx;">实际完成日期</view>
+        <picker mode="date" value="{{designCompleteDate}}" bindchange="onDesignCompleteDateChange" style="width: 100%; display: block;">
+          <view style="width: 100%; height: 88rpx; line-height: 88rpx; padding: 0 24rpx; background: #fafaf9; border-radius: 12rpx; border: 1rpx solid #e7e5e4; font-size: 28rpx; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; color: #44403c;">
+            <text>{{designCompleteDate || '请选择日期'}}</text>
+            <text style="color: #a8a29e; font-size: 22rpx;">▼</text>
+          </view>
+        </picker>
+        <view style="font-size: 22rpx; color: #a8a29e; margin-top: 12rpx;">如果昨天或更早完成，可以选择实际完成日期</view>
+      </view>
+
+      <view style="display: flex; gap: 20rpx;">
+        <button bindtap="closeDesignCompleteDateModal" style="flex: 1; font-size: 30rpx; background: #f5f5f4; color: #57534e; border-radius: 16rpx; border: none; padding: 20rpx 0; margin: 0; font-weight: 500; line-height: 1.5;">取消</button>
+        <button bindtap="confirmDesignCompleteWithDate" style="flex: 1; font-size: 30rpx; background: var(--primary-900); color: #fff; border-radius: 16rpx; border: none; padding: 20rpx 0; margin: 0; font-weight: bold; line-height: 1.5;">确认完成</button>
+      </view>
+    </view>
+  </block>
+
+  <!-- 开始设计节点日期选择弹窗 -->
+  <block wx:if="{{showDesignStartDateModal}}">
+    <view class="modal-mask" bindtap="closeDesignStartDateModal" style="position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;"></view>
+    <view class="modal-content" style="position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85%; background: #fff; border-radius: 32rpx; z-index: 10000; display: flex; flex-direction: column; overflow: hidden; padding: 48rpx;">
+      <view style="font-size: 32rpx; font-weight: bold; margin-bottom: 8rpx; text-align: center; color: #44403c;">确认开始时间</view>
+      <view style="font-size: 24rpx; color: #78716c; text-align: center; margin-bottom: 32rpx;">{{lead.designNodes[designStartIdx].name}}</view>
+
+      <view style="margin-bottom: 40rpx;">
+        <view style="font-size: 26rpx; color: #78716c; margin-bottom: 12rpx;">实际开始日期</view>
+        <picker mode="date" value="{{designStartDateSelection}}" bindchange="onDesignStartDateSelectionChange" style="width: 100%; display: block;">
+          <view style="width: 100%; height: 88rpx; line-height: 88rpx; padding: 0 24rpx; background: #fafaf9; border-radius: 12rpx; border: 1rpx solid #e7e5e4; font-size: 28rpx; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; color: #44403c;">
+            <text>{{designStartDateSelection || '请选择日期'}}</text>
+            <text style="color: #a8a29e; font-size: 22rpx;">▼</text>
+          </view>
+        </picker>
+      </view>
+
+      <view style="display: flex; gap: 20rpx;">
+        <button bindtap="closeDesignStartDateModal" style="flex: 1; font-size: 30rpx; background: #f5f5f4; color: #57534e; border-radius: 16rpx; border: none; padding: 20rpx 0; margin: 0; font-weight: 500; line-height: 1.5;">取消</button>
+        <button bindtap="confirmDesignStartWithDate" style="flex: 1; font-size: 30rpx; background: var(--primary-600); color: #fff; border-radius: 16rpx; border: none; padding: 20rpx 0; margin: 0; font-weight: bold; line-height: 1.5;">确认开始</button>
+      </view>
+    </view>
+  </block>
+
+</view>
         <view class="address" style="font-size: 26rpx; color: #475569; line-height: 1.4; margin-top: 12rpx;">{{lead.address || '暂无地址'}}</view>
       </view>
 
@@ -238,7 +287,11 @@ module.exports = { getStatusClass: getStatusClass };
                   <view wx:if="{{ganttUtil.getOverdueDays(item.endDate) > 0}}" style="font-size: 20rpx; color: var(--rose-600); background: var(--rose-50); padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold;">逾期 {{ganttUtil.getOverdueDays(item.endDate)}} 天</view>
                   <view wx:else style="font-size: 20rpx; color: var(--amber-600); background: var(--amber-50); padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold; border: 1rpx solid var(--amber-200);">进行中</view>
                 </block>
+                <block wx:else>
+                  <view style="font-size: 20rpx; color: #94a3b8; background: #f1f5f9; padding: 4rpx 16rpx; border-radius: 20rpx; font-weight: bold;">待开始</view>
+                </block>
 
+                <button wx:if="{{item.status === 'pending' && (isDesigner || isAdmin)}}" class="btn-complete" bindtap="startDesignNode" data-index="{{index}}" style="margin: 0; background: #fff; color: var(--primary-600); font-size: 24rpx; padding: 0 24rpx; height: 50rpx; line-height: 46rpx; border-radius: 25rpx; border: 2rpx solid var(--primary-600); box-sizing: border-box; width: fit-content; min-width: 120rpx; flex-shrink: 0; transform: translateX(12rpx);">开始</button>
                 <button wx:if="{{item.status === 'current' && (isDesigner || isAdmin)}}" class="btn-complete" bindtap="completeDesignNode" data-index="{{index}}" style="margin: 0; background: #fff; color: var(--primary-900); font-size: 24rpx; padding: 0 24rpx; height: 50rpx; line-height: 46rpx; border-radius: 25rpx; border: 2rpx solid var(--primary-900); box-sizing: border-box; width: fit-content; min-width: 120rpx; flex-shrink: 0; transform: translateX(12rpx);">完成</button>
               </view>
             </view>
@@ -379,33 +432,6 @@ module.exports = { getStatusClass: getStatusClass };
     </view>
     </view>
   </block>
-
-  <!-- 完成设计节点日期选择弹窗 -->
-  <block wx:if="{{showDesignCompleteDateModal}}">
-    <view class="modal-mask" bindtap="closeDesignCompleteDateModal" style="position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center;"></view>
-    <view class="modal-content" style="position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%); width: 85%; background: #fff; border-radius: 32rpx; z-index: 10000; display: flex; flex-direction: column; overflow: hidden; padding: 48rpx;">
-      <view style="font-size: 32rpx; font-weight: bold; margin-bottom: 8rpx; text-align: center; color: #44403c;">确认完成时间</view>
-      <view style="font-size: 24rpx; color: #78716c; text-align: center; margin-bottom: 32rpx;">{{lead.designNodes[designCompleteIdx].name}}</view>
-
-      <view style="margin-bottom: 40rpx;">
-        <view style="font-size: 26rpx; color: #78716c; margin-bottom: 12rpx;">实际完成日期</view>
-        <picker mode="date" value="{{designCompleteDate}}" bindchange="onDesignCompleteDateChange" style="width: 100%; display: block;">
-          <view style="width: 100%; height: 88rpx; line-height: 88rpx; padding: 0 24rpx; background: #fafaf9; border-radius: 12rpx; border: 1rpx solid #e7e5e4; font-size: 28rpx; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; color: #44403c;">
-            <text>{{designCompleteDate || '请选择日期'}}</text>
-            <text style="color: #a8a29e; font-size: 22rpx;">▼</text>
-          </view>
-        </picker>
-        <view style="font-size: 22rpx; color: #a8a29e; margin-top: 12rpx;">如果昨天或更早完成，可以选择实际完成日期</view>
-      </view>
-
-      <view style="display: flex; gap: 20rpx;">
-        <button bindtap="closeDesignCompleteDateModal" style="flex: 1; font-size: 30rpx; background: #f5f5f4; color: #57534e; border-radius: 16rpx; border: none; padding: 20rpx 0; margin: 0; font-weight: 500; line-height: 1.5;">取消</button>
-        <button bindtap="confirmDesignCompleteWithDate" style="flex: 1; font-size: 30rpx; background: var(--primary-900); color: #fff; border-radius: 16rpx; border: none; padding: 20rpx 0; margin: 0; font-weight: bold; line-height: 1.5;">确认完成</button>
-      </view>
-    </view>
-  </block>
-
-
 
   <!-- 逾期完成设计节点弹窗 -->
   <view class="modal-mask" wx:if="{{showDesignCompleteModal}}" style="position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center;">
