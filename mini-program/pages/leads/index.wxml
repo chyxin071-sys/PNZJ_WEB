@@ -274,10 +274,10 @@ module.exports = { getStatusClass: getStatusClass };
           </view>
           <view class="form-group">
             <text class="label">来源</text>
-            <picker bindchange="onNewLeadPickerChange" data-field="source" range="{{['自然进店', '老介新', '抖音', '小红书', '大众点评', '自有关系', '其他']}}">
-              <view class="picker-view">
-                <text>{{newLead.source}}</text>
-                <view class="arrow-down"></view>
+            <picker bindchange="onNewLeadPickerChange" data-field="source" range="{{['自然进店', '老介新', '抖音', '自有关系', '其他']}}">
+                <view class="picker-view">
+                  <text>{{newLead.source}}</text>
+                  <view class="arrow-down"></view>
               </view>
             </picker>
           </view>
@@ -293,7 +293,7 @@ module.exports = { getStatusClass: getStatusClass };
 
   <!-- 恭喜签单弹窗 -->
   <block wx:if="{{showSignModal}}">
-    <view class="modal-mask" style="position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 40rpx;">
+    <view class="modal-mask" style="position: fixed; top: -100rpx; left: 0; right: 0; bottom: -200rpx; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 9998; display: flex; align-items: center; justify-content: center;">
         <view class="sign-modal-content" style="background: #fff; width: 85%; border-radius: 32rpx; padding: 60rpx 40rpx 50rpx; position: relative; box-sizing: border-box; text-align: center; box-shadow: 0 20rpx 40rpx rgba(0,0,0,0.1);">
       
           <!-- 庆祝图标与标题 -->

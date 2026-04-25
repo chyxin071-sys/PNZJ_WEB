@@ -20,39 +20,78 @@
     <!-- === 文件图纸 Tab === -->
     <block wx:if="{{activeTab === 'files'}}">
       <!-- 空状态 -->
-      <view wx:if="{{files.length === 0}}" class="flex flex-col items-center justify-center py-20">
+      <view wx:if="{{groupedFiles.length === 0}}" class="flex flex-col items-center justify-center py-20">
         <view class="w-24 h-24 mb-4 bg-gray-100 rounded-full flex items-center justify-center">
           <text class="text-gray-400 text-3xl">📄</text>
         </view>
         <text class="text-gray-500 text-sm">暂无项目资料，请点击下方按钮上传</text>
       </view>
 
-      <!-- 文件列表 -->
-      <view wx:for="{{files}}" wx:key="fileID" class="mb-4" style="border-radius: 32rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); border: 2rpx solid #f3f4f6; background: #fff;">
-        <scroll-view scroll-x="true" scroll-with-animation="true" show-scrollbar="{{false}}" paging-enabled="true" style="width: 100%; white-space: nowrap; background: #fff;">
-          <view style="display: flex; flex-direction: row; width: 100%;">
-            <!-- 顶层可滑动内容区 -->
-            <view class="bg-white p-4 flex items-center" style="width: 100%; flex-shrink: 0; box-sizing: border-box;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
-              <!-- 文件信息 -->
-              <view class="flex-1 overflow-hidden pl-2">
-                <view class="text-sm font-bold text-gray-900 mb-1 truncate" style="white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">{{item.name}}</view>
-                <view class="text-xs text-gray-500 flex items-center">
-                  <text class="mr-2">{{item.sizeStr}}</text>
-                  <text class="text-gray-300 mr-2">|</text>
-                  <text class="mr-2">{{item.uploader || '未知'}}</text>
-                  <text class="text-gray-300 mr-2">|</text>
-                  <text>{{item.displayTime}}</text>
-                </view>
+      <!-- 文件夹列表 -->
+      <block wx:for="{{groupedFiles}}" wx:key="folderName" wx:for-item="group" wx:for-index="catIndex">
+        <view style="margin-bottom: 40rpx;">
+          <!-- 文件夹标题 -->
+          <view bindtap="toggleFolder" data-index="{{catIndex}}" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24rpx; padding: 12rpx 0;">
+            <view style="display: flex; align-items: center; gap: 12rpx; flex: 1; min-width: 0;">
+              <view style="width: 8rpx; height: 32rpx; background: var(--primary-600); border-radius: 4rpx; flex-shrink: 0;"></view>
+              <view style="font-size: 32rpx; font-weight: bold; color: var(--primary-900); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{group.folderName}}</view>
+              <view style="font-size: 24rpx; color: #94a3b8; margin-left: 8rpx; flex-shrink: 0;">{{group.items.length}} 项</view>
+            </view>
+            <view style="display: flex; align-items: center; gap: 24rpx; flex-shrink: 0; margin-left: 20rpx;">
+              <view wx:if="{{isUploader && group.folderName !== '默认文件夹'}}" catchtap="openFolderOptions" data-foldername="{{group.folderName}}" style="font-size: 36rpx; color: #94a3b8; padding: 4rpx 16rpx; display: flex; align-items: center; justify-content: center;">
+                <text>✎</text>
+              </view>
+              <view style="color: #94a3b8; font-size: 24rpx; transition: transform 0.3s; transform: rotate({{group.isCollapsed ? '-90deg' : '0'}});">
+                ▼
               </view>
             </view>
-            
-            <!-- 右侧滑动删除按钮 -->
-            <view wx:if="{{isUploader}}" catchtap="deleteFile" data-index="{{index}}" style="width: 160rpx; background: var(--rose-600); color: white; display: flex; align-items: center; justify-content: center; font-size: 28rpx; font-weight: bold; flex-shrink: 0;">
-              删除
-            </view>
           </view>
-        </scroll-view>
-      </view>
+          
+          <view wx:if="{{!group.isCollapsed}}">
+            <view wx:if="{{group.items.length === 0}}" style="padding: 24rpx; text-align: center; color: #94a3b8; font-size: 24rpx; background: #f8fafc; border-radius: 16rpx; border: 2rpx dashed #e2e8f0;">
+              该文件夹为空
+            </view>
+
+            <!-- 文件列表 -->
+              <view wx:for="{{group.items}}" wx:key="fileID" class="mb-4" style="border-radius: 32rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); border: 2rpx solid #f3f4f6; background: #fff;">
+                <scroll-view class="swipe-area" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
+                  <view class="swipe-view" style="display: inline-flex; flex-direction: row; min-width: 100%; align-items: stretch;">
+                    <!-- 顶层可滑动内容区 -->
+                <view class="bg-white p-4 flex flex-col justify-center" style="width: 100%; scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; white-space: normal;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
+                  <!-- 文件信息 -->
+                  <view class="flex-1 overflow-hidden pl-2">
+                    <view class="text-sm font-bold text-gray-900 mb-1 truncate flex items-center gap-2" style="white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                      {{item.name}}
+                      <text style="font-size: 20rpx; background: {{item.isVisible === false ? '#f1f5f9' : 'var(--emerald-50)'}}; color: {{item.isVisible === false ? '#64748b' : 'var(--emerald-600)'}}; padding: 2rpx 8rpx; border-radius: 8rpx; font-weight: normal; flex-shrink: 0;">{{item.isVisible === false ? '内部' : '公开'}}</text>
+                    </view>
+                    <view class="text-xs text-gray-500 flex items-center">
+                      <text class="mr-2">{{item.sizeStr}}</text>
+                      <text class="text-gray-300 mr-2">|</text>
+                      <text class="mr-2">{{item.uploader || '未知'}}</text>
+                      <text class="text-gray-300 mr-2">|</text>
+                      <text>{{item.displayTime}}</text>
+                    </view>
+                  </view>
+                </view>
+                
+                <!-- 右侧滑动操作按钮 -->
+                <view wx:if="{{isUploader}}" style="display: flex; flex-shrink: 0; width: 300rpx; scroll-snap-align: end;">
+                  <view catchtap="toggleVisibility" data-id="{{item.fileID}}" style="width: 100rpx; background: {{item.isVisible === false ? 'var(--emerald-600)' : '#94a3b8'}}; color: white; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: bold; height: 100%;">
+                    {{item.isVisible === false ? '公开' : '内部'}}
+                  </view>
+                  <view catchtap="openMoveFileModal" data-id="{{item.fileID}}" style="width: 100rpx; background: var(--amber-500); color: white; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: bold; height: 100%;">
+                    移动
+                  </view>
+                  <view catchtap="deleteFile" data-id="{{item.fileID}}" style="width: 100rpx; background: var(--rose-600); color: white; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: bold; height: 100%;">
+                    删除
+                  </view>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
+          </view>
+        </view>
+      </block>
     </block>
 
     <!-- === 材料清单 Tab === -->
@@ -100,12 +139,110 @@
   </scroll-view>
 
   <!-- 底部固定上传按钮 -->
-  <view style="position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; display: flex; gap: 24rpx; box-sizing: border-box;">
-    <view wx:if="{{activeTab === 'files' && isUploader}}" bindtap="chooseAndUpload" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);" class="active:opacity-80 transition-opacity">
-      上传资料
+  <view style="position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; display: flex; flex-direction: column; gap: 16rpx; box-sizing: border-box;">
+    <view wx:if="{{activeTab === 'files' && isUploader}}" style="font-size: 22rpx; color: #94a3b8; text-align: center;">
+      为确保上传稳定性，大文件建议分批上传
     </view>
-    <view wx:if="{{activeTab === 'materials' && isUploader}}" bindtap="openAddMaterial" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);" class="active:opacity-80 transition-opacity">
-      添加材料记录
+    <view style="display: flex; gap: 24rpx; width: 100%;">
+      <view wx:if="{{activeTab === 'files' && isUploader}}" bindtap="chooseAndUpload" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);" class="active:opacity-80 transition-opacity">
+        上传资料
+      </view>
+      <view wx:if="{{activeTab === 'materials' && isUploader}}" bindtap="openAddMaterial" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);" class="active:opacity-80 transition-opacity">
+        添加材料记录
+      </view>
+    </view>
+  </view>
+
+  <!-- 移动文件弹窗 -->
+  <view wx:if="{{showMoveFileModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; justify-content: center; align-items: center;">
+    <view style="background: #fff; width: 85%; border-radius: 24rpx; overflow: hidden;">
+      <view style="padding: 32rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+        <view style="font-size: 32rpx; font-weight: bold;">移动文件至</view>
+        <view bindtap="closeMoveFileModal" style="font-size: 40rpx; color: #94a3b8; line-height: 1;">×</view>
+      </view>
+      <view style="padding: 32rpx; display: flex; flex-direction: column; gap: 24rpx;">
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">选择目标文件夹</view>
+          <picker mode="selector" range="{{folderOptions}}" range-key="" bindchange="onMoveFolderChange">
+            <view style="background: #f8fafc; padding: 20rpx; border-radius: 8rpx; font-size: 28rpx; color: #334155; display: flex; justify-content: space-between;">
+              <text>{{moveFolderIndex == folders.length ? '新建文件夹...' : folders[moveFolderIndex]}}</text>
+              <text style="color: #94a3b8;">▼</text>
+            </view>
+          </picker>
+        </view>
+        <view wx:if="{{moveFolderIndex == folders.length}}">
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">新建文件夹名称 <text style="color: var(--rose-600);">*</text></view>
+          <input placeholder="请输入文件夹名称" value="{{moveNewFolderName}}" bindinput="onMoveNewFolderInput" style="background: #f8fafc; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        </view>
+      </view>
+      <view style="display: flex; border-top: 1rpx solid #f1f5f9;">
+        <view bindtap="closeMoveFileModal" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; color: #64748b;">取消</view>
+        <view bindtap="confirmMoveFile" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; font-weight: bold; color: #fff; background: var(--primary-900);">确定移动</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 重命名文件夹弹窗 -->
+  <view wx:if="{{showRenameFolderModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; justify-content: center; align-items: center;">
+    <view style="background: #fff; width: 85%; border-radius: 24rpx; overflow: hidden;">
+      <view style="padding: 32rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+        <view style="font-size: 32rpx; font-weight: bold;">重命名文件夹</view>
+        <view bindtap="closeRenameFolderModal" style="font-size: 40rpx; color: #94a3b8; line-height: 1;">×</view>
+      </view>
+      <view style="padding: 32rpx; display: flex; flex-direction: column; gap: 24rpx;">
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">原文件夹名称</view>
+          <view style="background: #f1f5f9; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; color: #94a3b8; width: 100%; box-sizing: border-box;">{{oldFolderName}}</view>
+        </view>
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">新文件夹名称 <text style="color: var(--rose-600);">*</text></view>
+          <input placeholder="请输入新文件夹名称" value="{{renameFolderNameInput}}" bindinput="onRenameFolderInput" style="background: #f8fafc; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        </view>
+      </view>
+      <view style="display: flex; border-top: 1rpx solid #f1f5f9;">
+        <view bindtap="closeRenameFolderModal" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; color: #64748b;">取消</view>
+        <view bindtap="confirmRenameFolder" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; font-weight: bold; color: #fff; background: var(--primary-900);">确定修改</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{showFolderSelectModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; justify-content: center; align-items: center;">
+    <view style="background: #fff; width: 85%; border-radius: 24rpx; overflow: hidden;">
+      <view style="padding: 32rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+        <view style="font-size: 32rpx; font-weight: bold;">选择上传文件夹</view>
+        <view bindtap="closeFolderSelectModal" style="font-size: 40rpx; color: #94a3b8; line-height: 1;">×</view>
+      </view>
+      <view style="padding: 32rpx; display: flex; flex-direction: column; gap: 24rpx;">
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">选择目标文件夹</view>
+          <picker mode="selector" range="{{folderOptions}}" range-key="" bindchange="onFolderChange">
+            <view style="background: #f8fafc; padding: 20rpx; border-radius: 8rpx; font-size: 28rpx; color: #334155; display: flex; justify-content: space-between;">
+              <text>{{selectedFolderIndex == folders.length ? '新建文件夹...' : folders[selectedFolderIndex]}}</text>
+              <text style="color: #94a3b8;">▼</text>
+            </view>
+          </picker>
+        </view>
+        <view wx:if="{{selectedFolderIndex == folders.length}}">
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">新建文件夹名称 <text style="color: var(--rose-600);">*</text></view>
+          <input placeholder="请输入文件夹名称" value="{{newFolderName}}" bindinput="onNewFolderInput" style="background: #f8fafc; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        </view>
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">可见性设置</view>
+          <view style="display: flex; gap: 24rpx;">
+            <view bindtap="onVisibilityChange" data-val="public" style="flex: 1; padding: 16rpx 0; text-align: center; border-radius: 8rpx; font-size: 28rpx; border: 2rpx solid {{uploadVisibility === 'public' ? 'var(--primary-600)' : '#e2e8f0'}}; color: {{uploadVisibility === 'public' ? 'var(--primary-700)' : '#64748b'}}; background: {{uploadVisibility === 'public' ? 'var(--primary-50)' : '#f8fafc'}};">
+              公开 (客户可见)
+            </view>
+            <view bindtap="onVisibilityChange" data-val="internal" style="flex: 1; padding: 16rpx 0; text-align: center; border-radius: 8rpx; font-size: 28rpx; border: 2rpx solid {{uploadVisibility === 'internal' ? 'var(--primary-600)' : '#e2e8f0'}}; color: {{uploadVisibility === 'internal' ? 'var(--primary-700)' : '#64748b'}}; background: {{uploadVisibility === 'internal' ? 'var(--primary-50)' : '#f8fafc'}};">
+              仅内部
+            </view>
+          </view>
+        </view>
+        <view style="font-size: 24rpx; color: #64748b; margin-top: 8rpx;">共选择了 {{tempUploadFiles.length}} 个文件</view>
+      </view>
+      <view style="display: flex; border-top: 1rpx solid #f1f5f9;">
+        <view bindtap="closeFolderSelectModal" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; color: #64748b;">取消</view>
+        <view bindtap="confirmUpload" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; font-weight: bold; color: #fff; background: var(--primary-900);">开始上传</view>
+      </view>
     </view>
   </view>
 

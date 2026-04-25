@@ -302,6 +302,22 @@ Page({
     }
   },
 
+  addSystemFollowUp(leadId, content) {
+    if (!leadId) return;
+    const db = wx.cloud.database();
+    db.collection('followUps').add({
+      data: {
+        leadId: leadId,
+        content: `【系统自动记录】\n${content}`,
+        creatorName: '客户/外部访客',
+        creatorRole: 'guest',
+        createTime: db.serverDate(),
+        type: 'system',
+        location: null
+      }
+    }).catch(err => console.error('添加系统跟进记录失败', err));
+  },
+
   _notifyStaff(applicantName, relation, nowStr) {
     const db = wx.cloud.database();
     const projectId = this.data.id;
@@ -315,6 +331,11 @@ Page({
       if (!p) return;
       const address = (p.address || p.customer || '未知工地').substring(0, 20);
       const notifyContent = `${applicantName}(${relation})申请查看工地进度：${address}`;
+
+      // 写一条跟进记录
+      if (p.leadId) {
+        this.addSystemFollowUp(p.leadId, notifyContent);
+      }
 
       const staffNames = [];
       if (p.sales) p.sales.split(',').map(s=>s.trim()).filter(Boolean).forEach(s => staffNames.push(s));
@@ -353,10 +374,77 @@ Page({
                 thing2: { value: notifyContent.substring(0, 20) }
               }
             }
-          }).catch(() => {});
+          }).catch(err => console.error('发送订阅消息失败', err));
         });
       }).catch(() => {});
     }).catch(() => {});
+  },
+
+  toggleFolder(e) {
+    const index = e.currentTarget.dataset.index;
+    const key = `groupedFiles[${index}].isCollapsed`;
+    this.setData({ [key]: !this.data.groupedFiles[index].isCollapsed });
+  },
+
+  previewFile(e) {
+    const item = e.currentTarget.dataset.item;
+    if (!item || !item.fileID) return;
+
+    // 尝试区分图片和其他文件
+    const isImage = item.name && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(item.name);
+    
+    wx.showLoading({ title: '加载中...' });
+    wx.cloud.getTempFileURL({
+      fileList: [item.fileID],
+      success: res => {
+        wx.hideLoading();
+        if (res.fileList && res.fileList.length > 0 && res.fileList[0].tempFileURL) {
+          const tempUrl = res.fileList[0].tempFileURL;
+          if (isImage) {
+            wx.previewImage({
+              current: tempUrl,
+              urls: [tempUrl]
+            });
+          } else {
+            wx.showLoading({ title: '正在打开文件...' });
+            wx.downloadFile({
+              url: tempUrl,
+              success: (dlRes) => {
+                if (dlRes.statusCode === 200) {
+                  wx.openDocument({
+                    filePath: dlRes.tempFilePath,
+                    showMenu: true,
+                    success: () => {
+                      wx.hideLoading();
+                    },
+                    fail: (err) => {
+                      console.error('打开文件失败', err);
+                      wx.hideLoading();
+                      wx.showToast({ title: '打开文件失败', icon: 'none' });
+                    }
+                  });
+                } else {
+                  wx.hideLoading();
+                  wx.showToast({ title: '下载文件失败', icon: 'none' });
+                }
+              },
+              fail: (err) => {
+                console.error('下载失败', err);
+                wx.hideLoading();
+                wx.showToast({ title: '下载失败', icon: 'none' });
+              }
+            });
+          }
+        } else {
+          wx.showToast({ title: '获取文件链接失败', icon: 'none' });
+        }
+      },
+      fail: err => {
+        console.error('getTempFileURL 失败', err);
+        wx.hideLoading();
+        wx.showToast({ title: '打开失败', icon: 'none' });
+      }
+    });
   },
 
   computeGroupedMaterials(materials) {
@@ -414,11 +502,46 @@ Page({
           this._convertAllNodeImages(nodesWithExpand);
         }
 
-        // 获取该工地的材料清单
+        // 获取该工地的材料清单和项目资料
         if (p.leadId) {
           db.collection('leads').doc(p.leadId).get().then(leadRes => {
-            const materials = leadRes.data.materialList || [];
-            this.setData({ materials, groupedMaterials: this.computeGroupedMaterials(materials) });
+            const lead = leadRes.data;
+            const materials = lead.materialList || [];
+            
+            // 处理项目资料
+            let files = lead.files || [];
+            if (!this.data.isEmployee) {
+              files = files.filter(f => f.isVisible !== false);
+            }
+
+            const folders = lead.fileFolders || ['默认文件夹'];
+            const sortedFiles = files.map(f => {
+              let dTime = '刚刚';
+              if (f.uploadTime) dTime = String(f.uploadTime).substring(0, 10);
+              else if (f.createdAt) dTime = String(f.createdAt).substring(0, 10);
+              const folderName = f.folderName || folders[0] || '默认文件夹';
+              return { ...f, displayTime: dTime, folderName };
+            }).sort((a, b) => {
+              const timeA = a && a.uploadTime ? String(a.uploadTime) : '';
+              const timeB = b && b.uploadTime ? String(b.uploadTime) : '';
+              return timeB.localeCompare(timeA);
+            });
+
+            const groupedFiles = folders.map(folderName => {
+              const existingGroup = (this.data.groupedFiles || []).find(g => g.folderName === folderName);
+              return {
+                folderName: folderName,
+                items: sortedFiles.filter(f => f.folderName === folderName),
+                isCollapsed: existingGroup ? existingGroup.isCollapsed : false
+              };
+            }).filter(g => this.data.isEmployee || g.items.length > 0);
+
+            this.setData({ 
+              materials, 
+              groupedMaterials: this.computeGroupedMaterials(materials),
+              files: sortedFiles,
+              groupedFiles
+            });
           }).catch(() => {});
         }
       } else {

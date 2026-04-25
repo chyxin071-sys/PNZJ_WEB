@@ -35,6 +35,12 @@ module.exports = { getStatusClass: getStatusClass };
       var end = getDate(actualEndDate.replace(getRegExp('-', 'g'), '/')).getTime();
       return Math.max(1, Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1);
     },
+    getPlanDays: function(startDate, endDate) {
+      if (!startDate || !endDate) return 0;
+      var start = getDate(startDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      var end = getDate(endDate.replace(getRegExp('-', 'g'), '/')).getTime();
+      return Math.max(1, Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1);
+    },
     formatDateRange: function(start, end) {
       if (!start || !end) return start + ' ~ ' + end;
       var startParts = start.split('-');
@@ -45,6 +51,17 @@ module.exports = { getStatusClass: getStatusClass };
         return start + ' ~ ' + endParts[1] + '-' + endParts[2];
       }
       return start + ' ~ ' + end;
+    },
+    formatDateOnly: function(dateStr) {
+      if (!dateStr) return '';
+      var str = dateStr.toString();
+      if (str.indexOf('T') !== -1) {
+        return str.split('T')[0];
+      }
+      if (str.indexOf(' ') !== -1) {
+        return str.split(' ')[0];
+      }
+      return str;
     }
   };
 </wxs>
@@ -248,9 +265,7 @@ module.exports = { getStatusClass: getStatusClass };
         <button wx:if="{{isDesigner || isAdmin}}" class="btn-outline-primary hover-scale" style="width: 70%; margin: 0 auto; height: 88rpx; line-height: 88rpx; display: flex; align-items: center; justify-content: center; border-radius: 44rpx; font-size: 32rpx; font-weight: bold; background: #faf8f5; color: var(--primary-900); border: 2rpx solid var(--primary-900); box-shadow: 0 4rpx 12rpx rgba(74,64,58,0.05);" bindtap="openStartDesignModal">开启设计工作流</button>
       </view>
       <view wx:else>
-        <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30rpx;">
-          <view class="section-title" style="margin-bottom: 0;">出图进度</view>
-        </view>
+        <!-- 原：出图进度 标题。现：已移除，因为与上方的“设计进度”重复 -->
         <!-- 时间轴容器 -->
         <view style="position: relative; width: 100%; box-sizing: border-box;">
           <!-- 垂直线背景 -->
@@ -302,7 +317,7 @@ module.exports = { getStatusClass: getStatusClass };
                   <view style="width: 70rpx;">计划：</view>
                   <view>{{ganttUtil.formatDateRange(item.startDate, item.endDate)}}</view>
                 </view>
-                <view style="padding: 2rpx 12rpx; background: #f1f5f9; border-radius: 8rpx; color: #64748b; font-size: 20rpx;">计划 {{item.duration}} 天</view>
+                <view style="padding: 2rpx 12rpx; background: #f1f5f9; border-radius: 8rpx; color: #64748b; font-size: 20rpx;">计划 {{ganttUtil.getPlanDays(item.startDate, item.endDate)}} 天</view>
               </view>
               <!-- 实际进度与延期原因 -->
               <view wx:if="{{item.status !== 'pending' && item.actualStartDate}}" style="display: flex; flex-direction: column; gap: 8rpx;">
@@ -327,12 +342,126 @@ module.exports = { getStatusClass: getStatusClass };
                   </block>
                 </view>
               </view>
+
+              <!-- 附件/图片展示及上传区域 -->
+              <view wx:if="{{item.status !== 'pending'}}" style="margin-top: 16rpx; border-top: 1rpx dashed #f1f5f9; padding-top: 16rpx; width: 100%;">
+                <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12rpx;">
+                  <text style="font-size: 22rpx; color: #64748b; font-weight: bold;">相关附件/图片 ({{item.files ? item.files.length : (item.images ? item.images.length : 0)}})</text>
+                  <view wx:if="{{isAdmin || isDesigner}}" bindtap="uploadDesignFile" data-index="{{index}}" style="font-size: 22rpx; color: var(--primary-600); background: var(--primary-50); padding: 6rpx 20rpx; border-radius: 20rpx; display: flex; align-items: center; gap: 8rpx; font-weight: bold;">
+                    <text style="font-size: 24rpx;">+</text>
+                    <text>上传</text>
+                  </view>
+                </view>
+                
+                <view wx:if="{{(item.files && item.files.length > 0) || (item.images && item.images.length > 0)}}" style="display: flex; flex-direction: column; gap: 12rpx; width: 100%;">
+                  <!-- 兼容旧的 images 数组 -->
+                  <view wx:if="{{item.images && item.images.length > 0}}" style="display: flex; flex-wrap: wrap; gap: 12rpx;">
+                    <block wx:for="{{item.images}}" wx:key="*this" wx:for-item="imgUrl" wx:for-index="imgIdx">
+                      <view style="position: relative; width: 140rpx; height: 140rpx; border-radius: 8rpx; overflow: hidden; background: #f8fafc; border: 1rpx solid #f1f5f9;">
+                        <image src="{{imgUrl}}" mode="aspectFill" bindtap="previewDesignImage" data-index="{{index}}" data-imgurl="{{imgUrl}}" style="width: 100%; height: 100%;" />
+                        <view wx:if="{{isAdmin || isDesigner}}" bindtap="deleteDesignImage" data-index="{{index}}" data-imgidx="{{imgIdx}}" style="position: absolute; top: 4rpx; right: 4rpx; width: 36rpx; height: 36rpx; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                          <text style="color: #fff; font-size: 24rpx; line-height: 1; transform: translateY(-2rpx);">×</text>
+                        </view>
+                      </view>
+                    </block>
+                  </view>
+                  
+                  <!-- 新的 files 对象数组 (文件可滑动) -->
+                  <block wx:if="{{item.files && item.files.length > 0}}">
+                    <view wx:for="{{item.files}}" wx:key="fileID" wx:for-item="fileObj" wx:for-index="fileIdx" style="margin-bottom: 12rpx; border-radius: 8rpx; overflow: hidden; border: 1rpx solid #f1f5f9; background: #fff; width: 100%;">
+                      <scroll-view scroll-x="true" enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
+                        <view style="display: flex; flex-direction: row; min-width: 100%; align-items: stretch;">
+                          <!-- 顶层可滑动内容区 -->
+                            <view style="display: flex; align-items: center; width: 100%; scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; padding: 12rpx 16rpx; background: #f8fafc; white-space: normal;" bindtap="previewDesignFile" data-index="{{index}}" data-fileidx="{{fileIdx}}">
+                              <view style="width: 60rpx; height: 60rpx; flex-shrink: 0; background: #e2e8f0; border-radius: 8rpx; display: flex; align-items: center; justify-content: center; margin-right: 16rpx;">
+                              <image wx:if="{{fileObj.type === 'image'}}" src="{{fileObj.fileID}}" mode="aspectFill" style="width: 100%; height: 100%; border-radius: 8rpx;" />
+                              <text wx:elif="{{fileObj.type === 'video'}}" style="font-size: 28rpx;">🎬</text>
+                              <text wx:elif="{{fileObj.type === 'doc'}}" style="font-size: 28rpx;">📄</text>
+                              <text wx:else style="font-size: 28rpx;">📁</text>
+                            </view>
+                            <view style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                              <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6rpx;">
+                                <view style="font-size: 24rpx; color: #334155; font-weight: 500; display: flex; align-items: center; flex: 1; min-width: 0; margin-right: 12rpx;">
+                                  <view style="flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{fileObj.name}}</view>
+                                </view>
+                                <text style="color: {{fileObj.isVisible === false ? '#64748b' : 'var(--emerald-600)'}}; background: {{fileObj.isVisible === false ? '#f1f5f9' : 'var(--emerald-50)'}}; padding: 2rpx 8rpx; border-radius: 4rpx; font-size: 20rpx; flex-shrink: 0; line-height: 1;">{{fileObj.isVisible === false ? '仅内部' : '公开'}}</text>
+                              </view>
+                              <view style="display: flex; align-items: center; justify-content: space-between; gap: 12rpx; font-size: 20rpx; color: #94a3b8; line-height: 1;">
+                                <text>{{fileObj.sizeStr}}</text>
+                                <text wx:if="{{fileObj.uploadTime}}">{{ganttUtil.formatDateOnly(fileObj.uploadTimeStr || fileObj.uploadTime)}}</text>
+                              </view>
+                            </view>
+                          </view>
+                          <!-- 右侧滑动操作按钮 -->
+                          <view wx:if="{{isAdmin || isDesigner}}" style="display: flex; flex-shrink: 0; width: 180rpx; scroll-snap-align: end;">
+                            <view catchtap="toggleDesignFileVisibility" data-index="{{index}}" data-fileidx="{{fileIdx}}" style="width: 90rpx; background: {{fileObj.isVisible === false ? 'var(--emerald-600)' : '#94a3b8'}}; color: white; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: bold; height: 100%;">
+                              {{fileObj.isVisible === false ? '公开' : '仅内部'}}
+                            </view>
+                            <view catchtap="deleteDesignFile" data-index="{{index}}" data-fileidx="{{fileIdx}}" style="width: 90rpx; background: var(--rose-600); color: white; display: flex; align-items: center; justify-content: center; font-size: 24rpx; font-weight: bold; height: 100%;">
+                              删除
+                            </view>
+                          </view>
+                        </view>
+                      </scroll-view>
+                    </view>
+                  </block>
+                </view>
+                <view wx:elif="{{!(isAdmin || isDesigner)}}" style="font-size: 22rpx; color: #cbd5e1; padding: 12rpx 0;">暂无附件</view>
+              </view>
             </view>
           </view>
         </view>
+      </view>
+      <!-- 添加设计节点弹窗 -->
+  <view class="modal-mask" wx:if="{{showAddDesignNodeModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center;">
+    <view class="custom-modal-content" style="background: #fff; width: 90%; border-radius: 24rpx; padding: 40rpx; box-sizing: border-box; display: flex; flex-direction: column; position: relative;">
+      <view style="font-size: 32rpx; font-weight: bold; margin-bottom: 24rpx; text-align: center; flex-shrink: 0;">添加设计节点</view>
+      
+      <view style="width: 100%; box-sizing: border-box;">
+        <view class="edit-node-item" style="display: flex; flex-direction: column; margin-bottom: 24rpx; align-items: stretch; gap: 0; width: 100%; box-sizing: border-box; margin-left: 0; margin-right: 0;">
+          
+          <!-- 第一行：名称 -->
+          <view style="position: relative; margin-bottom: 16rpx; width: 100%; display: block; box-sizing: border-box;">
+            <picker mode="selector" range="{{designNodeOptions}}" value="{{addNodeData.nameIndex}}" bindchange="onAddNodeNamePicker" style="width: 100%; display: block; overflow: hidden;">
+              <view style="width: 100%; font-size: 30rpx; color: #44403c; font-weight: bold; background: #fff; border: 2rpx solid #e2e8f0; height: 72rpx; padding: 0 60rpx 0 24rpx; border-radius: 8rpx; box-sizing: border-box; margin: 0; display: flex; align-items: center;">
+                {{addNodeData.isCustom ? '自定义' : addNodeData.name}}
+                <text class="iconfont icon-down" style="position: absolute; right: 24rpx; color: #94a3b8; font-size: 24rpx;">▼</text>
+              </view>
+            </picker>
+            <input wx:if="{{addNodeData.isCustom}}" class="edit-node-input" value="{{addNodeData.name}}" bindinput="onAddNodeName" placeholder="输入自定义名称" style="width: 100%; font-size: 28rpx; color: #44403c; background: #f8fafc; border: 2rpx solid #e2e8f0; height: 72rpx; padding: 0 24rpx; border-radius: 8rpx; box-sizing: border-box; margin-top: 16rpx; display: block;" />
+          </view>
+          
+          <!-- 第二行：开始时间 + 结束时间 -->
+          <view style="display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box; margin: 0; gap: 16rpx;">
+            <picker mode="date" value="{{addNodeData.startDate}}" bindchange="onAddNodeStartDate" style="flex: 1; display: block; overflow: hidden;">
+              <view style="display: flex; align-items: center; font-size: 26rpx; color: #94a3b8;">
+                <text style="margin-right: 16rpx; flex-shrink: 0;">开始</text>
+                <view style="flex: 1; background: #fff; border: 2rpx solid #e2e8f0; border-radius: 8rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; color: #44403c; font-weight: bold; padding: 0 16rpx;">
+                  {{addNodeData.startDate || '请选择'}}
+                </view>
+              </view>
+            </picker>
+            <picker mode="date" value="{{addNodeData.endDate}}" bindchange="onAddNodeEndDate" style="flex: 1; display: block; overflow: hidden;">
+              <view style="display: flex; align-items: center; font-size: 26rpx; color: #94a3b8;">
+                <text style="margin-right: 16rpx; flex-shrink: 0;">结束</text>
+                <view style="flex: 1; background: #fff; border: 2rpx solid #e2e8f0; border-radius: 8rpx; height: 72rpx; display: flex; align-items: center; justify-content: center; color: #44403c; font-weight: bold; padding: 0 16rpx;">
+                  {{addNodeData.endDate || '请选择'}}
+                </view>
+              </view>
+            </picker>
+          </view>
         </view>
       </view>
+      
+      <view style="display: flex; gap: 20rpx; margin-top: 10rpx;">
+        <button bindtap="closeAddDesignNodeModal" style="flex: 1; font-size: 30rpx; background: #f1f5f9; color: #475569; border-radius: 16rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: 500; line-height: 1;">取消</button>
+        <button bindtap="confirmAddDesignNode" style="flex: 1; font-size: 30rpx; background: var(--primary-900); color: #fff; border-radius: 16rpx; border: none; padding: 24rpx 0; margin: 0; font-weight: bold; line-height: 1;">确认添加</button>
+      </view>
     </view>
+  </view>
+  </view>
+  </view>
+  <!-- 设计进度 Tab 结束 -->
 
     <!-- 跟进记录 Tab -->
     <view wx:if="{{activeTab === 'follow'}}" class="follow-section">
@@ -343,7 +472,7 @@ module.exports = { getStatusClass: getStatusClass };
         
         <!-- 左滑组件 (使用 scroll-view + scroll-snap 实现QQ级完美回弹和高度自适应) -->
         <view class="swipe-container" style="width: calc(100vw - 152rpx); border-radius: 16rpx; overflow: hidden; transform: translateZ(0);">
-          <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{true}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
+          <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
             <view class="swipe-view" style="display: inline-flex; min-width: 100%;">
               
               <!-- 表面内容卡片 (滚动对齐点) -->
@@ -381,7 +510,7 @@ module.exports = { getStatusClass: getStatusClass };
   <!-- 底部操作栏 -->
   <view class="bottom-action-bar" style="display: flex; gap: 20rpx;" wx:if="{{isRelated}}">
     <view class="btn-primary hover-scale" bindtap="addFollowUp" wx:if="{{activeTab === 'follow'}}" style="flex: 1; text-align: center;">添加跟进</view>
-    <view class="btn-primary hover-scale" bindtap="openEditDesignModal" wx:elif="{{activeTab === 'design' && (isDesigner || isAdmin) && lead.designNodes && lead.designNodes.length > 0}}" style="flex: 1; text-align: center;">编辑排期</view>
+    <view class="btn-primary hover-scale" bindtap="openAddDesignNodeModal" wx:elif="{{activeTab === 'design' && (isDesigner || isAdmin) && lead.designNodes && lead.designNodes.length > 0}}" style="flex: 1; text-align: center;">添加节点</view>
     <view class="btn-primary hover-scale" bindtap="goToEdit" wx:elif="{{activeTab === 'info' && (isAdmin || isRelated)}}" style="flex: 1; text-align: center;">编辑资料</view>
   </view>
 
@@ -550,4 +679,44 @@ module.exports = { getStatusClass: getStatusClass };
     </view>
   </view>
 
+  <!-- 选择目标文件夹弹窗 (设计节点上传附件用) -->
+  <view wx:if="{{showFolderSelectModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; justify-content: center; align-items: center;">
+    <view style="background: #fff; width: 85%; border-radius: 24rpx; overflow: hidden;">
+      <view style="padding: 32rpx; border-bottom: 1rpx solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+        <view style="font-size: 32rpx; font-weight: bold;">选择上传文件夹</view>
+        <view bindtap="closeFolderSelectModal" style="font-size: 40rpx; color: #94a3b8; line-height: 1;">×</view>
+      </view>
+      <view style="padding: 32rpx; display: flex; flex-direction: column; gap: 24rpx;">
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">选择目标文件夹</view>
+          <picker mode="selector" range="{{folderOptions}}" range-key="" bindchange="onFolderChange">
+            <view style="background: #f8fafc; padding: 20rpx; border-radius: 8rpx; font-size: 28rpx; color: #334155; display: flex; justify-content: space-between;">
+              <text>{{selectedFolderIndex == folders.length ? '新建文件夹...' : folders[selectedFolderIndex]}}</text>
+              <text style="color: #94a3b8;">▼</text>
+            </view>
+          </picker>
+        </view>
+        <view wx:if="{{selectedFolderIndex == folders.length}}">
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">新建文件夹名称 <text style="color: var(--rose-600);">*</text></view>
+          <input placeholder="请输入文件夹名称" value="{{newFolderName}}" bindinput="onNewFolderInput" style="background: #f8fafc; padding: 0 20rpx; height: 80rpx; line-height: 80rpx; border-radius: 8rpx; font-size: 28rpx; width: 100%; box-sizing: border-box;" />
+        </view>
+        <view>
+          <view style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">可见性设置</view>
+          <view style="display: flex; gap: 24rpx;">
+            <view bindtap="onVisibilityChange" data-val="public" style="flex: 1; padding: 16rpx 0; text-align: center; border-radius: 8rpx; font-size: 28rpx; border: 2rpx solid {{uploadVisibility === 'public' ? 'var(--primary-600)' : '#e2e8f0'}}; color: {{uploadVisibility === 'public' ? 'var(--primary-700)' : '#64748b'}}; background: {{uploadVisibility === 'public' ? 'var(--primary-50)' : '#f8fafc'}};">
+              公开 (客户可见)
+            </view>
+            <view bindtap="onVisibilityChange" data-val="internal" style="flex: 1; padding: 16rpx 0; text-align: center; border-radius: 8rpx; font-size: 28rpx; border: 2rpx solid {{uploadVisibility === 'internal' ? 'var(--primary-600)' : '#e2e8f0'}}; color: {{uploadVisibility === 'internal' ? 'var(--primary-700)' : '#64748b'}}; background: {{uploadVisibility === 'internal' ? 'var(--primary-50)' : '#f8fafc'}};">
+              仅内部
+            </view>
+          </view>
+        </view>
+        <view style="font-size: 24rpx; color: #64748b; margin-top: 8rpx;">共选择了 {{tempUploadFiles.length}} 个文件</view>
+      </view>
+      <view style="display: flex; border-top: 1rpx solid #f1f5f9;">
+        <view bindtap="closeFolderSelectModal" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; color: #64748b;">取消</view>
+        <view bindtap="confirmUpload" style="flex: 1; padding: 30rpx 0; text-align: center; font-size: 30rpx; font-weight: bold; color: #fff; background: var(--primary-900);">开始上传</view>
+      </view>
+    </view>
+  </view>
 </view>

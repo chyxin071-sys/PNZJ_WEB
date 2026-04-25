@@ -32,7 +32,12 @@ Page({
           const date = r.createdAt.$date ? new Date(r.createdAt.$date) : new Date(r.createdAt);
           displayTime = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
         }
-        return { ...r, displayTime };
+        let displayApprovedTime = '';
+        if (r.approvedAt) {
+          const d2 = r.approvedAt.$date ? new Date(r.approvedAt.$date) : new Date(r.approvedAt);
+          displayApprovedTime = `${d2.getFullYear()}-${String(d2.getMonth()+1).padStart(2,'0')}-${String(d2.getDate()).padStart(2,'0')} ${String(d2.getHours()).padStart(2,'0')}:${String(d2.getMinutes()).padStart(2,'0')}`;
+        }
+        return { ...r, displayTime, displayApprovedTime };
       });
       this.setData({
         project: projRes.data,
@@ -44,6 +49,28 @@ Page({
     });
   },
 
+  addSystemFollowUp(content) {
+    const leadId = this.data.project?.leadId;
+    if (!leadId) return;
+    
+    const userInfo = wx.getStorageSync('userInfo');
+    const operatorName = userInfo ? userInfo.name : '管理员';
+    const operatorRole = userInfo ? userInfo.role : 'admin';
+    
+    const db = wx.cloud.database();
+    db.collection('followUps').add({
+      data: {
+        leadId: leadId,
+        content: `【系统自动记录】\n${content}`,
+        creatorName: operatorName,
+        creatorRole: operatorRole,
+        createTime: db.serverDate(),
+        type: 'system',
+        location: null
+      }
+    }).catch(err => console.error('添加系统跟进记录失败', err));
+  },
+
   approve(e) {
     const { id, name } = e.currentTarget.dataset;
     wx.showModal({
@@ -53,17 +80,35 @@ Page({
         if (!res.confirm) return;
         wx.showLoading({ title: '处理中...' });
         const db = wx.cloud.database();
+        
+        const userInfo = wx.getStorageSync('userInfo');
+        const operatorName = userInfo ? userInfo.name : '管理员';
+        
         db.collection('shareAccess').doc(id).update({
-          data: { status: 'approved' }
+          data: { 
+            status: 'approved',
+            approvedAt: db.serverDate(),
+            approvedBy: operatorName
+          }
         }).then(() => {
+          const now = new Date();
+          const displayApprovedTime = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
           const requests = this.data.requests.map(r =>
-            r._id === id ? { ...r, status: 'approved' } : r
+            r._id === id ? { 
+              ...r, 
+              status: 'approved',
+              approvedAt: now,
+              approvedBy: operatorName,
+              displayApprovedTime
+            } : r
           );
           this.setData({ requests });
           wx.hideLoading();
           wx.showToast({ title: '已通过', icon: 'success' });
           // 通知申请人
           this._notifyApplicant(id, name, 'approved');
+          // 写跟进记录
+          this.addSystemFollowUp(`已同意访客「${name}」的工地进度查看申请。`);
         }).catch(() => {
           wx.hideLoading();
           wx.showToast({ title: '操作失败', icon: 'error' });
@@ -92,6 +137,8 @@ Page({
           wx.showToast({ title: '已拒绝', icon: 'none' });
           // 通知申请人
           this._notifyApplicant(id, name, 'rejected');
+          // 写跟进记录
+          this.addSystemFollowUp(`已拒绝访客「${name}」的工地进度查看申请。`);
         }).catch(() => {
           wx.hideLoading();
           wx.showToast({ title: '操作失败', icon: 'error' });

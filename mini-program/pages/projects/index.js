@@ -531,28 +531,22 @@ Page({
     return `${y}-${m}-${d}`;
   },
 
-  // 辅助函数：跳过周末计算结束日期
+  // 辅助函数：计算结束日期
   calculateEndDate(startDateStr, durationDays) {
     if (!startDateStr || durationDays <= 0) return startDateStr;
     let current = new Date(startDateStr.replace(/-/g, '/'));
     let added = 0;
     while (added < durationDays - 1) {
       current.setDate(current.getDate() + 1);
-      const day = current.getDay();
-      if (day !== 0 && day !== 6) {
-        added++;
-      }
+      added++;
     }
     return this.formatDate(current);
   },
 
-  // 辅助函数：获取下一个工作日
+  // 辅助函数：获取下一天
   getNextWorkingDay(date) {
     let next = new Date(date);
     next.setDate(next.getDate() + 1);
-    while (next.getDay() === 0 || next.getDay() === 6) {
-      next.setDate(next.getDate() + 1);
-    }
     return next;
   },
 
@@ -712,7 +706,7 @@ Page({
   saveProject() {
     const d = this.data.newProject;
     if (this.data.leadIndex === -1) return wx.showToast({ title: '请选择关联客户', icon: 'none' });
-    if (this.data.managerIndex === 0) return wx.showToast({ title: '请选择项目经理', icon: 'none' });
+    if (!d.manager || d.manager.trim() === '') return wx.showToast({ title: '请选择项目经理', icon: 'none' });
     if (!d.startDate) return wx.showToast({ title: '请选择开工时间', icon: 'none' });
     
     wx.showLoading({ title: '保存中' });

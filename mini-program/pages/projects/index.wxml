@@ -68,11 +68,11 @@
   <!-- 工地列表区 -->
   <view class="list-container">
     <view class="swipe-container" wx:for="{{projects}}" wx:key="_id" style="margin-bottom: 24rpx; transform: translateZ(0);">
-      <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{true}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory; padding: 10rpx 0; margin: -10rpx 0;">
+      <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory; padding: 10rpx 0; margin: -10rpx 0;">
         <view class="swipe-view" style="display: inline-flex; min-width: 100%;">
           
           <!-- 表面内容卡片 (滚动对齐点) -->
-          <view class="project-card" style="width: calc(100vw - 64rpx); scroll-snap-align: start; flex-shrink: 0; white-space: normal; margin-bottom: 0; border-radius: 24rpx; box-sizing: border-box;" bindtap="goToDetail" data-id="{{item._id}}">
+          <view class="project-card" style="width: 100%; scroll-snap-align: start; flex-shrink: 0; white-space: normal; margin-bottom: 0; border-radius: 24rpx; box-sizing: border-box;" bindtap="goToDetail" data-id="{{item._id}}">
             <!-- 头部信息区 -->
             <view class="card-header-new">
         <view class="header-main" style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -289,7 +289,7 @@
   </block>
 
   <!-- 多选弹窗 -->
-  <view class="modal-mask" wx:if="{{showMultiSelect}}" bindtap="closeMultiSelect"></view>
+  <view class="modal-mask" wx:if="{{showMultiSelect}}" bindtap="closeMultiSelect" style="z-index: 9999;"></view>
   <view class="multi-select-modal" wx:if="{{showMultiSelect}}">
     <view class="ms-header">
       <view class="ms-cancel" bindtap="closeMultiSelect">取消</view>

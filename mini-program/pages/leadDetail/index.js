@@ -4,9 +4,6 @@ import { requestSubscribe, TEMPLATE_IDS } from '../../utils/subscribe.js';
 function getNextWorkingDay(date) {
   let d = new Date(date);
   d.setDate(d.getDate() + 1);
-  while (d.getDay() === 0 || d.getDay() === 6) {
-    d.setDate(d.getDate() + 1);
-  }
   return d;
 }
 
@@ -19,39 +16,22 @@ function formatDate(date) {
 
 function calculateEndDate(startStr, durationDays) {
   let d = new Date(startStr.replace(/-/g, '/'));
-  if (d.getDay() === 0 || d.getDay() === 6) d = getNextWorkingDay(d);
   let daysAdded = 0;
   while (daysAdded < durationDays - 1) {
     d.setDate(d.getDate() + 1);
-    if (d.getDay() !== 0 && d.getDay() !== 6) daysAdded++;
+    daysAdded++;
   }
   return formatDate(d);
 }
 
-function recalculateDesignGantt(nodes, startDateStr) {
+function recalculateDesignGantt(nodes) {
   if (!nodes || nodes.length === 0) return nodes;
-  let currentStart = startDateStr;
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i];
-    if (node.status === 'completed') {
-      currentStart = formatDate(getNextWorkingDay(new Date((node.actualEndDate || node.endDate).replace(/-/g, '/'))));
-      node._displayDate = (node.actualEndDate || node.endDate).substring(5);
-      continue;
-    }
-
-    // 优先使用实际开工时间，如果没有，则判断是否有手动顺延的开工时间
-    let startToUse = currentStart;
-    if (node.actualStartDate) {
-      startToUse = node.actualStartDate;
-    } else if (node.manualStartDate && new Date(node.manualStartDate.replace(/-/g, '/')) > new Date(currentStart.replace(/-/g, '/'))) {
-      startToUse = node.manualStartDate;
-    }
-
-    node.startDate = startToUse;
-    // 增加短日期用于显示 (去掉年份)
+    
+    // 如果没有预计开始时间，则不显示短日期
+    let startToUse = node.startDate || '';
     node._displayDate = startToUse ? startToUse.substring(5) : '';
-    node.endDate = calculateEndDate(startToUse, Number(node.duration) || 1);
-    currentStart = formatDate(getNextWorkingDay(new Date(node.endDate.replace(/-/g, '/'))));
   }
   return nodes;
 }
@@ -101,7 +81,18 @@ Page({
     showStartDesignModal: false,
     designStartDate: '',
     showEditDesignModal: false,
-    editDesignNodes: []
+    editDesignNodes: [],
+    designNodeOptions: ['平面布局', '效果图渲染', '施工图深化', '定制图纸绘制', '自定义'],
+    
+    // 文件夹上传相关状态
+    showFolderSelectModal: false,
+    tempUploadFiles: [],
+    currentUploadNodeIndex: 0,
+    uploadSourceType: '',
+    folders: ['默认文件夹'],
+    selectedFolderIndex: 0,
+    newFolderName: '',
+    uploadVisibility: 'internal'
   },
 
   onLoad(options) {
@@ -684,10 +675,7 @@ Page({
     }
     // 默认的节点列表
     const defaultNodes = [
-      { name: "平面布局", duration: 2 },
-      { name: "效果图渲染", duration: 5 },
-      { name: "施工图深化", duration: 3 },
-      { name: "定制图纸绘制", duration: 5 }
+      { name: "平面布局", isCustom: false, nameIndex: 0 },
     ];
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -696,38 +684,66 @@ Page({
     let initialNodes = defaultNodes.map((n, i) => ({
       id: Date.now() + i,
       name: n.name,
-      duration: n.duration,
+      isCustom: n.isCustom,
+      nameIndex: n.nameIndex,
+      startDate: todayStr,
+      endDate: todayStr,
       status: 'pending'
     }));
     
     // 自动计算一次时间，让界面有初始默认值展示
-    initialNodes = recalculateDesignGantt(initialNodes, todayStr);
+    initialNodes = recalculateDesignGantt(initialNodes);
 
     this.setData({
       showStartDesignModal: true,
-      designStartDate: todayStr,
       editDesignNodes: initialNodes
     });
+  },
+
+  onEditNodeNamePicker(e) {
+    const idx = e.currentTarget.dataset.index;
+    const valIdx = e.detail.value;
+    const valStr = this.data.designNodeOptions[valIdx];
+    let nodes = this.data.editDesignNodes;
+    
+    if (valStr === '自定义') {
+      nodes[idx].isCustom = true;
+      nodes[idx].name = '';
+    } else {
+      nodes[idx].isCustom = false;
+      nodes[idx].name = valStr;
+    }
+    nodes[idx].nameIndex = valIdx;
+    
+    this.setData({ editDesignNodes: nodes });
+  },
+
+  onEditNodeName(e) {
+    const idx = e.currentTarget.dataset.index;
+    this.setData({ [`editDesignNodes[${idx}].name`]: e.detail.value });
   },
 
   onEditNodeStartDate(e) {
     const idx = e.currentTarget.dataset.index;
     const selectedDate = e.detail.value;
-    
     let nodes = this.data.editDesignNodes;
-    nodes[idx].manualStartDate = selectedDate;
-    
-    // 选完日期后立即重算展示
-    const startDateToUse = this.data.lead && this.data.lead.designStartDate ? this.data.lead.designStartDate : this.data.designStartDate;
-    nodes = recalculateDesignGantt(nodes, startDateToUse);
-    
+    nodes[idx].startDate = selectedDate;
+    nodes = recalculateDesignGantt(nodes);
+    this.setData({ editDesignNodes: nodes });
+  },
+
+  onEditNodeEndDate(e) {
+    const idx = e.currentTarget.dataset.index;
+    const selectedDate = e.detail.value;
+    let nodes = this.data.editDesignNodes;
+    nodes[idx].endDate = selectedDate;
+    nodes = recalculateDesignGantt(nodes);
     this.setData({ editDesignNodes: nodes });
   },
 
   onDesignStartDateChange(e) {
     const selectedDate = e.detail.value;
     let nodes = this.data.editDesignNodes;
-    nodes = recalculateDesignGantt(nodes, selectedDate);
     this.setData({ designStartDate: selectedDate, editDesignNodes: nodes });
   },
 
@@ -736,35 +752,44 @@ Page({
   },
 
   async confirmStartDesign() {
-    if (!this.data.designStartDate) return wx.showToast({ title: '请选择日期', icon: 'none' });
-
     let nodes = this.data.editDesignNodes;
     if (nodes.length === 0) return wx.showToast({ title: '请至少保留一个节点', icon: 'none' });
+
+    // 检查自定义名称是否为空
+    const hasEmptyName = nodes.some(n => !n.name || n.name.trim() === '');
+    if (hasEmptyName) return wx.showToast({ title: '节点名称不能为空', icon: 'none' });
+
+    // 检查日期是否填写
+    const hasEmptyDate = nodes.some(n => !n.startDate || !n.endDate);
+    if (hasEmptyDate) return wx.showToast({ title: '请选择预计开始和完成日期', icon: 'none' });
+
+    // 检查日期是否合理
+    const hasInvalidDate = nodes.some(n => new Date(n.startDate) > new Date(n.endDate));
+    if (hasInvalidDate) return wx.showToast({ title: '开始时间不能晚于结束时间', icon: 'none' });
 
     // 静默请求订阅授权
     await requestSubscribe();
 
-    // 确保第一个节点是 current
     nodes.forEach(n => n.status = 'pending');
-    nodes[0].status = 'current';
 
-    nodes = recalculateDesignGantt(nodes, this.data.designStartDate);
+    nodes = recalculateDesignGantt(nodes);
+    const designStartDate = nodes[0].startDate;
 
     wx.showLoading({ title: '正在开启...' });
     const db = wx.cloud.database();
     db.collection('leads').doc(this.data.leadId).update({
-      data: { designNodes: nodes, designStartDate: this.data.designStartDate }
+      data: { designNodes: nodes, designStartDate: designStartDate }
     }).then(() => {
       this.setData({
         'lead.designNodes': nodes,
-        'lead.designStartDate': this.data.designStartDate,
+        'lead.designStartDate': designStartDate,
         showStartDesignModal: false
       });
       wx.hideLoading();
-      wx.showToast({ title: '工作流已开启', icon: 'success' });
+      wx.showToast({ title: '工作流已设定', icon: 'success' });
       const startNode = nodes[0];
       const endNode = nodes[nodes.length - 1];
-      this.addSystemFollowUp(`开启设计出图工作流\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`);
+      this.addSystemFollowUp(`设定设计出图工作流\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`);
 
       // 发送通知给关联设计师和所有管理员
       this.notifyDesignStart();
@@ -774,163 +799,270 @@ Page({
     });
   },
 
-  openEditDesignModal() {
+  openAddDesignNodeModal() {
     const userInfo = wx.getStorageSync('userInfo');
     const userRole = userInfo ? userInfo.role : '';
     if (userRole !== 'designer' && userRole !== 'admin') {
-      return wx.showToast({ title: '仅设计师可编辑设计排期', icon: 'none' });
+      return wx.showToast({ title: '仅设计师可添加设计节点', icon: 'none' });
     }
     if (!this.data.lead || !this.data.lead.designNodes) return;
     
-    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
-    const startDateToUse = this.data.lead.designStartDate || new Date().toISOString().split('T')[0];
-    
-    // 强制重算一次，补齐所有缺失的字段（如 _displayDate 等）
-    nodes = recalculateDesignGantt(nodes, startDateToUse);
-    
+    const todayStr = new Date().toISOString().split('T')[0];
     this.setData({
-      showEditDesignModal: true,
-      editDesignNodes: nodes
+      showAddDesignNodeModal: true,
+      addNodeData: {
+        name: this.data.designNodeOptions[0],
+        isCustom: false,
+        nameIndex: 0,
+        startDate: todayStr,
+        endDate: todayStr
+      }
     });
   },
 
-  closeEditDesignModal() {
-    this.setData({ showEditDesignModal: false });
+  closeAddDesignNodeModal() {
+    this.setData({ showAddDesignNodeModal: false });
   },
 
-  onEditNodeName(e) {
-    const idx = e.currentTarget.dataset.index;
-    this.setData({ [`editDesignNodes[${idx}].name`]: e.detail.value });
-  },
-
-  onEditNodeDur(e) {
-    const idx = e.currentTarget.dataset.index;
-    let nodes = this.data.editDesignNodes;
-    const val = e.detail.value;
-
-    // 允许暂时为空，方便用户删除后重新输入
-    if (val === '') {
-      nodes[idx].duration = '';
-      this.setData({ editDesignNodes: nodes });
-      return;
-    }
-
-    const numVal = parseInt(val);
-    if (isNaN(numVal) || numVal < 1) {
-      nodes[idx].duration = 1;
+  onAddNodeNamePicker(e) {
+    const valIdx = e.detail.value;
+    const valStr = this.data.designNodeOptions[valIdx];
+    let nodeData = this.data.addNodeData;
+    
+    if (valStr === '自定义') {
+      nodeData.isCustom = true;
+      nodeData.name = '';
     } else {
-      nodes[idx].duration = numVal;
+      nodeData.isCustom = false;
+      nodeData.name = valStr;
     }
-
-    // 重算排期
-    const startDateToUse = this.data.lead && this.data.lead.designStartDate ? this.data.lead.designStartDate : this.data.designStartDate;
-    nodes = recalculateDesignGantt(nodes, startDateToUse);
-
-    this.setData({ editDesignNodes: nodes });
+    nodeData.nameIndex = valIdx;
+    
+    this.setData({ addNodeData: nodeData });
   },
 
-  addDesignNode() {
-    let nodes = this.data.editDesignNodes;
+  onAddNodeName(e) {
+    this.setData({ 'addNodeData.name': e.detail.value });
+  },
+
+  onAddNodeStartDate(e) {
+    this.setData({ 'addNodeData.startDate': e.detail.value });
+  },
+
+  onAddNodeEndDate(e) {
+    this.setData({ 'addNodeData.endDate': e.detail.value });
+  },
+
+  async confirmAddDesignNode() {
+    let nodeData = this.data.addNodeData;
+    
+    if (nodeData.isCustom && (!nodeData.name || nodeData.name.trim() === '')) {
+      return wx.showToast({ title: '节点名称不能为空', icon: 'none' });
+    }
+    if (!nodeData.startDate || !nodeData.endDate) {
+      return wx.showToast({ title: '请选择预计开始和完成日期', icon: 'none' });
+    }
+    if (new Date(nodeData.startDate) > new Date(nodeData.endDate)) {
+      return wx.showToast({ title: '开始时间不能晚于结束时间', icon: 'none' });
+    }
+
+    // 静默请求订阅授权
+    await requestSubscribe();
+
+    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes || []));
     nodes.push({
       id: Date.now() + Math.random(),
-      name: '新设计节点',
-      duration: 1,
+      name: nodeData.name,
+      isCustom: nodeData.isCustom,
+      nameIndex: nodeData.nameIndex,
+      startDate: nodeData.startDate,
+      endDate: nodeData.endDate,
       status: 'pending'
     });
-    
-    const startDateToUse = this.data.lead && this.data.lead.designStartDate ? this.data.lead.designStartDate : this.data.designStartDate;
-    nodes = recalculateDesignGantt(nodes, startDateToUse);
-    
-    this.setData({ editDesignNodes: nodes });
-  },
 
-  removeDesignNode(e) {
-    const idx = e.currentTarget.dataset.index;
-    const nodes = this.data.editDesignNodes;
-    if (nodes[idx].status === 'completed') {
-      return wx.showToast({ title: '已完成节点无法删除', icon: 'none' });
-    }
-    nodes.splice(idx, 1);
-    
-    // 删除后重算排期
-    const startDateToUse = this.data.lead && this.data.lead.designStartDate ? this.data.lead.designStartDate : this.data.designStartDate;
-    const recalculatedNodes = recalculateDesignGantt(nodes, startDateToUse);
-    
-    this.setData({ editDesignNodes: recalculatedNodes });
-  },
+    nodes = recalculateDesignGantt(nodes);
 
-  confirmEditDesign() {
-    const nodes = this.data.editDesignNodes;
-    if (nodes.length === 0) return wx.showToast({ title: '至少保留一个节点', icon: 'none' });
-    
-    // 确保如果有待办节点，至少有一个是 current
-    const hasCurrent = nodes.some(n => n.status === 'current');
-    if (!hasCurrent) {
-      const firstPending = nodes.find(n => n.status === 'pending');
-      if (firstPending) firstPending.status = 'current';
-    }
-
-    const startNode = nodes.find(n => n.status !== 'completed');
-    const startDateToUse = startNode ? (startNode.startDate || this.data.lead.designStartDate || new Date().toISOString().split('T')[0]) : this.data.lead.designStartDate;
-
-    const recalculatedNodes = recalculateDesignGantt(nodes, this.data.lead.designStartDate || startDateToUse);
-
-    wx.showLoading({ title: '保存中...' });
+    wx.showLoading({ title: '正在添加...' });
     const db = wx.cloud.database();
     db.collection('leads').doc(this.data.leadId).update({
-      data: { designNodes: recalculatedNodes }
-    }).then(() => {
+      data: { designNodes: nodes }
+    }).then(res => {
       this.setData({
-        'lead.designNodes': recalculatedNodes,
-        showEditDesignModal: false
+        'lead.designNodes': nodes,
+        showAddDesignNodeModal: false
       });
       wx.hideLoading();
-      wx.showToast({ title: '排期已更新', icon: 'success' });
-      const startNode = recalculatedNodes[0];
-      const endNode = recalculatedNodes[recalculatedNodes.length - 1];
-      this.addSystemFollowUp(`调整了设计出图排期\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`);
+      wx.showToast({ title: '节点已添加', icon: 'success' });
+      this.addSystemFollowUp(`添加了设计节点：${nodeData.name}\n排期：${nodeData.startDate} 至 ${nodeData.endDate}`);
+      this.notifyDesignAction(`为客户【${this.data.lead.name}】添加了设计节点：【${nodeData.name}】(排期：${nodeData.startDate} 至 ${nodeData.endDate})。`);
+    }).catch((err) => {
+      console.error('Add design node failed:', err);
+      wx.hideLoading();
+      wx.showToast({ title: '添加失败，请重试', icon: 'none' });
+    });
+  },
 
-      // 增加通知：排期被修改时通知其他相关人员
-      const userInfo = wx.getStorageSync('userInfo');
-      const operatorName = userInfo ? (userInfo.name || '未知') : '未知';
-      const notifyUsers = new Set();
-      if (this.data.lead.sales && this.data.lead.sales !== operatorName) notifyUsers.add(this.data.lead.sales);
-      if (this.data.lead.creatorName && this.data.lead.creatorName !== operatorName) notifyUsers.add(this.data.lead.creatorName);
+  async deleteDesignNode(e) {
+    const userInfo = wx.getStorageSync('userInfo');
+    const userRole = userInfo ? userInfo.role : '';
+    if (userRole !== 'designer' && userRole !== 'admin') {
+      return wx.showToast({ title: '仅设计师可删除节点', icon: 'none' });
+    }
 
-      db.collection('users').where({ role: 'admin' }).get().then(res => {
-        res.data.forEach(u => {
-          if (u.name !== operatorName) notifyUsers.add(u.name);
-        });
-        notifyUsers.forEach(u => {
-          if (!u) return;
-          db.collection('notifications').add({
-            data: {
-              type: 'lead',
-              title: '设计排期更新',
-              content: `${operatorName} 调整了客户【${this.data.lead.name}】的设计出图排期。`,
-              senderName: operatorName,
-              senderRole: userInfo.role || 'default',
-              targetUser: u,
-              isRead: false,
-              createTime: db.serverDate(),
-              link: `/pages/leadDetail/index?id=${this.data.leadId}`
-            }
+    const idx = e.currentTarget.dataset.index;
+    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
+    
+    if (nodes[idx].status !== 'pending') {
+      return wx.showToast({ title: '只能删除未开始的节点', icon: 'none' });
+    }
+
+    const nodeName = nodes[idx].name;
+
+    wx.showModal({
+      title: '删除确认',
+      content: `确定要删除节点【${nodeName}】吗？`,
+      success: async (res) => {
+        if (res.confirm) {
+          // 静默请求订阅授权
+          await requestSubscribe();
+
+          nodes.splice(idx, 1);
+          nodes = recalculateDesignGantt(nodes);
+
+          wx.showLoading({ title: '正在删除...' });
+          const db = wx.cloud.database();
+          db.collection('leads').doc(this.data.leadId).update({
+            data: { designNodes: nodes }
+          }).then(updateRes => {
+            this.setData({ 'lead.designNodes': nodes });
+            wx.hideLoading();
+            wx.showToast({ title: '节点已删除', icon: 'success' });
+            this.addSystemFollowUp(`删除了设计节点：${nodeName}`);
+            this.notifyDesignAction(`删除了客户【${this.data.lead.name}】的设计节点：【${nodeName}】。`);
+          }).catch((err) => {
+            console.error('Delete design node failed:', err);
+            wx.hideLoading();
+            wx.showToast({ title: '删除失败，请重试', icon: 'none' });
           });
-        });
+        }
+      }
+    });
+  },
+
+  openEditDesignNodeModal(e) {
+    const userInfo = wx.getStorageSync('userInfo');
+    const userRole = userInfo ? userInfo.role : '';
+    if (userRole !== 'designer' && userRole !== 'admin') {
+      return wx.showToast({ title: '仅设计师可编辑节点', icon: 'none' });
+    }
+
+    const idx = e.currentTarget.dataset.index;
+    let nodes = this.data.lead.designNodes;
+    
+    if (nodes[idx].status !== 'pending') {
+      return wx.showToast({ title: '只能编辑未开始的节点', icon: 'none' });
+    }
+
+    this.setData({
+      showEditDesignNodeModal: true,
+      editSingleNodeIndex: idx,
+      editSingleNodeData: {
+        name: nodes[idx].name,
+        startDate: nodes[idx].startDate,
+        endDate: nodes[idx].endDate
+      }
+    });
+  },
+
+  closeEditDesignNodeModal() {
+    this.setData({ showEditDesignNodeModal: false });
+  },
+
+  onEditSingleNodeStartDate(e) {
+    this.setData({ 'editSingleNodeData.startDate': e.detail.value });
+  },
+
+  onEditSingleNodeEndDate(e) {
+    this.setData({ 'editSingleNodeData.endDate': e.detail.value });
+  },
+
+  async confirmEditDesignNode() {
+    let nodeData = this.data.editSingleNodeData;
+    let idx = this.data.editSingleNodeIndex;
+    
+    if (!nodeData.startDate || !nodeData.endDate) {
+      return wx.showToast({ title: '请选择预计开始和完成日期', icon: 'none' });
+    }
+    if (new Date(nodeData.startDate) > new Date(nodeData.endDate)) {
+      return wx.showToast({ title: '开始时间不能晚于结束时间', icon: 'none' });
+    }
+
+    // 静默请求订阅授权
+    await requestSubscribe();
+
+    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes || []));
+    
+    const oldStartDate = nodes[idx].startDate;
+    const oldEndDate = nodes[idx].endDate;
+    
+    nodes[idx].startDate = nodeData.startDate;
+    nodes[idx].endDate = nodeData.endDate;
+
+    nodes = recalculateDesignGantt(nodes);
+
+    wx.showLoading({ title: '正在保存...' });
+    const db = wx.cloud.database();
+    db.collection('leads').doc(this.data.leadId).update({
+      data: { designNodes: nodes }
+    }).then(res => {
+      this.setData({
+        'lead.designNodes': nodes,
+        showEditDesignNodeModal: false
       });
-    }).catch(() => {
       wx.hideLoading();
-      wx.showToast({ title: '保存失败', icon: 'none' });
+      wx.showToast({ title: '节点已更新', icon: 'success' });
+      this.addSystemFollowUp(`编辑了设计节点【${nodeData.name}】的排期时间\n由 ${oldStartDate} 至 ${oldEndDate}\n改为 ${nodeData.startDate} 至 ${nodeData.endDate}`);
+      this.notifyDesignAction(`编辑了客户【${this.data.lead.name}】的设计节点：【${nodeData.name}】的排期时间。`);
+    }).catch((err) => {
+      console.error('Edit design node failed:', err);
+      wx.hideLoading();
+      wx.showToast({ title: '保存失败，请重试', icon: 'none' });
     });
   },
 
   async openFillDelayReason(e) {
     const idx = e.currentTarget.dataset.index;
     const existingReason = this.data.lead.designNodes[idx].delayReason || '';
-    this.setData({
-      showDesignCompleteModal: true,
-      designCompleteIdx: idx,
-      designDelayReason: existingReason
+    
+    wx.showModal({
+      title: '填写逾期原因',
+      content: existingReason,
+      editable: true,
+      placeholderText: '请填写逾期原因',
+      success: (res) => {
+        if (res.confirm) {
+          const reason = res.content;
+          if (!reason || reason.trim() === '') {
+            return wx.showToast({ title: '逾期原因不能为空', icon: 'none' });
+          }
+          
+          let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
+          nodes[idx].delayReason = reason;
+          
+          wx.showLoading({ title: '保存中...' });
+          const db = wx.cloud.database();
+          db.collection('leads').doc(this.data.leadId).update({
+            data: { designNodes: nodes }
+          }).then(() => {
+            this.setData({ 'lead.designNodes': nodes });
+            wx.hideLoading();
+            wx.showToast({ title: '已保存', icon: 'success' });
+          }).catch(err => {
+            wx.hideLoading();
+            wx.showToast({ title: '保存失败', icon: 'none' });
+          });
+        }
+      }
     });
   },
 
@@ -940,57 +1072,30 @@ Page({
     if (userRole !== 'designer' && userRole !== 'admin') {
       return wx.showToast({ title: '仅设计师可开始设计节点', icon: 'none' });
     }
+    
+    const idx = e.currentTarget.dataset.index;
+    let nodes = this.data.lead.designNodes;
+    if (!nodes || !nodes[idx]) return;
 
     // 静默请求订阅授权
     await requestSubscribe();
-
-    const idx = e.currentTarget.dataset.index;
+    
     const nowStr = new Date().toISOString().split('T')[0];
-
-    // 弹窗让用户选择实际开始日期
-    this.setData({
-      showDesignStartDateModal: true,
-      designStartIdx: idx,
-      designStartDateSelection: nowStr
-    });
-  },
-
-  onDesignStartDateSelectionChange(e) {
-    this.setData({ designStartDateSelection: e.detail.value });
-  },
-
-  closeDesignStartDateModal() {
-    this.setData({ showDesignStartDateModal: false });
-  },
-
-  confirmDesignStartWithDate() {
-    const idx = this.data.designStartIdx;
-    const actualStartDate = this.data.designStartDateSelection;
-    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
-    const nodeName = nodes[idx].name;
-
     nodes[idx].status = 'current';
-    nodes[idx].actualStartDate = actualStartDate;
+    nodes[idx].actualStartDate = nowStr;
 
-    nodes = recalculateDesignGantt(nodes, this.data.lead.designStartDate || actualStartDate);
-
-    wx.showLoading({ title: '处理中...' });
+    wx.showLoading({ title: '正在开始...' });
     const db = wx.cloud.database();
     db.collection('leads').doc(this.data.leadId).update({
       data: { designNodes: nodes }
-    }).then(() => {
-      this.setData({
-        'lead.designNodes': nodes,
-        showDesignStartDateModal: false
-      });
+    }).then((res) => {
+      this.setData({ 'lead.designNodes': nodes });
       wx.hideLoading();
-      wx.showToast({ title: '节点已开始', icon: 'success' });
-
-      // 联动1：系统跟进记录
-      let followContent = `已开始设计出图节点：【${nodeName}】（实际开始：${actualStartDate}）`;
-      this.addSystemFollowUp(followContent);
-
-    }).catch(() => {
+      wx.showToast({ title: '已开始', icon: 'success' });
+      this.addSystemFollowUp(`开始设计工作：${nodes[idx].name}`);
+      this.notifyDesignAction(`开始进行客户【${this.data.lead.name}】的设计工作：【${nodes[idx].name}】。`);
+    }).catch((err) => {
+      console.error('Start design node failed:', err);
       wx.hideLoading();
       wx.showToast({ title: '操作失败', icon: 'none' });
     });
@@ -1003,102 +1108,78 @@ Page({
       return wx.showToast({ title: '仅设计师可完成设计节点', icon: 'none' });
     }
 
-    // 静默请求订阅授权
     await requestSubscribe();
 
     const idx = e.currentTarget.dataset.index;
-    const nowStr = new Date().toISOString().split('T')[0];
+    let nodes = this.data.lead.designNodes;
+    if (!nodes || !nodes[idx]) return;
 
-    // 弹窗让用户选择实际完成日期
-    this.setData({
-      showDesignCompleteDateModal: true,
-      designCompleteIdx: idx,
-      designCompleteDate: nowStr
-    });
+    const node = nodes[idx];
+    const todayStr = new Date().toISOString().split('T')[0];
+    const expectedEndDate = new Date((node.endDate || '').replace(/-/g, '/'));
+    const actualEnd = new Date(todayStr.replace(/-/g, '/'));
+
+    const isLate = actualEnd > expectedEndDate;
+
+    if (isLate) {
+      wx.showModal({
+        title: '节点已逾期',
+        content: '',
+        editable: true,
+        placeholderText: '请填写逾期原因（必填）',
+        success: (res) => {
+          if (res.confirm) {
+            const reason = res.content;
+            if (!reason || reason.trim() === '') {
+              return wx.showToast({ title: '请填写逾期原因', icon: 'none' });
+            }
+            this.processCompleteNode(idx, true, reason);
+          }
+        }
+      });
+    } else {
+      // 没逾期，直接完成
+      this.processCompleteNode(idx, false, '');
+    }
   },
 
-  onDesignCompleteDateChange(e) {
-    this.setData({ designCompleteDate: e.detail.value });
-  },
-
-  closeDesignCompleteDateModal() {
-    this.setData({ showDesignCompleteDateModal: false });
-  },
-
-  confirmDesignCompleteWithDate() {
-    const idx = this.data.designCompleteIdx;
-    const actualEndDate = this.data.designCompleteDate;
+  processCompleteNode(idx, isLate, reason) {
     let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
-    const nodeName = nodes[idx].name;
+    const node = nodes[idx];
+    const nodeName = node.name;
+    const todayStr = new Date().toISOString().split('T')[0];
 
-    nodes[idx].status = 'completed';
-    nodes[idx].actualEndDate = actualEndDate;
-
-    // 设置实际开始时间（如果还没有）
-    if (!nodes[idx].actualStartDate) {
-      nodes[idx].actualStartDate = nodes[idx].startDate;
+    node.status = 'completed';
+    node.actualEndDate = todayStr;
+    if (isLate) {
+      node.delayReason = reason;
     }
 
-    nodes = recalculateDesignGantt(nodes, this.data.lead.designStartDate || actualEndDate);
+    nodes = recalculateDesignGantt(nodes);
 
     wx.showLoading({ title: '处理中...' });
     const db = wx.cloud.database();
     db.collection('leads').doc(this.data.leadId).update({
       data: { designNodes: nodes }
-    }).then(() => {
+    }).then((res) => {
       this.setData({
-        'lead.designNodes': nodes,
-        showDesignCompleteDateModal: false
+        'lead.designNodes': nodes
       });
       wx.hideLoading();
       wx.showToast({ title: '节点已完成', icon: 'success' });
 
       // 联动1：系统跟进记录
-      let followContent = `已完成设计出图节点：【${nodeName}】（实际完成：${actualEndDate}）`;
+      let followContent = `已完成设计出图节点：【${nodeName}】（实际完成：${todayStr}）`;
+      if (isLate) followContent += `\n【逾期原因】：${reason}`;
       this.addSystemFollowUp(followContent);
 
-      // 联动2：消息通知
-      this.notifyDesignComplete(nodeName);
+      // 联动2：发送通知给管理员和其他关联人员
+      this.notifyDesignAction(`完成了客户【${this.data.lead.name}】的设计工作：【${nodeName}】。`);
 
-    }).catch(() => {
+    }).catch((err) => {
+      console.error('Complete design node failed:', err);
       wx.hideLoading();
       wx.showToast({ title: '操作失败', icon: 'none' });
-    });
-  },
-
-  onDesignDelayReasonInput(e) {
-    this.setData({ designDelayReason: e.detail.value });
-  },
-
-  closeDesignCompleteModal() {
-    this.setData({ showDesignCompleteModal: false });
-  },
-
-  confirmDesignComplete() {
-    const reason = this.data.designDelayReason.trim();
-    if (!reason) {
-      return wx.showToast({ title: '请输入逾期原因', icon: 'none' });
-    }
-    
-    const idx = this.data.designCompleteIdx;
-    let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes));
-    
-    nodes[idx].delayReason = reason;
-
-    wx.showLoading({ title: '保存中...' });
-    const db = wx.cloud.database();
-    db.collection('leads').doc(this.data.leadId).update({
-      data: { designNodes: nodes }
-    }).then(() => {
-      this.setData({
-        'lead.designNodes': nodes,
-        showDesignCompleteModal: false
-      });
-      wx.hideLoading();
-      wx.showToast({ title: '已补充逾期原因', icon: 'success' });
-    }).catch(() => {
-      wx.hideLoading();
-      wx.showToast({ title: '保存失败', icon: 'none' });
     });
   },
 
@@ -1144,29 +1225,567 @@ Page({
     const notifyUsers = new Set();
     if (lead.designer && lead.designer !== operatorName) notifyUsers.add(lead.designer);
     // 添加所有管理员
-    db.collection('users').where({ role: 'admin' }).get().then(res => {
-      res.data.forEach(u => {
-        if (u.name !== operatorName) notifyUsers.add(u.name);
+    db.collection('users').where({ isActive: true }).get().then(res => {
+      const users = res.data;
+      users.forEach(u => {
+        if (u.role === 'admin' && u.name !== operatorName) notifyUsers.add(u.name);
       });
       // 发送通知
-      notifyUsers.forEach(u => {
-        if (!u) return;
+      const nowStr = new Date().toISOString().split('T')[0];
+      
+      notifyUsers.forEach(uName => {
+        if (!uName) return;
+        const targetUserObj = users.find(user => user.name === uName);
         db.collection('notifications').add({
           data: {
             type: 'lead',
-            title: '设计工作流已开启',
-            content: `${operatorName} 为客户【${lead.name}】开启了设计出图工作流，请及时跟进。`,
+            title: '设计进度更新',
+            content: `${operatorName} 已设定客户【${lead.name}】的设计工作流。`,
             senderName: operatorName,
             senderRole: userInfo.role || 'default',
-            targetUser: u,
+            targetUser: uName,
             isRead: false,
             createTime: db.serverDate(),
             link: `/pages/leadDetail/index?id=${this.data.leadId}`
           }
         });
+
+        // 发送微信订阅消息
+        if (targetUserObj) {
+          wx.cloud.callFunction({
+            name: 'sendSubscribeMessage',
+            data: {
+              receiverUserId: targetUserObj._id,
+              templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+              page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+              data: {
+                thing1: { value: (lead.name || '未知客户').substring(0, 20) },
+                time2: { value: nowStr },
+                thing4: { value: (operatorName || '系统').substring(0, 20) },
+                thing6: { value: '设计进度更新' },
+                thing7: { value: '已设定设计工作流' }
+              }
+            }
+          }).catch(console.error);
+        }
       });
     }).catch(err => {
       console.error('发送设计开启通知失败', err);
+    });
+  },
+
+  notifyDesignAction(actionDesc) {
+    const db = wx.cloud.database();
+    const lead = this.data.lead;
+    const userInfo = wx.getStorageSync('userInfo');
+    const operatorName = userInfo ? (userInfo.name || '未知') : '未知';
+    
+    const notifyUsers = new Set();
+    if (lead.sales && lead.sales !== operatorName) notifyUsers.add(lead.sales);
+    if (lead.designer && lead.designer !== operatorName) notifyUsers.add(lead.designer);
+    if (lead.creatorName && lead.creatorName !== operatorName) notifyUsers.add(lead.creatorName);
+
+    db.collection('users').where({ isActive: true }).get().then(res => {
+      const users = res.data;
+      users.forEach(u => {
+        if (u.role === 'admin' && u.name !== operatorName) notifyUsers.add(u.name);
+      });
+      const nowStr = new Date().toISOString().split('T')[0];
+
+      notifyUsers.forEach(uName => {
+        if (!uName) return;
+        const targetUserObj = users.find(user => user.name === uName);
+        db.collection('notifications').add({
+          data: {
+            type: 'lead',
+            title: '设计进度更新',
+            content: `${operatorName} ${actionDesc}`,
+            senderName: operatorName,
+            senderRole: userInfo.role || 'default',
+            targetUser: uName,
+            isRead: false,
+            createTime: db.serverDate(),
+            link: `/pages/leadDetail/index?id=${this.data.leadId}`
+          }
+        });
+
+        // 发送微信订阅消息
+        if (targetUserObj) {
+          wx.cloud.callFunction({
+            name: 'sendSubscribeMessage',
+            data: {
+              receiverUserId: targetUserObj._id,
+              templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+              page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+              data: {
+                thing1: { value: (lead.name || '未知客户').substring(0, 20) },
+                time2: { value: nowStr },
+                thing4: { value: (operatorName || '系统').substring(0, 20) },
+                thing6: { value: '设计进度更新' },
+                thing7: { value: actionDesc.replace(/为客户【.*?】/, '').substring(0, 20) }
+              }
+            }
+          }).catch(console.error);
+        }
+      });
+    }).catch(err => {
+      console.error('发送设计更新通知失败', err);
+    });
+  },
+
+  // ==========================================
+  // 设计节点附件上传与管理功能
+  // ==========================================
+
+  // 格式化文件大小
+  formatSize(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  },
+
+  // 获取文件扩展名或类型
+  getFileType(filename) {
+    const ext = (filename.split('.').pop() || '').toLowerCase();
+    const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+    const videoExts = ['mp4', 'mov', 'avi'];
+    const docExts = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'pdf'];
+    
+    if (imageExts.includes(ext)) return 'image';
+    if (videoExts.includes(ext)) return 'video';
+    if (docExts.includes(ext)) return 'doc';
+    return 'file';
+  },
+
+  // 上传设计节点附件
+  uploadDesignFile(e) {
+    const { index } = e.currentTarget.dataset;
+    const node = this.data.lead.designNodes[index];
+    const nodeName = node.name; // 默认使用节点名称作为文件夹
+    
+    wx.showActionSheet({
+      itemList: ['上传图片/视频', '上传微信文件'],
+      success: (res) => {
+        const isMedia = res.tapIndex === 0;
+        
+        if (isMedia) {
+          wx.chooseMedia({
+            count: 9,
+            mediaType: ['image', 'video'],
+            sourceType: ['album', 'camera'],
+            sizeType: ['compressed'],
+            success: (mediaRes) => {
+              const tempFiles = mediaRes.tempFiles.map(f => ({
+                path: f.tempFilePath || f.path,
+                name: f.name || `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}.${(f.tempFilePath || f.path).split('.').pop() || 'jpg'}`,
+                size: f.size,
+                fileType: f.fileType || 'image'
+              }));
+              this.showDesignFolderSelect(tempFiles, index, nodeName, 'media');
+            }
+          });
+        } else {
+          wx.chooseMessageFile({
+            count: 9,
+            type: 'all',
+            success: (msgRes) => {
+              const tempFiles = msgRes.tempFiles.map(f => ({
+                path: f.path,
+                name: f.name,
+                size: f.size,
+                type: f.type
+              }));
+              this.showDesignFolderSelect(tempFiles, index, nodeName, 'file');
+            }
+          });
+        }
+      }
+    });
+  },
+
+  showDesignFolderSelect(tempFiles, nodeIndex, defaultFolderName, source) {
+    const folders = this.data.lead.fileFolders || ['默认文件夹'];
+    let selectedFolderIndex = folders.indexOf(defaultFolderName);
+    
+    // 如果没有对应的文件夹，可以把它加到列表最后或让用户新建。
+    // 这里我们默认如果不存在就帮他准备新建
+    let newFolderName = '';
+    if (selectedFolderIndex === -1) {
+      selectedFolderIndex = folders.length; // 选中"新建文件夹"
+      newFolderName = defaultFolderName;
+    }
+
+    this.setData({
+      showFolderSelectModal: true,
+      tempUploadFiles: tempFiles,
+      currentUploadNodeIndex: nodeIndex,
+      uploadSourceType: source,
+      folders: folders,
+      folderOptions: [...folders, '新建文件夹...'],
+      selectedFolderIndex: selectedFolderIndex,
+      newFolderName: newFolderName,
+      uploadVisibility: 'internal'
+    });
+  },
+
+  onVisibilityChange(e) {
+    this.setData({ uploadVisibility: e.currentTarget.dataset.val });
+  },
+
+  closeFolderSelectModal() {
+    this.setData({
+      showFolderSelectModal: false,
+      tempUploadFiles: [],
+      newFolderName: ''
+    });
+  },
+
+  onFolderChange(e) {
+    this.setData({ selectedFolderIndex: e.detail.value });
+  },
+
+  onNewFolderInput(e) {
+    this.setData({ newFolderName: e.detail.value });
+  },
+
+  async confirmUpload() {
+    const { selectedFolderIndex, folders, newFolderName, tempUploadFiles, currentUploadNodeIndex, uploadSourceType, uploadVisibility } = this.data;
+    
+    let targetFolder = '';
+    let newFolders = [...folders];
+    
+    if (selectedFolderIndex == folders.length) {
+      if (!newFolderName.trim()) {
+        return wx.showToast({ title: '请输入文件夹名称', icon: 'none' });
+      }
+      targetFolder = newFolderName.trim();
+      if (!folders.includes(targetFolder)) {
+        newFolders.push(targetFolder);
+        // 更新数据库中的 folders
+        const db = wx.cloud.database();
+        await db.collection('leads').doc(this.data.leadId).update({
+          data: { fileFolders: newFolders }
+        });
+        this.setData({ 'lead.fileFolders': newFolders });
+      }
+    } else {
+      targetFolder = folders[selectedFolderIndex];
+    }
+
+    this.setData({ showFolderSelectModal: false });
+    this.processAndUploadDesignFiles(tempUploadFiles, currentUploadNodeIndex, targetFolder, uploadSourceType, uploadVisibility);
+  },
+
+  async processAndUploadDesignFiles(tempFiles, nodeIndex, targetFolder, source, uploadVisibility) {
+    if (!tempFiles || tempFiles.length === 0) return;
+    
+    const lead = this.data.lead;
+    const nodes = lead.designNodes || [];
+    const node = nodes[nodeIndex];
+    if (!node) return;
+
+    wx.showLoading({ title: '处理图片...', mask: true });
+    
+    try {
+      // 1. 如果是图片需要压缩处理
+      const processPromises = tempFiles.map(f => {
+        return new Promise((resolve) => {
+          const originalPath = f.tempFilePath || f.path;
+          const originalName = f.name || `upload_${Date.now()}_${Math.floor(Math.random() * 1000)}.${originalPath.split('.').pop() || 'jpg'}`;
+          const isImage = (source === 'media' && f.fileType === 'image') || (source === 'file' && f.type === 'image');
+          
+          const fileInfo = {
+            name: originalName,
+            size: f.size
+          };
+          
+          if (isImage) {
+            wx.compressImage({
+              src: originalPath,
+              quality: 60,
+              success: (compRes) => {
+                fileInfo.path = compRes.tempFilePath;
+                resolve(fileInfo);
+              },
+              fail: () => {
+                fileInfo.path = originalPath;
+                resolve(fileInfo);
+              }
+            });
+          } else {
+            fileInfo.path = originalPath;
+            resolve(fileInfo);
+          }
+        });
+      });
+
+      const processedFiles = await Promise.all(processPromises);
+      
+      const userInfo = wx.getStorageSync('userInfo');
+      const uploaderName = userInfo ? userInfo.name : '未知人员';
+      
+      const totalFiles = processedFiles.length;
+      
+      // 2. 上传到云存储 (逐个上传以显示进度)
+      const uploadedFiles = [];
+      for (let i = 0; i < processedFiles.length; i++) {
+        const file = processedFiles[i];
+        wx.showLoading({ title: `上传中 (${i + 1}/${totalFiles})`, mask: true });
+        
+        const ext = file.name.split('.').pop();
+        const cloudPath = `design_files/${this.data.leadId}_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+        
+        await new Promise((resolve, reject) => {
+          wx.cloud.uploadFile({
+            cloudPath,
+            filePath: file.path,
+            success: res => {
+              const uploadDate = new Date();
+              uploadedFiles.push({
+                fileID: res.fileID,
+                name: file.name,
+                size: file.size,
+                sizeStr: this.formatSize(file.size),
+                type: this.getFileType(file.name),
+                uploader: uploaderName,
+                uploadTime: uploadDate.toISOString(),
+                uploadTimeStr: `${uploadDate.getFullYear()}-${String(uploadDate.getMonth()+1).padStart(2,'0')}-${String(uploadDate.getDate()).padStart(2,'0')}`,
+                folderName: targetFolder,
+                isVisible: uploadVisibility === 'public',
+                category: '设计资料'
+              });
+              resolve();
+            },
+            fail: err => reject(err)
+          });
+        });
+      }
+      
+      wx.showLoading({ title: '更新数据...', mask: true });
+      
+      // 3. 更新数据库
+      const currentFiles = node.files || [];
+      const newFiles = [...currentFiles, ...uploadedFiles];
+      
+      // 同步到 lead.files
+      const currentLeadFiles = lead.files || [];
+      const newLeadFiles = [...currentLeadFiles, ...uploadedFiles];
+      
+      const updateData = {};
+      updateData[`designNodes.${nodeIndex}.files`] = newFiles;
+      updateData['files'] = newLeadFiles;
+
+      const db = wx.cloud.database();
+      await db.collection('leads').doc(this.data.leadId).update({
+        data: updateData
+      });
+
+      // 4. 更新本地数据
+      nodes[nodeIndex].files = newFiles;
+      this.setData({
+        'lead.designNodes': nodes,
+        'lead.files': newLeadFiles
+      });
+
+      wx.hideLoading();
+      wx.showToast({ title: '上传成功', icon: 'success' });
+      
+      const fileNames = uploadedFiles.map(f => f.name).join('、');
+      this.addSystemFollowUp(`上传了 ${uploadedFiles.length} 个附件至设计节点：${node.name} (文件夹：${targetFolder})，文件：${fileNames}`);
+      this.notifyDesignAction(`为客户【${this.data.lead.name}】的设计节点【${node.name}】上传了附件：${fileNames}`);
+      
+    } catch (err) {
+      console.error('上传附件失败', err);
+      wx.hideLoading();
+      wx.showToast({ title: '上传失败，请重试', icon: 'none' });
+    }
+  },
+
+  // 预览/下载附件
+  previewDesignFile(e) {
+    const { index, fileidx } = e.currentTarget.dataset;
+    const node = this.data.lead.designNodes[index];
+    if (!node || !node.files) return;
+    
+    const fileObj = node.files[fileidx];
+    const fileID = fileObj.fileID;
+    
+    if (fileObj.type === 'image') {
+      const imageFiles = node.files.filter(f => f.type === 'image').map(f => f.fileID);
+      wx.previewImage({
+        urls: imageFiles.length > 0 ? imageFiles : [fileID],
+        current: fileID,
+        showmenu: true
+      });
+    } else if (fileObj.type === 'video') {
+      wx.previewMedia({
+        sources: [{ url: fileID, type: 'video' }]
+      });
+    } else {
+      wx.showLoading({ title: '下载文件...', mask: true });
+      wx.cloud.downloadFile({
+        fileID: fileID,
+        success: res => {
+          wx.hideLoading();
+          const filePath = res.tempFilePath;
+          wx.openDocument({
+            filePath: filePath,
+            showMenu: true,
+            success: function () {
+              console.log('打开文档成功');
+            }
+          });
+        },
+        fail: err => {
+          console.error('下载文件失败', err);
+          wx.hideLoading();
+          wx.showToast({ title: '下载失败', icon: 'none' });
+        }
+      });
+    }
+  },
+
+  // 预览旧版图片
+  previewDesignImage(e) {
+    const { index, imgurl } = e.currentTarget.dataset;
+    const node = this.data.lead.designNodes[index];
+    if (!node || !node.images || node.images.length === 0) return;
+    wx.previewImage({ current: imgurl, urls: node.images });
+  },
+
+  // 删除旧版图片
+  deleteDesignImage(e) {
+    const { index, imgidx } = e.currentTarget.dataset;
+    const lead = this.data.lead;
+    const nodes = lead.designNodes || [];
+    const node = nodes[index];
+    if (!node || !node.images) return;
+
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这张图片吗？',
+      success: async (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中...', mask: true });
+          try {
+            const currentImages = [...node.images];
+            const deletedImage = currentImages.splice(imgidx, 1)[0];
+            const updateData = {};
+            updateData[`designNodes.${index}.images`] = currentImages;
+
+            const db = wx.cloud.database();
+            await db.collection('leads').doc(this.data.leadId).update({
+              data: updateData
+            });
+
+            if (deletedImage.startsWith('cloud://')) {
+              wx.cloud.deleteFile({ fileList: [deletedImage] }).catch(console.error);
+            }
+
+            nodes[index].images = currentImages;
+            this.setData({ 'lead.designNodes': nodes });
+            wx.hideLoading();
+            wx.showToast({ title: '删除成功', icon: 'success' });
+          } catch (err) {
+            console.error('删除图片失败', err);
+            wx.hideLoading();
+            wx.showToast({ title: '删除失败，请重试', icon: 'none' });
+          }
+        }
+      }
+    });
+  },
+
+  // 切换附件可见性
+  async toggleDesignFileVisibility(e) {
+    const { index, fileidx } = e.currentTarget.dataset;
+    const lead = this.data.lead;
+    const nodes = lead.designNodes || [];
+    const node = nodes[index];
+    if (!node || !node.files || !node.files[fileidx]) return;
+
+    const file = node.files[fileidx];
+    const newIsVisible = file.isVisible === false ? true : false;
+    
+    wx.showLoading({ title: '正在设置...' });
+    try {
+      const db = wx.cloud.database();
+      const leadFiles = lead.files || [];
+      const globalFileIndex = leadFiles.findIndex(f => f.fileID === file.fileID);
+      
+      const updateData = {};
+      updateData[`designNodes.${index}.files.${fileidx}.isVisible`] = newIsVisible;
+      if (globalFileIndex !== -1) {
+        updateData[`files.${globalFileIndex}.isVisible`] = newIsVisible;
+      }
+
+      await db.collection('leads').doc(this.data.leadId).update({
+        data: updateData
+      });
+
+      this.setData({
+        [`lead.designNodes[${index}].files[${fileidx}].isVisible`]: newIsVisible
+      });
+      
+      if (globalFileIndex !== -1) {
+        this.setData({
+          [`lead.files[${globalFileIndex}].isVisible`]: newIsVisible
+        });
+      }
+
+      wx.hideLoading();
+      wx.showToast({ title: newIsVisible ? '已设为公开' : '已设为仅内部', icon: 'success' });
+    } catch (err) {
+      console.error('修改可见性失败', err);
+      wx.hideLoading();
+      wx.showToast({ title: '操作失败', icon: 'none' });
+    }
+  },
+
+  // 删除附件
+  deleteDesignFile(e) {
+    const { index, fileidx } = e.currentTarget.dataset;
+    const lead = this.data.lead;
+    const nodes = lead.designNodes || [];
+    const node = nodes[index];
+    if (!node || !node.files) return;
+
+    wx.showModal({
+      title: '确认删除',
+      content: '确定要删除这个附件吗？（仅从当前进度中移除）',
+      success: async (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '删除中...', mask: true });
+          try {
+            const currentFiles = [...node.files];
+            const deletedFile = currentFiles.splice(fileidx, 1)[0];
+
+            const updateData = {};
+            updateData[`designNodes.${index}.files`] = currentFiles;
+
+            const db = wx.cloud.database();
+            await db.collection('leads').doc(this.data.leadId).update({
+              data: updateData
+            });
+
+            nodes[index].files = currentFiles;
+            this.setData({ 
+              'lead.designNodes': nodes
+            });
+            wx.hideLoading();
+            wx.showToast({ title: '删除成功', icon: 'success' });
+            
+            this.addSystemFollowUp(`从设计节点【${node.name}】移除了附件：${deletedFile.name}`);
+            this.notifyDesignAction(`从客户【${this.data.lead.name}】的设计节点【${node.name}】移除了附件：${deletedFile.name}`);
+          } catch (err) {
+            console.error('删除附件失败', err);
+            wx.hideLoading();
+            wx.showToast({ title: '删除失败，请重试', icon: 'none' });
+          }
+        }
+      }
     });
   }
 });

@@ -15,7 +15,43 @@
     "createdAt": "2024-04-04",
     "lastFollowUp": "2024-04-11",
     "unread": false,
-    "notes": "正在跟进中，客户意向良好。"
+    "notes": "正在跟进中，客户意向良好。",
+    "fileFolders": ["默认文件夹", "前期资料", "效果图"],
+    "files": [
+      {
+        "fileID": "mock-file-1",
+        "name": "量房草图.jpg",
+        "size": 1024000,
+        "sizeStr": "1.00MB",
+        "type": "image",
+        "uploader": "李设计",
+        "uploadTime": "2024-04-05T10:00:00.000Z",
+        "folderName": "前期资料",
+        "isVisible": true
+      },
+      {
+        "fileID": "mock-file-2",
+        "name": "客餐厅效果图.jpg",
+        "size": 2048000,
+        "sizeStr": "2.00MB",
+        "type": "image",
+        "uploader": "李设计",
+        "uploadTime": "2024-04-10T14:30:00.000Z",
+        "folderName": "效果图",
+        "isVisible": true
+      },
+      {
+        "fileID": "mock-file-3",
+        "name": "旧版设计图(废弃).pdf",
+        "size": 512000,
+        "sizeStr": "500.00KB",
+        "type": "pdf",
+        "uploader": "李设计",
+        "uploadTime": "2024-04-08T09:15:00.000Z",
+        "folderName": "默认文件夹",
+        "isVisible": false
+      }
+    ]
   },
   {
     "id": "P20240029",

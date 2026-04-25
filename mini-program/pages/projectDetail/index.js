@@ -566,6 +566,7 @@ Page({
       wx.hideLoading();
       
       this.checkUnreadNotifications();
+      this.checkPendingShareRequests();
 
       // 自动生成分享图
       this.generateProjectShareImage();
@@ -584,6 +585,20 @@ Page({
       const lastReadAt = wx.getStorageSync('followup_read_' + leadId) || 0;
       this.setData({ hasUnreadFollowUp: lastFollowUpAt > lastReadAt });
     }).catch(err => console.error('获取未读状态失败', err));
+  },
+
+  checkPendingShareRequests() {
+    if (!this.data.isAdmin && !this.data.isRelated) return;
+    const db = wx.cloud.database();
+    const projectId = this.data.id;
+    if (!projectId) return;
+    
+    db.collection('shareAccess')
+      .where({ projectId, status: 'pending' })
+      .count()
+      .then(res => {
+        this.setData({ hasPendingShareRequest: res.total > 0 });
+      }).catch(err => console.error('获取待审核申请失败', err));
   },
 
   toggleNode(e) {
@@ -760,6 +775,7 @@ Page({
         const subStart = currentStartStr;
         const subEnd = calculateEndDate(subStart, Number(sub.duration) || 0);
         
+        // 只有当前一个工序是 completed 且当前不是 completed 时，才将 actualStartDate 设为空（修正今天开始的问题）
         // 下一个子节点起始时间为当前子节点结束后的下一个工作日
         if ((Number(sub.duration) || 0) > 0) {
           currentStartStr = formatDate(getNextWorkingDay(new Date(subEnd.replace(/-/g, '/'))));
@@ -977,9 +993,10 @@ Page({
     }
     if (nodes[0].subNodes && nodes[0].subNodes.length > 0) {
       nodes[0].subNodes[0].status = 'current';
-      if (!nodes[0].subNodes[0].actualStartDate) {
-        nodes[0].subNodes[0].actualStartDate = this.data.baseStartDate;
-      }
+      // 开工时，第一个子工序也不要默认写上 actualStartDate，等员工真正开始处理时才算
+      // if (!nodes[0].subNodes[0].actualStartDate) {
+      //   nodes[0].subNodes[0].actualStartDate = this.data.baseStartDate;
+      // }
     }
     nodes = this.recalculateGantt(nodes, this.data.baseStartDate);
 
@@ -1236,7 +1253,6 @@ Page({
     this.setData({
       showSubNodeEdit: true,
       editSubStartDate: sub.startDate || '',
-      editSubDuration: String(sub.duration || 1),
       editSubEndDate: sub.endDate || ''
     });
   },
@@ -1247,37 +1263,47 @@ Page({
 
   onEditSubStartDateChange(e) {
     const startDate = e.detail.value;
-    const duration = Number(this.data.editSubDuration) || 1;
-    const endDate = calculateEndDate(startDate, duration);
+    let endDate = this.data.editSubEndDate;
+    if (startDate && endDate) {
+      let start = new Date(startDate.replace(/-/g, '/'));
+      let end = new Date(endDate.replace(/-/g, '/'));
+      if (start > end) {
+        endDate = startDate; // 若开工大于完工，则完工与开工同步
+      }
+    }
     this.setData({ editSubStartDate: startDate, editSubEndDate: endDate });
   },
 
-  onEditSubDurationInput(e) {
-    const duration = Number(e.detail.value) || 0;
-    const startDate = this.data.editSubStartDate;
-    let endDate = this.data.editSubEndDate;
-    if (startDate && duration > 0) {
-      endDate = calculateEndDate(startDate, duration);
-    }
-    this.setData({ editSubDuration: e.detail.value, editSubEndDate: endDate });
-  },
-
   onEditSubEndDateChange(e) {
-    // 只改完工日期，开工和工期不变
-    this.setData({ editSubEndDate: e.detail.value });
+    const endDate = e.detail.value;
+    let startDate = this.data.editSubStartDate;
+    if (startDate && endDate) {
+      let start = new Date(startDate.replace(/-/g, '/'));
+      let end = new Date(endDate.replace(/-/g, '/'));
+      if (start > end) {
+        startDate = endDate; // 若完工小于开工，则开工与完工同步
+      }
+    }
+    this.setData({ editSubStartDate: startDate, editSubEndDate: endDate });
   },
 
   confirmSubNodeEdit() {
-    const { popupMajorIdx, popupSubIdx, editSubStartDate, editSubDuration, editSubEndDate } = this.data;
+    const { popupMajorIdx, popupSubIdx, editSubStartDate, editSubEndDate } = this.data;
     if (!editSubStartDate || !editSubEndDate) {
       return wx.showToast({ title: '请填写完整日期', icon: 'none' });
     }
+    
+    // 自动计算工期
+    const start = new Date(editSubStartDate.replace(/-/g, '/')).getTime();
+    const end = new Date(editSubEndDate.replace(/-/g, '/')).getTime();
+    const duration = Math.max(1, Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1);
+
     wx.showLoading({ title: '重算排期中...' });
 
     let nodes = JSON.parse(JSON.stringify(this.data.nodesList));
     const sub = nodes[popupMajorIdx].subNodes[popupSubIdx];
     sub.startDate = editSubStartDate;
-    sub.duration = Number(editSubDuration) || sub.duration;
+    sub.duration = duration;
     sub.endDate = editSubEndDate;
 
     // 从该子节点之后顺延所有后续工序
@@ -1313,7 +1339,7 @@ Page({
       // 写入系统跟进记录
       const majorNode = nodes[popupMajorIdx];
       const subNode = majorNode.subNodes[popupSubIdx];
-      this.addSystemFollowUpToLead(`调整了施工排期\n【${majorNode.name} - ${subNode.name}】\n开工：${editSubStartDate}\n完工：${editSubEndDate}\n工期：${editSubDuration}天\n预计总完工：${expectedEndDate}`);
+      this.addSystemFollowUpToLead(`调整了施工排期\n【${majorNode.name} - ${subNode.name}】\n开工：${editSubStartDate}\n完工：${editSubEndDate}\n工期：${duration}天\n预计总完工：${expectedEndDate}`);
     }).catch(() => {
       wx.hideLoading();
       wx.showToast({ title: '保存失败', icon: 'none' });
@@ -1533,9 +1559,16 @@ Page({
     // 静默请求订阅授权
     await requestSubscribe();
 
-    wx.showLoading({ title: '提交中' });
-
     const { popupMajorIdx, popupSubIdx, acceptanceRemark, acceptancePhotos, acceptanceMode, userName, delayReason } = this.data;
+    const totalUploads = acceptancePhotos.length;
+    let completedUploads = 0;
+
+    if (totalUploads > 0) {
+      wx.showLoading({ title: `上传 0/${totalUploads}` });
+    } else {
+      wx.showLoading({ title: '提交中' });
+    }
+
     const nowStr = new Date().toISOString().split('T')[0];
     const nowFull = (() => {
       const d = new Date();
@@ -1545,10 +1578,40 @@ Page({
     // 上传图片到云存储
     const uploadTasks = acceptancePhotos.map((item, index) => {
       const path = item.url || item;
-      if (path.startsWith('cloud://') || path.startsWith('https://')) return Promise.resolve({ fileID: path });
+      if (path.startsWith('cloud://') || path.startsWith('https://')) {
+        completedUploads++;
+        if (totalUploads > 0) {
+          wx.showLoading({ title: `上传 ${completedUploads}/${totalUploads}` });
+        }
+        return Promise.resolve({ fileID: path });
+      }
+      
       const ext = path.split('.').pop() || 'jpg';
       const cloudPath = `acceptance/${this.data.id}/${popupMajorIdx}_${popupSubIdx}_${Date.now()}_${index}.${ext}`;
-      return wx.cloud.uploadFile({ cloudPath, filePath: path });
+      
+      return new Promise((resolve, reject) => {
+        const task = wx.cloud.uploadFile({
+          cloudPath,
+          filePath: path,
+          success: res => {
+            completedUploads++;
+            if (completedUploads === totalUploads) {
+              wx.showLoading({ title: '保存数据中' });
+            } else {
+              wx.showLoading({ title: `上传 ${completedUploads}/${totalUploads}` });
+            }
+            resolve(res);
+          },
+          fail: reject
+        });
+
+        task.onProgressUpdate((res) => {
+          // 仅在未完成当前文件时更新百分比，避免覆盖 completedUploads 的提示
+          if (res.progress < 100) {
+             wx.showLoading({ title: `上传 ${completedUploads + 1}/${totalUploads} ${res.progress}%` });
+          }
+        });
+      });
     });
 
     Promise.all(uploadTasks).then(resList => {
@@ -1590,7 +1653,10 @@ Page({
         // 如果当前大节点还没完成，则推进下一个子工序的状态为 current
         if (popupSubIdx + 1 < nodes[popupMajorIdx].subNodes.length) {
           nodes[popupMajorIdx].subNodes[popupSubIdx + 1].status = 'current';
-          nodes[popupMajorIdx].subNodes[popupSubIdx + 1].actualStartDate = nowStr;
+          // 不要在这里就强行把下一个子节点的 actualStartDate 设置为今天
+          // 只有当用户真正点击下一个子节点进入上传验收等操作时，才算作真正开始。
+          // 或者让它在 current 状态下暂时没有 actualStartDate，前端判断无实际开始时间时，就不显示为今天开始。
+          // nodes[popupMajorIdx].subNodes[popupSubIdx + 1].actualStartDate = nowStr; 
         }
 
         nodes = this.recalculateGantt(nodes, this.data.project.startDate);
@@ -1614,10 +1680,10 @@ Page({
           nodes[popupMajorIdx + 1].status = 'current';
           nodes[popupMajorIdx + 1].actualStartDate = nowStr;
           
-          // 给下一个大节点的第一个子工序赋予 actualStartDate 和 current 状态
+          // 给下一个大节点的第一个子工序赋予 current 状态，但不强行赋 actualStartDate
           if (nodes[popupMajorIdx + 1].subNodes && nodes[popupMajorIdx + 1].subNodes.length > 0) {
             nodes[popupMajorIdx + 1].subNodes[0].status = 'current';
-            nodes[popupMajorIdx + 1].subNodes[0].actualStartDate = nowStr;
+            // nodes[popupMajorIdx + 1].subNodes[0].actualStartDate = nowStr;
           }
           newCurrentNode = popupMajorIdx + 2;
         }
@@ -1670,29 +1736,38 @@ Page({
             if (p.sales && p.sales !== userName) notifyUsers.add(p.sales);
             if (p.designer && p.designer !== userName) notifyUsers.add(p.designer);
             if (p.creatorName && p.creatorName !== userName) notifyUsers.add(p.creatorName);
-            if (userName !== 'admin') notifyUsers.add('admin');
-        
-            notifyUsers.forEach(u => {
-              if (!u) return;
-              let notifyContent = '';
-              const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
-              if (content.startsWith('工地【')) {
-                notifyContent = `${userName} 更新了进度：${shortContent}`;
-              } else {
-                notifyContent = `${userName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
+
+            // 获取管理员名单并合并去重
+            const db = wx.cloud.database();
+            db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+              if (userName !== 'admin') {
+                adminRes.data.forEach(adminDoc => {
+                  if (adminDoc.name !== userName) notifyUsers.add(adminDoc.name);
+                });
               }
-              db.collection('notifications').add({
-                data: {
-                  type: 'project',
-                  title: '工地有新进度',
-                  content: notifyContent,
-                  senderName: userName,
-                  senderRole: wx.getStorageSync('userInfo')?.role || 'default',
-                  targetUser: u,
-                  isRead: false,
-                  createTime: db.serverDate(),
-                  link: `/pages/projectDetail/index?id=${this.data.id}`
+              
+              notifyUsers.forEach(u => {
+                if (!u) return;
+                let notifyContent = '';
+                const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
+                if (content.startsWith('工地【')) {
+                  notifyContent = `${userName} 更新了进度：${shortContent}`;
+                } else {
+                  notifyContent = `${userName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
                 }
+                db.collection('notifications').add({
+                  data: {
+                    type: 'project',
+                    title: '工地有新进度',
+                    content: notifyContent,
+                    senderName: userName,
+                    senderRole: wx.getStorageSync('userInfo')?.role || 'default',
+                    targetUser: u,
+                    isRead: false,
+                    createTime: db.serverDate(),
+                    link: `/pages/projectDetail/index?id=${this.data.id}`
+                  }
+                });
               });
             });
           }
@@ -1786,20 +1861,23 @@ Page({
 
     // 全局通知
     const p = this.data.project;
-    const notifyUsers = new Set();
-    if (p.manager && p.manager !== operatorName) notifyUsers.add(p.manager);
-    if (p.sales && p.sales !== operatorName) notifyUsers.add(p.sales);
-    if (p.designer && p.designer !== operatorName) notifyUsers.add(p.designer);
-    if (p.creatorName && p.creatorName !== operatorName) notifyUsers.add(p.creatorName);
-    
-    if (operatorName !== 'admin') notifyUsers.add('admin');
+    const notifyNames = new Set();
+    if (p.manager && p.manager !== operatorName) notifyNames.add(p.manager);
+    if (p.sales && p.sales !== operatorName) notifyNames.add(p.sales);
+    if (p.designer && p.designer !== operatorName) notifyNames.add(p.designer);
+    if (p.creatorName && p.creatorName !== operatorName) notifyNames.add(p.creatorName);
 
-    // 获取用户 ID 后触发微信订阅消息（静默请求）
+    // 获取管理员名单并合并去重
     db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
-      const adminNames = adminRes.data.map(u => u.name);
+      if (operatorName !== 'admin') {
+        adminRes.data.forEach(adminDoc => {
+          if (adminDoc.name !== operatorName) notifyNames.add(adminDoc.name);
+        });
+      }
       
-      notifyUsers.forEach(u => {
-        if (!u) return;
+      notifyNames.forEach(targetName => {
+        if (!targetName) return;
+        
         let notifyContent = '';
         const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
         if (content.startsWith('工地【')) {
@@ -1808,42 +1886,23 @@ Page({
           notifyContent = `${operatorName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
         }
         
-        // 发送站内信，如果是 admin 字符串则特殊处理，其他发具体名字
-        if (u === 'admin') {
-          adminNames.forEach(adminName => {
-             db.collection('notifications').add({
-              data: {
-                type: 'project',
-                title: '工地有新进度',
-                content: notifyContent,
-                senderName: operatorName,
-                senderRole: userInfo.role || 'default',
-                targetUser: adminName,
-                isRead: false,
-                createTime: db.serverDate(),
-                link: `/pages/projectDetail/index?id=${this.data.id}`
-              }
-            });
-          });
-        } else {
-          db.collection('notifications').add({
-            data: {
-              type: 'project',
-              title: '工地有新进度',
-              content: notifyContent,
-              senderName: operatorName,
-              senderRole: userInfo.role || 'default',
-              targetUser: u,
-              isRead: false,
-              createTime: db.serverDate(),
-              link: `/pages/projectDetail/index?id=${this.data.id}`
-            }
-          });
-        }
+        // 发送站内信
+        db.collection('notifications').add({
+          data: {
+            type: 'project',
+            title: '工地有新进度',
+            content: notifyContent,
+            senderName: operatorName,
+            senderRole: userInfo.role || 'default',
+            targetUser: targetName,
+            isRead: false,
+            createTime: db.serverDate(),
+            link: `/pages/projectDetail/index?id=${this.data.id}`
+          }
+        });
 
         // 发送微信订阅消息
-        const queryCondition = u === 'admin' ? { role: 'admin' } : { name: u };
-        db.collection('users').where(queryCondition).get().then(res => {
+        db.collection('users').where({ name: targetName }).get().then(res => {
           if (res.data && res.data.length > 0) {
             res.data.forEach(userDoc => {
               if (userDoc.name === operatorName) return; // 不要发给自己

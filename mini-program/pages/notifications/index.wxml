@@ -16,11 +16,11 @@
   <view class="list-container">
     <block wx:if="{{notifications.length > 0}}">
       <view class="swipe-wrap" wx:for="{{notifications}}" wx:key="_id" style="transform: translateZ(0);">
-        <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{true}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
-          <view class="swipe-view" style="display: inline-flex; min-width: 100%;">
+        <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
+          <view class="swipe-view" style="display: flex; flex-direction: row; min-width: 100%; align-items: stretch;">
             
             <!-- 表面内容卡片 (滚动对齐点) -->
-            <view class="notification-item {{item.isRead ? 'read' : 'unread'}}" style="width: calc(100vw - 48rpx); scroll-snap-align: start; flex-shrink: 0; white-space: normal; box-sizing: border-box;" bindtap="handleNotificationClick" data-item="{{item}}">
+            <view class="notification-item {{item.isRead ? 'read' : 'unread'}}" style="width: 100%; scroll-snap-align: start; flex-shrink: 0; white-space: normal; box-sizing: border-box;" bindtap="handleNotificationClick" data-item="{{item}}">
               <view class="item-icon">
                 <view class="avatar-circle avatar-bg-{{item.senderRole || 'default'}}" wx:if="{{item.senderName && item.senderName !== '系统'}}">{{item.senderName[0]}}</view>
                 <view class="avatar-circle avatar-bg-system" wx:elif="{{item.senderName === '系统' || !item.senderName}}">系</view>

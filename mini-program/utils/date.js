@@ -23,20 +23,13 @@ const HOLIDAYS = new Set([
 
 function isWorkingDay(d) {
   if (isNaN(d.getTime())) return false;
-  const day = d.getDay();
-  if (day === 0 || day === 6) return false;
-  const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-  return !HOLIDAYS.has(key);
+  return true; // 节假日周末都按正常算
 }
 
 export function getNextWorkingDay(dateObj) {
   let d = new Date(dateObj);
   if (isNaN(d.getTime())) return new Date();
-  let guard = 0;
-  do {
-    d.setDate(d.getDate() + 1);
-    if (++guard > 30) break; // 最多跳 30 天，防死循环
-  } while (!isWorkingDay(d));
+  d.setDate(d.getDate() + 1);
   return d;
 }
 

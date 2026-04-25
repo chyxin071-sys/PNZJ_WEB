@@ -1,6 +1,9 @@
 .page-container {
   background: #faf9f8;
   min-height: 100vh;
+  width: 100vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -15,19 +18,24 @@
   top: 0;
   z-index: 10;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.02);
+  height: 100rpx;
 }
 
 .tabs {
   display: flex;
   gap: 60rpx;
+  height: 100rpx;
+  align-items: center;
 }
 
 .tab {
-  padding: 32rpx 0;
+  height: 100rpx;
+  line-height: 100rpx;
   font-size: 32rpx;
   color: var(--primary-500);
   font-weight: 500;
   position: relative;
+  box-sizing: border-box;
 }
 
 .tab.active {
@@ -45,6 +53,7 @@
   height: 6rpx;
   background: var(--primary-900);
   border-radius: 6rpx 6rpx 0 0;
+  z-index: 1;
 }
 
 .profile-entry {
@@ -83,6 +92,9 @@
   flex: 1;
   padding: 24rpx;
   overflow-x: hidden;
+  padding-top: 32rpx;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .swipe-wrap {
@@ -101,9 +113,11 @@
 }
 
 .swipe-view {
-  display: inline-flex;
+  display: flex;
+  flex-direction: row;
   flex-wrap: nowrap;
   min-width: 100%;
+  align-items: stretch;
 }
 
 .swipe-actions {
@@ -135,7 +149,7 @@
 }
 
 .notification-item {
-  width: calc(100vw - 48rpx); /* parent padding is 24rpx * 2 = 48rpx */
+  width: 100%;
   scroll-snap-align: start;
   flex-shrink: 0;
   white-space: normal;

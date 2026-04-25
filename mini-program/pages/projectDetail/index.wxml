@@ -120,7 +120,10 @@
         </view>
       </view>
       <view bindtap="goToAccessManage" style="flex: 1; background: #fff; padding: 28rpx 0; border-radius: 16rpx; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e8edf2;">
-        <text style="font-size: 26rpx; font-weight: 600; color: #334155;">查看申请</text>
+        <view style="position: relative; display: inline-block;">
+          <text style="font-size: 26rpx; font-weight: 600; color: #334155;">查看申请</text>
+          <view wx:if="{{hasPendingShareRequest}}" class="badge-dot" style="top: -6rpx; right: -16rpx;"></view>
+        </view>
       </view>
     </block>
   </view>
@@ -467,14 +470,6 @@
         </picker>
       </view>
 
-      <!-- 工期天数 -->
-      <view style="margin-bottom: 32rpx;">
-        <view style="font-size: 26rpx; color: #334155; font-weight: 600; margin-bottom: 16rpx;">工期 (天)</view>
-        <view style="padding: 24rpx; background: #f8fafc; border-radius: 12rpx; font-size: 30rpx; color: #1e293b; font-weight: 500; border: 1rpx solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-          <input type="number" value="{{editSubDuration}}" bindinput="onEditSubDurationInput" placeholder="输入天数" style="width: 100%; height: 100%;" />
-        </view>
-      </view>
-
       <!-- 完工日期 -->
       <view style="margin-bottom: 40rpx;">
         <view style="font-size: 26rpx; color: #334155; font-weight: 600; margin-bottom: 16rpx;">预计完工日期</view>
@@ -487,7 +482,7 @@
       </view>
 
       <view style="font-size: 24rpx; color: var(--amber-600); background: var(--amber-50); padding: 20rpx 24rpx; border-radius: 12rpx; margin-bottom: 48rpx; line-height: 1.6; border: 1rpx solid rgba(245, 158, 11, 0.2);">
-        确认后，此工序之后的所有工序将自动顺延（跳过周末及法定节假日）
+        确认后，此工序之后的所有工序将自动顺延
       </view>
 
       <view style="display: flex; gap: 24rpx;">
@@ -568,7 +563,7 @@
       </view>
 
       <view style="font-size: 22rpx; color: var(--amber-600); background: var(--amber-50); padding: 16rpx; border-radius: 8rpx; margin-bottom: 40rpx;">
-        修改后系统将自动重新推算后续所有工序的预计开/完工日期（自动跳过周末及法定节假日）。
+        修改后系统将自动重新推算后续所有工序的预计开/完工日期。
       </view>
 
       <view style="display: flex; gap: 20rpx;">
@@ -615,7 +610,7 @@
         <picker mode="date" value="{{baseStartDate}}" bindchange="onStartDateChange">
           <view style="width: 100%; padding: 20rpx; background: #f8fafc; border-radius: 8rpx; font-size: 28rpx; box-sizing: border-box; border: 1rpx solid #e2e8f0; color: #334155; font-weight: 500; text-align: center;">{{baseStartDate || '请选择日期'}}</view>
         </picker>
-        <view style="font-size: 22rpx; color: #94a3b8; margin-top: 10rpx;">系统将自动按 T+N 算法推算所有工序的预计开/完工日期，自动跳过周末及法定节假日。</view>
+        <view style="font-size: 22rpx; color: #94a3b8; margin-top: 10rpx;">系统将自动按 T+N 算法推算所有工序的预计开/完工日期。</view>
       </view>
       <view style="margin-bottom: 40rpx; display: flex; align-items: center; justify-content: space-between; background: #f1f5f9; padding: 20rpx; border-radius: 8rpx;">
         <view style="font-size: 26rpx; color: #334155;">裁剪不需要的工序</view>
@@ -657,7 +652,7 @@
       </view>
 
       <view style="font-size: 22rpx; color: var(--amber-600); background: var(--amber-50); padding: 16rpx 20rpx; border-radius: 8rpx; margin-bottom: 40rpx; line-height: 1.5;">
-        提示：修改开工日期后，系统将自动重新推算所有相关工序的开始和结束日期（跳过周末及节假日）。
+        提示：修改开工日期后，系统将自动重新推算所有相关工序的开始和结束日期。
       </view>
       
       <view style="display: flex; gap: 20rpx; margin-bottom: 24rpx;">

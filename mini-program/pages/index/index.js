@@ -1049,6 +1049,28 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: '新建成功', icon: 'success' });
       
+      // 自动添加客户跟进记录（仅关联了客户的待办创建时）
+      if (relatedTo && relatedTo.type === 'lead' && relatedTo.id) {
+        const followContent = `【待办已创建】${title.trim()} (预计完成：${dueDate || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`})`;
+        const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        
+        db.collection('followUps').add({
+          data: {
+            leadId: relatedTo.id,
+            content: followContent,
+            createdBy: operatorName,
+            createdAt: db.serverDate(),
+            method: '系统记录',
+            displayTime: nowStr,
+            timestamp: db.serverDate()
+          }
+        });
+        
+        db.collection('leads').doc(relatedTo.id).update({
+          data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+        });
+      }
+
       // 清空输入内容，避免触发 closeAddModal 的提示框
       this.setData({
         'newTodo.title': '',

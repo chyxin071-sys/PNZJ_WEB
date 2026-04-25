@@ -31,7 +31,9 @@
           <view wx:elif="{{item.status === 'rejected'}}" style="font-size: 22rpx; color: var(--rose-600); background: var(--rose-50); padding: 6rpx 20rpx; border-radius: 20rpx; font-weight: bold;">已拒绝</view>
         </view>
       </view>
-      <view style="font-size: 24rpx; color: #94a3b8; margin-bottom: 24rpx;">申请时间：{{item.displayTime}}</view>
+      <view style="font-size: 24rpx; color: #94a3b8; margin-bottom: {{item.status === 'approved' ? '8rpx' : '24rpx'}};">申请时间：{{item.displayTime}}</view>
+      <view wx:if="{{item.status === 'approved' && item.displayApprovedTime}}" style="font-size: 24rpx; color: #94a3b8; margin-bottom: 8rpx;">通过时间：{{item.displayApprovedTime}}</view>
+      <view wx:if="{{item.status === 'approved' && item.approvedBy}}" style="font-size: 24rpx; color: #94a3b8; margin-bottom: 24rpx;">通过人：{{item.approvedBy}}</view>
 
       <!-- 待审核时显示操作按钮 -->
       <view wx:if="{{item.status === 'pending'}}" style="display: flex; gap: 20rpx;">

@@ -41,8 +41,6 @@ Page({
       { name: '自然进店', selected: false },
       { name: '老介新', selected: false },
       { name: '抖音', selected: false },
-      { name: '小红书', selected: false },
-      { name: '大众点评', selected: false },
       { name: '自有关系', selected: false },
       { name: '其他', selected: false }
     ],
@@ -163,7 +161,7 @@ Page({
     if (field === 'rating') {
       val = ['A', 'B', 'C', 'D'][e.detail.value];
     } else if (field === 'source') {
-      val = ['自然进店', '老介新', '抖音', '小红书', '大众点评', '自有关系', '其他'][e.detail.value];
+      val = ['自然进店', '老介新', '抖音', '自有关系', '其他'][e.detail.value];
     } else if (field === 'requirementType') {
       val = ['毛坯', '旧改', '精装微调'][e.detail.value];
     }

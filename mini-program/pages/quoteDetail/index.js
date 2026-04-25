@@ -531,22 +531,28 @@ Page({
         if (lead.creatorName && lead.creatorName !== operatorName) notifyUsers.add(lead.creatorName);
       }
       
-      if (userInfo?.role !== 'admin') notifyUsers.add('admin');
+      db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+        if (userInfo?.role !== 'admin') {
+          adminRes.data.forEach(adminDoc => {
+            if (adminDoc.name !== operatorName) notifyUsers.add(adminDoc.name);
+          });
+        }
 
-      notifyUsers.forEach(u => {
-        if (!u) return;
-        db.collection('notifications').add({
-          data: {
-            type: 'quote',
-            title: '报价单已更新',
-            content: `${operatorName} 更新了客户【${q.customer || '未知'}】的报价单。`,
-            senderName: operatorName,
-            senderRole: userInfo.role || 'default',
-            targetUser: u,
-            isRead: false,
-            createTime: db.serverDate(),
-            link: `/pages/quoteDetail/index?leadId=${q.leadId}`
-          }
+        notifyUsers.forEach(u => {
+          if (!u) return;
+          db.collection('notifications').add({
+            data: {
+              type: 'quote',
+              title: '报价单已更新',
+              content: `${operatorName} 更新了客户【${q.customer || '未知'}】的报价单。`,
+              senderName: operatorName,
+              senderRole: userInfo.role || 'default',
+              targetUser: u,
+              isRead: false,
+              createTime: db.serverDate(),
+              link: `/pages/quoteDetail/index?leadId=${q.leadId}`
+            }
+          });
         });
       });
     }).catch(() => {});

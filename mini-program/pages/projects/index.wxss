@@ -167,7 +167,7 @@
 .arrow-down { width: 0; height: 0; border-left: 10rpx solid transparent; border-right: 10rpx solid transparent; border-top: 10rpx solid #94a3b8; }
 
 /* 多选弹窗 */
-.multi-select-modal { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 32rpx 32rpx 0 0; z-index: 1000; padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; max-height: 80vh; }
+.multi-select-modal { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-radius: 32rpx 32rpx 0 0; z-index: 10000; padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; max-height: 80vh; }
 .ms-header { display: flex; justify-content: space-between; align-items: center; padding: 32rpx 40rpx; border-bottom: 1rpx solid #f1f5f9; }
 .ms-cancel { font-size: 30rpx; color: #94a3b8; padding: 10rpx; margin-left: -10rpx; }
 .ms-title { font-size: 32rpx; font-weight: bold; color: #1e293b; }
