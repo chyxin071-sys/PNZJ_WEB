@@ -1740,7 +1740,8 @@ Page({
             // 获取管理员名单并合并去重
             const db = wx.cloud.database();
             db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
-              if (userName !== 'admin') {
+              const userInfo = wx.getStorageSync('userInfo');
+              if (userInfo?.role !== 'admin') {
                 adminRes.data.forEach(adminDoc => {
                   if (adminDoc.name !== userName) notifyUsers.add(adminDoc.name);
                 });
@@ -1869,7 +1870,7 @@ Page({
 
     // 获取管理员名单并合并去重
     db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
-      if (operatorName !== 'admin') {
+      if (userInfo?.role !== 'admin') {
         adminRes.data.forEach(adminDoc => {
           if (adminDoc.name !== operatorName) notifyNames.add(adminDoc.name);
         });
@@ -1900,17 +1901,29 @@ Page({
             link: `/pages/projectDetail/index?id=${this.data.id}`
           }
         });
+      });
 
-        // 发送微信订阅消息
-        db.collection('users').where({ name: targetName }).get().then(res => {
+      // 批量发送微信订阅消息（利用 wechatOpenId 进行去重，防止测试时同一微信绑定多个不同角色收到多条重复通知）
+      const namesArray = Array.from(notifyNames).filter(Boolean);
+      if (namesArray.length > 0) {
+        db.collection('users').where({
+          name: db.command.in(namesArray)
+        }).get().then(res => {
           if (res.data && res.data.length > 0) {
+            const notifiedOpenIds = new Set();
+            const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
+            let thing7Content = shortContent;
+            const match = content.match(/的【([^】]+)】工序/);
+            if (match) {
+              thing7Content = `【${match[1]}】工序有更新`;
+            }
+
             res.data.forEach(userDoc => {
               if (userDoc.name === operatorName) return; // 不要发给自己
               
-              let thing7Content = shortContent;
-              const match = content.match(/的【([^】]+)】工序/);
-              if (match) {
-                thing7Content = `【${match[1]}】工序有更新`;
+              if (userDoc.wechatOpenId) {
+                if (notifiedOpenIds.has(userDoc.wechatOpenId)) return; // 同一微信号只发一次
+                notifiedOpenIds.add(userDoc.wechatOpenId);
               }
               
               wx.cloud.callFunction({
@@ -1931,7 +1944,7 @@ Page({
             });
           }
         });
-      });
+      }
     });
   },
 

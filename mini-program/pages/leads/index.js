@@ -709,7 +709,7 @@ Page({
           });
         });
 
-        if (operatorName !== 'admin') {
+        if (userInfo?.role !== 'admin') {
           db.collection('users').where({ role: 'admin' }).get().then(res => {
             res.data.forEach(u => {
               db.collection('notifications').add({
