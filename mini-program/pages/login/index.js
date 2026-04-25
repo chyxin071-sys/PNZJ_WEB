@@ -89,11 +89,24 @@ Page({
 
   doLoginSuccess(userInfo, passwordUsed) {
     wx.hideLoading();
+    
+    // 生成一个独一无二的 sessionToken（用于多端登录互踢）
+    const sessionToken = Date.now().toString(36) + Math.random().toString(36).substr(2);
+    wx.setStorageSync('sessionToken', sessionToken);
+    
     // 把本次登录使用的密码临时存起来用于校验状态，但不展示在UI
     userInfo._loginPassword = passwordUsed;
     
-    // 如果登录账号有关联最新的员工信息，同步最新数据到缓存
     const db = wx.cloud.database();
+    
+    // 将 sessionToken 更新到云端数据库中
+    db.collection('users').doc(userInfo._id || userInfo.id).update({
+      data: {
+        sessionToken: sessionToken
+      }
+    }).catch(err => console.error('更新 sessionToken 失败:', err));
+
+    // 如果登录账号有关联最新的员工信息，同步最新数据到缓存
     db.collection('users').doc(userInfo._id || userInfo.id).get().then(res => {
       const latestUser = res.data;
       latestUser._loginPassword = passwordUsed;
