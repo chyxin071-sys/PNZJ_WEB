@@ -10,6 +10,7 @@ Page({
       name: '',
       phone: '',
       address: '',
+      doorPassword: '',
       area: '',
       rating: 'C',
       status: '待跟进',

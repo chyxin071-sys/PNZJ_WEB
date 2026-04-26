@@ -77,13 +77,14 @@ Page({
     isAdmin: false,
     isDesigner: false,
     isRelated: false,
+    canSeeDoorPassword: false,
     // 设计进度相关状态
     showStartDesignModal: false,
     designStartDate: '',
     showEditDesignModal: false,
     editDesignNodes: [],
     designNodeOptions: ['平面布局', '效果图渲染', '施工图深化', '定制图纸绘制', '自定义'],
-    
+
     // 文件夹上传相关状态
     showFolderSelectModal: false,
     tempUploadFiles: [],
@@ -163,10 +164,13 @@ Page({
       const userInfo = wx.getStorageSync('userInfo');
       const myName = userInfo ? userInfo.name : '';
       const isAdmin = userInfo && userInfo.role === 'admin';
-      
+
       let lead = leadRes.data;
       const isAssignedToMe = isAdmin || lead.creatorName === myName || (lead.sales && lead.sales.includes(myName)) || (lead.designer && lead.designer.includes(myName)) || (lead.manager && lead.manager.includes(myName)) || lead.signer === myName;
       const isVisible = isAssignedToMe || lead.status === '已签单';
+
+      // 入户密码权限判断
+      const canSeeDoorPassword = isAdmin || isAssignedToMe;
 
       // 格式化创建时间
       if (lead.createdAt) {
@@ -187,11 +191,12 @@ Page({
         if (lead.community) lead.community = maskAddress(lead.community);
       }
 
-      this.setData({ 
+      this.setData({
         lead: lead,
         isAdmin,
         isRelated: isAssignedToMe,
         isVisible,
+        canSeeDoorPassword,
         ratingIndex: ['A', 'B', 'C', 'D'].indexOf(lead.rating) > -1 ? ['A', 'B', 'C', 'D'].indexOf(lead.rating) : 1,
         statusIndex: ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'].indexOf(lead.status) > -1 ? ['待跟进', '沟通中', '已量房', '方案阶段', '已交定金', '已签单', '已流失'].indexOf(lead.status) : 0
       });

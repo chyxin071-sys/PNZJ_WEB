@@ -11,20 +11,40 @@ Page({
     moveFolderIndex: 0,
     moveNewFolderName: '',
     materials: [], // 新增材料清单数据
+    materialListVisible: false, // 材料清单可见性（客户端是否可见）
     loading: true,
     isUploader: false,
     activeTab: 'files', // 'files' | 'materials'
     showMaterialModal: false,
     materialForm: {
-      category: '主材',
-      name: '',
-      brandModel: '',
+      category: '瓷砖/木地板',
+      region: '',
+      brand: '',
+      model: '',
+      spec: '',
       quantity: '',
-      remark: ''
+      remark: '',
+      frameColor: '',
+      coreColor: '',
+      doorModel: '',
+      itemCategory: '',
+      name: '',
+      cabinetBody: '',
+      cabinetDoor: '',
+      handle: ''
     },
-    categories: ['主材', '辅材', '全屋定制', '家电软装', '其他'],
+    regionOptions1: ['客餐厅', '主卫墙面', '主卫地面', '客卫墙面', '客卫地面', '干区墙面', '厨房墙面', '自定义'],
+    regionOptions2: ['卫生间', '厨房', '卧室', '窗套', '入户门套', '自定义'],
+    regionOptions4: ['厨房', '卫生间', '自定义'],
+    regionIndex: 0,
+    showCustomRegion: false,
+    materialOptions: ['窗台石', '踢脚线', '橱柜台面', '水槽', '开关插座', '自定义'],
+    materialIndex: 0,
+    showCustomName: false,
+    materialHint: '', // 智能提示文字
+    categories: ['瓷砖/木地板', '木门/金属门', '壁布/乳胶漆/护墙板', '集成吊顶/电器', '全屋定制衣柜', '全屋定制橱柜', '其他'],
     editMaterialIndex: -1,
-    
+
     // 新增：上传时的文件夹选择弹窗
     showFolderSelectModal: false,
     tempUploadFiles: [],
@@ -53,20 +73,62 @@ Page({
   },
 
   computeGroupedMaterials(materials) {
-    const categories = ['主材', '辅材', '全屋定制', '家电软装', '其他'];
+    const categories = ['瓷砖/木地板', '木门/金属门', '壁布/乳胶漆/护墙板', '集成吊顶/电器', '全屋定制衣柜', '全屋定制橱柜', '其他'];
+
+    // 为每条记录添加展示信息
+    const processedMaterials = materials.map(m => {
+      const item = { ...m };
+
+      // 根据分类定制展示信息
+      if (m.category === '瓷砖/木地板') {
+        item.displayTitle = m.region ? `【${m.region}】` : '';
+        item.displayLine1 = [m.brand, m.model ? `型号：${m.model}` : ''].filter(Boolean).join(' | ');
+        item.displayLine2 = [m.spec ? `规格: ${m.spec}` : '', m.quantity ? `数量: ${m.quantity}` : ''].filter(Boolean).join('  ');
+      } else if (m.category === '木门/金属门') {
+        item.displayTitle = m.region ? `【${m.region}】` : '';
+        item.displayLine1 = m.brand || '';
+        item.displayLine2 = [
+          m.frameColor ? `边框: ${m.frameColor}` : '',
+          m.coreColor ? `门芯: ${m.coreColor}` : '',
+          m.doorModel ? `门型: ${m.doorModel}` : ''
+        ].filter(Boolean).join(' | ');
+      } else if (m.category === '壁布/乳胶漆/护墙板') {
+        item.displayTitle = m.region ? `【${m.region}】` : '';
+        item.displayLine1 = [m.itemCategory ? `类别: ${m.itemCategory}` : '', m.brand ? `品牌: ${m.brand}` : ''].filter(Boolean).join(' | ');
+        item.displayLine2 = [m.model ? `型号: ${m.model}` : '', m.quantity ? `数量: ${m.quantity}` : ''].filter(Boolean).join('  ');
+      } else if (m.category === '集成吊顶/电器') {
+        item.displayTitle = m.region ? `【${m.region}】${m.name || ''}` : m.name || '';
+        item.displayLine1 = '';
+        item.displayLine2 = [m.spec ? `规格: ${m.spec}` : '', m.quantity ? `数量: ${m.quantity}` : ''].filter(Boolean).join('  ');
+      } else if (m.category === '全屋定制衣柜' || m.category === '全屋定制橱柜') {
+        const type = m.category === '全屋定制衣柜' ? '衣柜' : '橱柜';
+        item.displayTitle = m.region ? `【${m.region}】${type}` : type;
+        item.displayLine1 = [
+          m.brand || '',
+          m.cabinetBody ? `柜体: ${m.cabinetBody}` : '',
+          m.cabinetDoor ? `柜门: ${m.cabinetDoor}` : ''
+        ].filter(Boolean).join(' | ');
+        item.displayLine2 = m.handle ? `拉手: ${m.handle}` : '';
+      } else if (m.category === '其他') {
+        item.displayTitle = m.name || '';
+        item.displayLine1 = '';
+        item.displayLine2 = '';
+      }
+
+      return item;
+    });
+
     const groups = categories.map(cat => ({
       category: cat,
-      items: materials.filter(m => m.category === cat)
-    })).filter(g => g.items.length > 0);
-    
+      items: processedMaterials.filter(m => m.category === cat)
+    }));
+
     // 处理分类外的异常数据
-    const otherItems = materials.filter(m => !categories.includes(m.category));
+    const otherItems = processedMaterials.filter(m => !categories.includes(m.category));
     if (otherItems.length > 0) {
       const otherGroup = groups.find(g => g.category === '其他');
       if (otherGroup) {
         otherGroup.items.push(...otherItems);
-      } else {
-        groups.push({ category: '其他', items: otherItems });
       }
     }
     return groups;
@@ -95,6 +157,7 @@ Page({
         // 如果没有 files 数组则初始化为空数组
         let files = lead.files || [];
         const materials = lead.materialList || []; // 获取材料清单
+        const materialListVisible = lead.materialListVisible || false; // 获取材料清单可见性
         const groupedMaterials = this.computeGroupedMaterials(materials);
         
         // 初始化文件夹列表
@@ -134,16 +197,17 @@ Page({
           };
         }).filter(g => isUploader || g.items.length > 0); // 客户不显示空文件夹
 
-        this.setData({ 
-          lead: lead, 
+        this.setData({
+          lead: lead,
           files: sortedFiles,
           groupedFiles: groupedFiles,
           folders: folders,
           folderOptions: folderOptions,
           materials: materials,
+          materialListVisible: materialListVisible,
           groupedMaterials: groupedMaterials,
           isUploader,
-          loading: false 
+          loading: false
         });
       })
       .catch(err => {
@@ -374,11 +438,22 @@ Page({
   },
 
   // === 材料清单管理 ===
-  openAddMaterial() {
+  openAddMaterial(e) {
+    const category = e.currentTarget.dataset.category || '瓷砖/木地板';
     this.setData({
       showMaterialModal: true,
       editMaterialIndex: -1,
-      materialForm: { category: '主材', name: '', brandModel: '', quantity: '', remark: '' }
+      showCustomRegion: false,
+      showCustomName: false,
+      materialHint: '',
+      regionIndex: 0,
+      materialIndex: 0,
+      materialForm: {
+        category: category,
+        region: '', brand: '', model: '', spec: '', quantity: '', remark: '',
+        frameColor: '', coreColor: '', doorModel: '', itemCategory: '', name: '',
+        cabinetBody: '', cabinetDoor: '', handle: ''
+      }
     });
   },
 
@@ -387,13 +462,106 @@ Page({
     const catIndex = e.currentTarget.dataset.catindex;
     const item = this.data.groupedMaterials[catIndex].items[itemIndex];
     const index = this.data.materials.findIndex(m => m.id === item.id);
-    
+
     if (index === -1) return;
+
+    let showCustomRegion = false;
+    let regionIndex = 0;
+    let showCustomName = false;
+    let materialIndex = 0;
+    let materialHint = '';
+    const form = { ...this.data.materials[index] };
+
+    if (form.category === '瓷砖/木地板') {
+      const idx = this.data.regionOptions1.indexOf(form.region);
+      if (idx !== -1 && idx !== this.data.regionOptions1.length - 1) {
+        regionIndex = idx;
+      } else if (form.region) {
+        regionIndex = this.data.regionOptions1.length - 1;
+        showCustomRegion = true;
+      }
+    } else if (form.category === '木门/金属门') {
+      const idx = this.data.regionOptions2.indexOf(form.region);
+      if (idx !== -1 && idx !== this.data.regionOptions2.length - 1) {
+        regionIndex = idx;
+      } else if (form.region) {
+        regionIndex = this.data.regionOptions2.length - 1;
+        showCustomRegion = true;
+      }
+    } else if (form.category === '集成吊顶/电器') {
+      const idx = this.data.regionOptions4.indexOf(form.region);
+      if (idx !== -1 && idx !== this.data.regionOptions4.length - 1) {
+        regionIndex = idx;
+      } else if (form.region) {
+        regionIndex = this.data.regionOptions4.length - 1;
+        showCustomRegion = true;
+      }
+    } else if (form.category === '其他') {
+      const idx = this.data.materialOptions.indexOf(form.name);
+      if (idx !== -1 && idx !== this.data.materialOptions.length - 1) {
+        materialIndex = idx;
+      } else if (form.name) {
+        materialIndex = this.data.materialOptions.length - 1;
+        showCustomName = true;
+      }
+      // 设置智能提示
+      if (form.name === '踢脚线') {
+        materialHint = '注意是否有个别空间不同色';
+      } else if (form.name === '橱柜台面') {
+        materialHint = '备注挡水条的要求';
+      } else if (form.name === '水槽') {
+        materialHint = '备注单槽/双槽及全包半包';
+      }
+    }
 
     this.setData({
       showMaterialModal: true,
       editMaterialIndex: index,
-      materialForm: { ...this.data.materials[index] }
+      showCustomRegion,
+      regionIndex,
+      showCustomName,
+      materialIndex,
+      materialHint,
+      materialForm: form
+    });
+  },
+
+  onRegionChange(e) {
+    const index = parseInt(e.detail.value);
+    const category = this.data.materialForm.category;
+    let options = [];
+    if (category === '瓷砖/木地板') options = this.data.regionOptions1;
+    else if (category === '木门/金属门') options = this.data.regionOptions2;
+    else if (category === '集成吊顶/电器') options = this.data.regionOptions4;
+
+    const isCustom = index === options.length - 1;
+    this.setData({
+      regionIndex: index,
+      showCustomRegion: isCustom,
+      'materialForm.region': isCustom ? '' : options[index]
+    });
+  },
+
+  onMaterialNameChange(e) {
+    const index = parseInt(e.detail.value);
+    const isCustom = index === this.data.materialOptions.length - 1;
+    const materialName = isCustom ? '' : this.data.materialOptions[index];
+
+    // 智能提示逻辑
+    let hint = '';
+    if (materialName === '踢脚线') {
+      hint = '注意是否有个别空间不同色';
+    } else if (materialName === '橱柜台面') {
+      hint = '备注挡水条的要求';
+    } else if (materialName === '水槽') {
+      hint = '备注单槽/双槽及全包半包';
+    }
+
+    this.setData({
+      materialIndex: index,
+      showCustomName: isCustom,
+      'materialForm.name': materialName,
+      materialHint: hint
     });
   },
 
@@ -410,14 +578,22 @@ Page({
 
   onCategoryChange(e) {
     this.setData({
-      'materialForm.category': this.data.categories[e.detail.value]
+      'materialForm.category': this.data.categories[e.detail.value],
+      showCustomRegion: false,
+      regionIndex: 0,
+      'materialForm.region': ''
     });
   },
 
   saveMaterial() {
     const form = this.data.materialForm;
-    if (!form.name.trim()) return wx.showToast({ title: '请输入材料名称', icon: 'none' });
-    if (!form.brandModel.trim()) return wx.showToast({ title: '请输入品牌型号', icon: 'none' });
+    if (form.category !== '其他') {
+      if (!form.region || !form.region.trim()) return wx.showToast({ title: '请填写或选择区域', icon: 'none' });
+    }
+    
+    if (form.category === '集成吊顶/电器' || form.category === '其他') {
+      if (!form.name || !form.name.trim()) return wx.showToast({ title: '请输入名称', icon: 'none' });
+    }
 
     wx.showLoading({ title: '保存中' });
     let newMaterials = [...this.data.materials];
@@ -450,7 +626,7 @@ Page({
     // 需要找到该 item 在全局 materials 中的真实索引
     const item = this.data.groupedMaterials[catIndex].items[itemIndex];
     const index = this.data.materials.findIndex(m => m.id === item.id);
-    
+
     if (index === -1) return;
 
     wx.showModal({
@@ -466,7 +642,7 @@ Page({
             data: { materialList: newMaterials }
           }).then(() => {
             wx.hideLoading();
-            this.setData({ 
+            this.setData({
               materials: newMaterials,
               groupedMaterials: this.computeGroupedMaterials(newMaterials)
             });
@@ -477,6 +653,28 @@ Page({
           });
         }
       }
+    });
+  },
+
+  // 切换材料清单可见性
+  toggleMaterialListVisibility() {
+    const newVisibility = !this.data.materialListVisible;
+    wx.showLoading({ title: '更新中...' });
+
+    const db = wx.cloud.database();
+    db.collection('leads').doc(this.data.leadId).update({
+      data: { materialListVisible: newVisibility }
+    }).then(() => {
+      wx.hideLoading();
+      this.setData({ materialListVisible: newVisibility });
+      wx.showToast({
+        title: newVisibility ? '已设为公开' : '已设为仅内部',
+        icon: 'success'
+      });
+    }).catch(err => {
+      console.error('更新可见性失败', err);
+      wx.hideLoading();
+      wx.showToast({ title: '更新失败', icon: 'none' });
     });
   },
 

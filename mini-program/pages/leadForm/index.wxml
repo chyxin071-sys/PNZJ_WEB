@@ -11,8 +11,13 @@
     </view>
 
     <view class="form-group">
-      <view class="label">小区地址 <text class="required">*</text></view>    
+      <view class="label">小区地址 <text class="required">*</text></view>
       <input class="input-box" placeholder="如：恒大绿洲3栋101..." placeholder-class="ph" value="{{formData.address}}" bindinput="onInput" data-field="address" />
+    </view>
+
+    <view class="form-group">
+      <view class="label">入户密码</view>
+      <input class="input-box" placeholder="请输入入户密码" placeholder-class="ph" value="{{formData.doorPassword}}" bindinput="onInput" data-field="doorPassword" />
     </view>
 
     <view class="form-row-group">

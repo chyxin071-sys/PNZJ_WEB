@@ -215,6 +215,10 @@ module.exports = { getStatusClass: getStatusClass };
           <text class="info-label">小区地址</text>
           <text class="info-value">{{lead.address}}</text>
         </view>
+        <view wx:if="{{canSeeDoorPassword && lead.doorPassword}}" class="info-item">
+          <text class="info-label">入户密码</text>
+          <text class="info-value">{{lead.doorPassword}}</text>
+        </view>
         <view class="info-item">
           <text class="info-label">需求类型</text>
           <text class="info-value">{{lead.requirementType || lead.requirement || '未填'}}</text>

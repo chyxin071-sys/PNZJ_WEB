@@ -6,9 +6,11 @@ Page({
   data: {
     id: null,
     project: null,
+    lead: null,
     loading: true,
     isAdmin: false,
     isRelated: false,
+    canSeeDoorPassword: false,
     nodesList: [],
     currentNodeIndex: 0,
     showUploadModal: false,
@@ -386,24 +388,33 @@ Page({
     const db = wx.cloud.database();
     db.collection('projects').doc(id).get().then(res => {
       const p = res.data;
-      
-      // 如果没有电话或客户编号，尝试从 leads 表补全
-      if (!p.phone || !p.customerNo) {
-        if (p.leadId) {
-          db.collection('leads').doc(p.leadId).get().then(leadRes => {
-            const l = leadRes.data;
-            this.setData({
-              'project.phone': p.phone || l.phone,
-              'project.customerNo': p.customerNo || l.customerNo || l._id
-            });
-          }).catch(() => {});
-        }
-      }
 
       const userInfo = wx.getStorageSync('userInfo');
       const myName = userInfo ? userInfo.name : '';
       const isAdmin = userInfo && userInfo.role === 'admin';
       const isRelated = isAdmin || (p.manager && p.manager.includes(myName)) || (p.sales && p.sales.includes(myName)) || (p.designer && p.designer.includes(myName)) || p.creatorName === myName;
+
+      // 读取关联的客户信息（包括入户密码）
+      if (p.leadId) {
+        db.collection('leads').doc(p.leadId).get().then(leadRes => {
+          const l = leadRes.data;
+
+          // 判断入户密码权限
+          const isLeadRelated = isAdmin || l.sales === myName || l.designer === myName || l.signer === myName;
+          const canSeeDoorPassword = isAdmin || isRelated || isLeadRelated;
+
+          this.setData({
+            lead: l,
+            canSeeDoorPassword,
+            'project.phone': p.phone || l.phone,
+            'project.customerNo': p.customerNo || l.customerNo || l._id
+          });
+        }).catch(() => {
+          this.setData({ lead: null, canSeeDoorPassword: false });
+        });
+      } else {
+        this.setData({ lead: null, canSeeDoorPassword: false });
+      }
 
       p._isMasked = false;
       p._isRelated = isRelated;
