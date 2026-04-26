@@ -102,12 +102,18 @@ Page({
       }
 
       db.collection('users').where(db.command.or(queryConds)).get().then(userRes => {
+        const receiverUserIds = [];
         userRes.data.forEach(userDoc => {
-          if (userDoc.name === operatorName) return; // 不发给自己
+          if (userDoc.name !== operatorName) {
+            receiverUserIds.push(userDoc._id);
+          }
+        });
+
+        if (receiverUserIds.length > 0) {
           wx.cloud.callFunction({
             name: 'sendSubscribeMessage',
             data: {
-              receiverUserId: userDoc._id,
+              receiverUserIds,
               templateId: TEMPLATE_IDS.PROJECT_UPDATE,
               page: `/pages/leadDetail/index?id=${this.data.leadId}`,
               data: {
@@ -119,7 +125,7 @@ Page({
               }
             }
           }).catch(console.error);
-        });
+        }
       });
     });
   },

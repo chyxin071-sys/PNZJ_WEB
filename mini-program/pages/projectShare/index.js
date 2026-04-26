@@ -343,8 +343,10 @@ Page({
       if (p.manager) p.manager.split(',').map(s=>s.trim()).filter(Boolean).forEach(s => staffNames.push(s));
       db.collection('users').where({ role: db.command.in(['admin', 'manager', 'sales', 'designer']) }).limit(50).get().then(res => {
         const targets = res.data.filter(u => u.role === 'admin' || staffNames.includes(u.name));
+        const receiverUserIds = [];
         targets.forEach(u => {
           if (!u._id) return;
+          receiverUserIds.push(u._id);
           // 写通知中心
           db.collection('notifications').add({
             data: {
@@ -362,11 +364,14 @@ Page({
               createTime: db.serverDate()
             }
           }).catch(() => {});
-          // 发订阅消息
+        });
+
+        if (receiverUserIds.length > 0) {
+          // 发订阅消息（云函数批量处理去重）
           wx.cloud.callFunction({
             name: 'sendSubscribeMessage',
             data: {
-              receiverUserId: u._id,
+              receiverUserIds,
               templateId: TEMPLATE_IDS.SHARE_ACCESS_REQUEST,
               page: `/pages/shareAccessManage/index?projectId=${projectId}`,
               data: {
@@ -375,7 +380,7 @@ Page({
               }
             }
           }).catch(err => console.error('发送订阅消息失败', err));
-        });
+        }
       }).catch(() => {});
     }).catch(() => {});
   },
@@ -508,11 +513,9 @@ Page({
             const lead = leadRes.data;
             const materials = lead.materialList || [];
             
-            // 处理项目资料
+            // 处理项目资料（分享页始终作为客户视图，无论打开者是否为员工，均只展示允许客户可见的文件，以便员工测试验证）
             let files = lead.files || [];
-            if (!this.data.isEmployee) {
-              files = files.filter(f => f.isVisible !== false);
-            }
+            files = files.filter(f => f.isVisible !== false);
 
             const folders = lead.fileFolders || ['默认文件夹'];
             const sortedFiles = files.map(f => {
@@ -534,7 +537,7 @@ Page({
                 items: sortedFiles.filter(f => f.folderName === folderName),
                 isCollapsed: existingGroup ? existingGroup.isCollapsed : false
               };
-            }).filter(g => this.data.isEmployee || g.items.length > 0);
+            }).filter(g => g.items.length > 0); // 客户端始终隐藏空文件夹
 
             this.setData({ 
               materials, 
@@ -1018,11 +1021,12 @@ Page({
       
       db.collection('users').where(db.command.or(queryConds)).get().then(res => {
         if (res.data && res.data.length > 0) {
-          res.data.forEach(userDoc => {
+          const receiverUserIds = res.data.map(u => u._id);
+          if (receiverUserIds.length > 0) {
             wx.cloud.callFunction({
               name: 'sendSubscribeMessage',
               data: {
-                receiverUserId: userDoc._id,
+                receiverUserIds,
                 templateId: TEMPLATE_IDS.PROJECT_UPDATE,
                 page: `/pages/projectDetail/index?id=${this.data.id}`,
                 data: {
@@ -1034,7 +1038,7 @@ Page({
                 }
               }
             }).catch(console.error);
-          });
+          }
         }
       }).catch(console.error);
     }

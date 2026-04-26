@@ -606,8 +606,10 @@ Page({
       db2.collection('users').where({ isActive: true }).limit(100).get().then(res => {
         const users = res.data;
         const nowStr = new Date().toISOString().split('T')[0];
+        const receiverUserIds = [];
         
         users.forEach(u => {
+          receiverUserIds.push(u._id);
           db2.collection('notifications').add({
             data: {
               type: 'lead', title: '🎉 恭喜开单',
@@ -616,12 +618,14 @@ Page({
               link: `/pages/leadDetail/index?id=${this.data.leadId}`
             }
           });
+        });
 
-          // 微信订阅消息
+        if (receiverUserIds.length > 0) {
+          // 微信订阅消息（云函数批量去重发送）
           wx.cloud.callFunction({
             name: 'sendSubscribeMessage',
             data: {
-              receiverUserId: u._id,
+              receiverUserIds,
               templateId: TEMPLATE_IDS.PROJECT_UPDATE,
               page: `/pages/leadDetail/index?id=${this.data.leadId}`,
               data: {
@@ -633,7 +637,7 @@ Page({
               }
             }
           }).catch(console.error);
-        });
+        }
       }).catch(err => {
         console.error('发送签单通知失败', err);
       });
@@ -1232,10 +1236,14 @@ Page({
       });
       // 发送通知
       const nowStr = new Date().toISOString().split('T')[0];
+      const receiverUserIds = [];
       
       notifyUsers.forEach(uName => {
         if (!uName) return;
         const targetUserObj = users.find(user => user.name === uName);
+        if (targetUserObj) {
+          receiverUserIds.push(targetUserObj._id);
+        }
         db.collection('notifications').add({
           data: {
             type: 'lead',
@@ -1249,26 +1257,26 @@ Page({
             link: `/pages/leadDetail/index?id=${this.data.leadId}`
           }
         });
-
-        // 发送微信订阅消息
-        if (targetUserObj) {
-          wx.cloud.callFunction({
-            name: 'sendSubscribeMessage',
-            data: {
-              receiverUserId: targetUserObj._id,
-              templateId: TEMPLATE_IDS.PROJECT_UPDATE,
-              page: `/pages/leadDetail/index?id=${this.data.leadId}`,
-              data: {
-                thing1: { value: (lead.name || '未知客户').substring(0, 20) },
-                time2: { value: nowStr },
-                thing4: { value: (operatorName || '系统').substring(0, 20) },
-                thing6: { value: '设计进度更新' },
-                thing7: { value: '已设定设计工作流' }
-              }
-            }
-          }).catch(console.error);
-        }
       });
+
+      // 发送微信订阅消息
+      if (receiverUserIds.length > 0) {
+        wx.cloud.callFunction({
+          name: 'sendSubscribeMessage',
+          data: {
+            receiverUserIds,
+            templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+            page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+            data: {
+              thing1: { value: (lead.name || '未知客户').substring(0, 20) },
+              time2: { value: nowStr },
+              thing4: { value: (operatorName || '系统').substring(0, 20) },
+              thing6: { value: '设计进度更新' },
+              thing7: { value: '已设定设计工作流' }
+            }
+          }
+        }).catch(console.error);
+      }
     }).catch(err => {
       console.error('发送设计开启通知失败', err);
     });
@@ -1291,10 +1299,14 @@ Page({
         if (u.role === 'admin' && u.name !== operatorName) notifyUsers.add(u.name);
       });
       const nowStr = new Date().toISOString().split('T')[0];
+      const receiverUserIds = [];
 
       notifyUsers.forEach(uName => {
         if (!uName) return;
         const targetUserObj = users.find(user => user.name === uName);
+        if (targetUserObj) {
+          receiverUserIds.push(targetUserObj._id);
+        }
         db.collection('notifications').add({
           data: {
             type: 'lead',
@@ -1308,26 +1320,26 @@ Page({
             link: `/pages/leadDetail/index?id=${this.data.leadId}`
           }
         });
-
-        // 发送微信订阅消息
-        if (targetUserObj) {
-          wx.cloud.callFunction({
-            name: 'sendSubscribeMessage',
-            data: {
-              receiverUserId: targetUserObj._id,
-              templateId: TEMPLATE_IDS.PROJECT_UPDATE,
-              page: `/pages/leadDetail/index?id=${this.data.leadId}`,
-              data: {
-                thing1: { value: (lead.name || '未知客户').substring(0, 20) },
-                time2: { value: nowStr },
-                thing4: { value: (operatorName || '系统').substring(0, 20) },
-                thing6: { value: '设计进度更新' },
-                thing7: { value: actionDesc.replace(/为客户【.*?】/, '').substring(0, 20) }
-              }
-            }
-          }).catch(console.error);
-        }
       });
+
+      // 发送微信订阅消息
+      if (receiverUserIds.length > 0) {
+        wx.cloud.callFunction({
+          name: 'sendSubscribeMessage',
+          data: {
+            receiverUserIds,
+            templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+            page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+            data: {
+              thing1: { value: (lead.name || '未知客户').substring(0, 20) },
+              time2: { value: nowStr },
+              thing4: { value: (operatorName || '系统').substring(0, 20) },
+              thing6: { value: '设计进度更新' },
+              thing7: { value: actionDesc.replace(/为客户【.*?】/, '').substring(0, 20) }
+            }
+          }
+        }).catch(console.error);
+      }
     }).catch(err => {
       console.error('发送设计更新通知失败', err);
     });

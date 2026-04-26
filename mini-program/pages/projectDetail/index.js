@@ -1552,7 +1552,11 @@ Page({
   },
 
   async submitAcceptance() {
+    if (this.data.isSubmitting) return;
+    this.setData({ isSubmitting: true });
+
     if (this.data.acceptancePhotos.length === 0 && !this.data.acceptanceRemark.trim()) {
+      this.setData({ isSubmitting: false });
       return wx.showToast({ title: '请填写现场说明或上传影像', icon: 'none' });
     }
 
@@ -1564,9 +1568,9 @@ Page({
     let completedUploads = 0;
 
     if (totalUploads > 0) {
-      wx.showLoading({ title: `上传 0/${totalUploads}` });
+      wx.showLoading({ title: `上传 0/${totalUploads}`, mask: true });
     } else {
-      wx.showLoading({ title: '提交中' });
+      wx.showLoading({ title: '提交中', mask: true });
     }
 
     const nowStr = new Date().toISOString().split('T')[0];
@@ -1581,7 +1585,7 @@ Page({
       if (path.startsWith('cloud://') || path.startsWith('https://')) {
         completedUploads++;
         if (totalUploads > 0) {
-          wx.showLoading({ title: `上传 ${completedUploads}/${totalUploads}` });
+          wx.showLoading({ title: `上传 ${completedUploads}/${totalUploads}`, mask: true });
         }
         return Promise.resolve({ fileID: path });
       }
@@ -1596,9 +1600,9 @@ Page({
           success: res => {
             completedUploads++;
             if (completedUploads === totalUploads) {
-              wx.showLoading({ title: '保存数据中' });
+              wx.showLoading({ title: '保存数据中', mask: true });
             } else {
-              wx.showLoading({ title: `上传 ${completedUploads}/${totalUploads}` });
+              wx.showLoading({ title: `上传 ${completedUploads}/${totalUploads}`, mask: true });
             }
             resolve(res);
           },
@@ -1608,7 +1612,7 @@ Page({
         task.onProgressUpdate((res) => {
           // 仅在未完成当前文件时更新百分比，避免覆盖 completedUploads 的提示
           if (res.progress < 100) {
-             wx.showLoading({ title: `上传 ${completedUploads + 1}/${totalUploads} ${res.progress}%` });
+             wx.showLoading({ title: `上传 ${completedUploads + 1}/${totalUploads} ${res.progress}%`, mask: true });
           }
         });
       });
@@ -1747,34 +1751,77 @@ Page({
                 });
               }
               
-              notifyUsers.forEach(u => {
-                if (!u) return;
-                let notifyContent = '';
-                const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
-                if (content.startsWith('工地【')) {
-                  notifyContent = `${userName} 更新了进度：${shortContent}`;
-                } else {
-                  notifyContent = `${userName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
-                }
-                db.collection('notifications').add({
-                  data: {
-                    type: 'project',
-                    title: '工地有新进度',
-                    content: notifyContent,
-                    senderName: userName,
-                    senderRole: wx.getStorageSync('userInfo')?.role || 'default',
-                    targetUser: u,
-                    isRead: false,
-                    createTime: db.serverDate(),
-                    link: `/pages/projectDetail/index?id=${this.data.id}`
+              const namesArray = Array.from(notifyUsers).filter(Boolean);
+              if (namesArray.length > 0) {
+                db.collection('users').where({
+                  name: db.command.in(namesArray)
+                }).get().then(res => {
+                  const receiverUserIds = [];
+                  res.data.forEach(userDoc => {
+                    if (userDoc.name === userName) return;
+                    receiverUserIds.push(userDoc._id);
+                  });
+
+                  // 发送站内信
+                  notifyUsers.forEach(u => {
+                    if (!u) return;
+                    let notifyContent = '';
+                    const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
+                    if (content.startsWith('工地【')) {
+                      notifyContent = `${userName} 更新了进度：${shortContent}`;
+                    } else {
+                      notifyContent = `${userName} 更新了工地【${p.address || '未知'}】：${shortContent}`;
+                    }
+                    db.collection('notifications').add({
+                      data: {
+                        type: 'project',
+                        title: '工地有新进度',
+                        content: notifyContent,
+                        senderName: userName,
+                        senderRole: userInfo?.role || 'default',
+                        targetUser: u,
+                        isRead: false,
+                        createTime: db.serverDate(),
+                        link: `/pages/projectDetail/index?id=${this.data.id}`
+                      }
+                    });
+                  });
+
+                  // 批量发送微信订阅消息
+                  if (receiverUserIds.length > 0) {
+                    const now = new Date();
+                    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                    const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
+                    let thing7Content = shortContent;
+                    const match = content.match(/的【([^】]+)】工序/);
+                    if (match) {
+                      thing7Content = `【${match[1]}】工序有更新`;
+                    }
+
+                    wx.cloud.callFunction({
+                      name: 'sendSubscribeMessage',
+                      data: {
+                        receiverUserIds,
+                        templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+                        page: `/pages/projectDetail/index?id=${this.data.id}`,
+                        data: {
+                          thing1: { value: (p.address || p.customer || '未知项目').substring(0, 20) },
+                          time2: { value: nowStr },
+                          thing4: { value: userName.substring(0, 20) },
+                          thing6: { value: '请及时点击进入小程序查看详情' },
+                          thing7: { value: thing7Content.substring(0, 20) }
+                        }
+                      }
+                    }).catch(console.error);
                   }
                 });
-              });
+              }
             });
           }
         }
 
         wx.hideLoading();
+        this.setData({ isSubmitting: false });
         const toastTitle = acceptanceMode === 'edit' ? '记录已更新' : (sub.status === 'awaiting_signature' ? '已提交，待客户确认' : '已验收通过');
         wx.showToast({ title: toastTitle, icon: 'success' });
         
@@ -1788,6 +1835,7 @@ Page({
     }).catch(err => {
       console.error('验收提交失败', err);
       wx.hideLoading();
+      this.setData({ isSubmitting: false });
       wx.showToast({ title: '提交失败，请重试', icon: 'none' });
     });
   },
@@ -1904,13 +1952,13 @@ Page({
       });
 
       // 批量发送微信订阅消息（利用 wechatOpenId 进行去重，防止测试时同一微信绑定多个不同角色收到多条重复通知）
+      // 客户端无法稳定获取其他用户的 wechatOpenId，需将 userIds 传给云函数在服务端去重
       const namesArray = Array.from(notifyNames).filter(Boolean);
       if (namesArray.length > 0) {
         db.collection('users').where({
           name: db.command.in(namesArray)
         }).get().then(res => {
           if (res.data && res.data.length > 0) {
-            const notifiedOpenIds = new Set();
             const shortContent = content.length > 40 ? content.substring(0, 40) + '...' : content;
             let thing7Content = shortContent;
             const match = content.match(/的【([^】]+)】工序/);
@@ -1918,18 +1966,17 @@ Page({
               thing7Content = `【${match[1]}】工序有更新`;
             }
 
+            const receiverUserIds = [];
             res.data.forEach(userDoc => {
               if (userDoc.name === operatorName) return; // 不要发给自己
-              
-              if (userDoc.wechatOpenId) {
-                if (notifiedOpenIds.has(userDoc.wechatOpenId)) return; // 同一微信号只发一次
-                notifiedOpenIds.add(userDoc.wechatOpenId);
-              }
-              
+              receiverUserIds.push(userDoc._id);
+            });
+
+            if (receiverUserIds.length > 0) {
               wx.cloud.callFunction({
                 name: 'sendSubscribeMessage',
                 data: {
-                  receiverUserId: userDoc._id,
+                  receiverUserIds,
                   templateId: TEMPLATE_IDS.PROJECT_UPDATE,
                   page: `/pages/projectDetail/index?id=${this.data.id}`,
                   data: {
@@ -1941,7 +1988,7 @@ Page({
                   }
                 }
               }).catch(console.error);
-            });
+            }
           }
         });
       }
