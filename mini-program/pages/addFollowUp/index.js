@@ -110,12 +110,15 @@ Page({
         });
 
         if (receiverUserIds.length > 0) {
+          const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+          const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
           wx.cloud.callFunction({
             name: 'sendSubscribeMessage',
             data: {
               receiverUserIds,
               templateId: TEMPLATE_IDS.PROJECT_UPDATE,
               page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+              miniprogramState,
               data: {
                 thing1: { value: (lead.name || '未知客户').substring(0, 20) },
                 time2: { value: nowStr },

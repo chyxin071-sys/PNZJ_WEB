@@ -1,3 +1,4 @@
+<wxs src="../../utils/format.wxs" module="format" />
 <wxs module="util">
 var getStatusClass = function(status) {
   if (status === '沟通中') return 'status-blue';
@@ -377,13 +378,14 @@ module.exports = { getStatusClass: getStatusClass };
                         <view style="display: flex; flex-direction: row; min-width: 100%; align-items: stretch;">
                           <!-- 顶层可滑动内容区 -->
                             <view style="display: flex; align-items: center; width: 100%; scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; padding: 12rpx 16rpx; background: #f8fafc; white-space: normal;" bindtap="previewDesignFile" data-index="{{index}}" data-fileidx="{{fileIdx}}">
-                              <view style="width: 60rpx; height: 60rpx; flex-shrink: 0; background: #e2e8f0; border-radius: 8rpx; display: flex; align-items: center; justify-content: center; margin-right: 16rpx;">
-                              <image wx:if="{{fileObj.type === 'image'}}" src="{{fileObj.fileID}}" mode="aspectFill" style="width: 100%; height: 100%; border-radius: 8rpx;" />
-                              <text wx:elif="{{fileObj.type === 'video'}}" style="font-size: 28rpx;">🎬</text>
-                              <text wx:elif="{{fileObj.type === 'doc'}}" style="font-size: 28rpx;">📄</text>
-                              <text wx:else style="font-size: 28rpx;">📁</text>
-                            </view>
-                            <view style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
+                              <!-- 文件图标/缩略图 -->
+                              <view style="width: 80rpx; height: 80rpx; flex-shrink: 0; border-radius: 12rpx; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e2e8f0; margin-right: 16rpx;">
+                                <image wx:if="{{fileObj.type === 'image' || format.getFileIconText(format.getFileExt(fileObj.name)) === 'IMG'}}" src="{{format.formatImageUrl(fileObj.fileID || fileObj.url)}}" mode="aspectFill" style="width: 100%; height: 100%;"></image>
+                                <view wx:else style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: {{format.getFileIconColor(format.getFileExt(fileObj.name))}}20;">
+                                  <text style="font-size: 22rpx; font-weight: bold; color: {{format.getFileIconColor(format.getFileExt(fileObj.name))}};">{{format.getFileIconText(format.getFileExt(fileObj.name))}}</text>
+                                </view>
+                              </view>
+                              <view style="flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center;">
                               <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6rpx;">
                                 <view style="font-size: 24rpx; color: #334155; font-weight: 500; display: flex; align-items: center; flex: 1; min-width: 0; margin-right: 12rpx;">
                                   <view style="flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{fileObj.name}}</view>

@@ -533,25 +533,29 @@ Page({
           delayRecords: n.delayRecords || []
         }));
 
-        // ---- 修复历史遗留脏数据：确保整个项目中只有一个子工序是 'current' ----
+        // ---- 修复历史遗留脏数据：确保在需要顺序执行的场景下状态正确 ----
+        // 注意：目前架构下，大节点的首节点签字后，中间所有小工序会并行执行（状态均为 current）。
+        // 因此不能强行将多个 current 状态重置为 pending。
         let hasActiveCurrent = false;
         let isDirty = false;
         projectNodes.forEach((majorNode) => {
+          // 如果有正在签字或已完成的首尾节点，中间可能并行，不强制重置 current
+          const hasParallelNodes = majorNode.subNodes.some(s => s.status === 'awaiting_signature' || s.status === 'completed');
+          
           majorNode.subNodes.forEach((sub) => {
             if (sub.status === 'completed' || sub.status === 'awaiting_signature') {
               // 已经完成的保持原样
+              hasActiveCurrent = true;
             } else {
-              // 未完成的节点，只有在当前大节点是 current，且还没遇到过 current 子节点时，才设为 current
-              if (majorNode.status === 'current' && !hasActiveCurrent) {
-                if (sub.status !== 'current') {
-                  sub.status = 'current';
-                  isDirty = true;
-                }
-                hasActiveCurrent = true;
-              } else {
-                if (sub.status !== 'pending') {
-                  sub.status = 'pending';
-                  isDirty = true;
+              // 未完成的节点
+              if (majorNode.status === 'current') {
+                if (!hasParallelNodes && !hasActiveCurrent) {
+                  // 只有在完全没有启动过任何工序的大节点中，才确保第一个未完成的是 current
+                  if (sub.status !== 'current') {
+                    sub.status = 'current';
+                    isDirty = true;
+                  }
+                  hasActiveCurrent = true;
                 }
               }
             }
@@ -777,29 +781,67 @@ Page({
       let nodeStartDate = currentStartStr;
       let nodeEndDate = currentStartStr;
       
-      const updatedSubNodes = (node.subNodes || []).map((sub) => {
-        if (sub.status === 'completed' && sub.actualEndDate) {
-           currentStartStr = formatDate(getNextWorkingDay(new Date(sub.actualEndDate.replace(/-/g, '/'))));
-           return sub;
+      const updatedSubNodes = [];
+      let maxIntermediateEndStr = currentStartStr;
+      let firstNodeEndStr = currentStartStr;
+
+      // 1. 处理首节点 (index 0)
+      if (node.subNodes && node.subNodes.length > 0) {
+        const firstSub = node.subNodes[0];
+        let subStart = currentStartStr;
+        let subEnd = currentStartStr;
+        if (firstSub.status === 'completed' && firstSub.actualEndDate) {
+           subEnd = firstSub.actualEndDate;
+           firstNodeEndStr = formatDate(getNextWorkingDay(new Date(subEnd.replace(/-/g, '/'))));
+           updatedSubNodes.push(firstSub);
+        } else {
+           subEnd = calculateEndDate(subStart, Number(firstSub.duration) || 0);
+           if ((Number(firstSub.duration) || 0) > 0) {
+             firstNodeEndStr = formatDate(getNextWorkingDay(new Date(subEnd.replace(/-/g, '/'))));
+           }
+           updatedSubNodes.push({ ...firstSub, startDate: subStart, endDate: subEnd });
         }
-        
-        const subStart = currentStartStr;
-        const subEnd = calculateEndDate(subStart, Number(sub.duration) || 0);
-        
-        // 只有当前一个工序是 completed 且当前不是 completed 时，才将 actualStartDate 设为空（修正今天开始的问题）
-        // 下一个子节点起始时间为当前子节点结束后的下一个工作日
-        if ((Number(sub.duration) || 0) > 0) {
-          currentStartStr = formatDate(getNextWorkingDay(new Date(subEnd.replace(/-/g, '/'))));
+        maxIntermediateEndStr = firstNodeEndStr;
+      }
+
+      // 2. 处理中间节点 (并行执行)
+      if (node.subNodes && node.subNodes.length > 2) {
+        for (let i = 1; i < node.subNodes.length - 1; i++) {
+          const sub = node.subNodes[i];
+          let subStart = firstNodeEndStr; // 并行，都从首节点结束后开始
+          let subEnd = subStart;
+          if (sub.status === 'completed' && sub.actualEndDate) {
+             subEnd = sub.actualEndDate;
+             updatedSubNodes.push(sub);
+          } else {
+             subEnd = calculateEndDate(subStart, Number(sub.duration) || 0);
+             updatedSubNodes.push({ ...sub, startDate: subStart, endDate: subEnd });
+          }
+          // 记录中间节点中最晚的结束时间
+          if (new Date(subEnd.replace(/-/g, '/')) > new Date(maxIntermediateEndStr.replace(/-/g, '/'))) {
+             maxIntermediateEndStr = subEnd;
+          }
         }
-        
-        nodeEndDate = subEnd; // 大节点的预计结束日更新为最后一个子节点的结束日
-        
-        return {
-          ...sub,
-          startDate: subStart,
-          endDate: subEnd
-        };
-      });
+      }
+
+      // 3. 处理尾节点 (最后一个)
+      if (node.subNodes && node.subNodes.length > 1) {
+        const lastSub = node.subNodes[node.subNodes.length - 1];
+        let subStart = formatDate(getNextWorkingDay(new Date(maxIntermediateEndStr.replace(/-/g, '/'))));
+        let subEnd = subStart;
+        if (lastSub.status === 'completed' && lastSub.actualEndDate) {
+           subEnd = lastSub.actualEndDate;
+           updatedSubNodes.push(lastSub);
+        } else {
+           subEnd = calculateEndDate(subStart, Number(lastSub.duration) || 0);
+           updatedSubNodes.push({ ...lastSub, startDate: subStart, endDate: subEnd });
+        }
+        nodeEndDate = subEnd; // 大节点结束时间以尾节点为准
+        currentStartStr = formatDate(getNextWorkingDay(new Date(subEnd.replace(/-/g, '/'))));
+      } else if (node.subNodes && node.subNodes.length === 1) {
+        nodeEndDate = updatedSubNodes[0].endDate;
+        currentStartStr = firstNodeEndStr;
+      }
       
       // 处理大节点的异常延误
       const delayDays = (node.delayRecords || []).reduce((sum, r) => sum + (Number(r.days) || 0), 0);
@@ -1665,13 +1707,10 @@ Page({
         sub.actualEndDate = nowStr;
         
         // 动态排期：只要有工序完成，就根据其实际完成时间重新推算后续所有工序的排期
-        // 如果当前大节点还没完成，则推进下一个子工序的状态为 current
-        if (popupSubIdx + 1 < nodes[popupMajorIdx].subNodes.length) {
+        // 如果当前是首节点且刚提交验收（待确认），则不激活后续节点（需等客户签字后再激活并行工序）
+        // 对于非首节点，或者如果是不需要签字的普通工序，则按序激活下一个
+        if (sub.status === 'completed' && popupSubIdx + 1 < nodes[popupMajorIdx].subNodes.length) {
           nodes[popupMajorIdx].subNodes[popupSubIdx + 1].status = 'current';
-          // 不要在这里就强行把下一个子节点的 actualStartDate 设置为今天
-          // 只有当用户真正点击下一个子节点进入上传验收等操作时，才算作真正开始。
-          // 或者让它在 current 状态下暂时没有 actualStartDate，前端判断无实际开始时间时，就不显示为今天开始。
-          // nodes[popupMajorIdx].subNodes[popupSubIdx + 1].actualStartDate = nowStr; 
         }
 
         nodes = this.recalculateGantt(nodes, this.data.project.startDate);
@@ -1756,11 +1795,9 @@ Page({
             const db = wx.cloud.database();
             db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
               const userInfo = wx.getStorageSync('userInfo');
-              if (userInfo?.role !== 'admin') {
-                adminRes.data.forEach(adminDoc => {
-                  if (adminDoc.name !== userName) notifyUsers.add(adminDoc.name);
-                });
-              }
+              adminRes.data.forEach(adminDoc => {
+                if (adminDoc.name !== userName) notifyUsers.add(adminDoc.name);
+              });
               
               const namesArray = Array.from(notifyUsers).filter(Boolean);
               if (namesArray.length > 0) {
@@ -1809,12 +1846,16 @@ Page({
                       thing7Content = `【${match[1]}】工序有更新`;
                     }
 
+                    const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+                    const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
+
                     wx.cloud.callFunction({
                       name: 'sendSubscribeMessage',
                       data: {
                         receiverUserIds,
                         templateId: TEMPLATE_IDS.PROJECT_UPDATE,
                         page: `/pages/projectDetail/index?id=${this.data.id}`,
+                        miniprogramState,
                         data: {
                           thing1: { value: (p.address || p.customer || '未知项目').substring(0, 20) },
                           time2: { value: nowStr },
@@ -1929,11 +1970,9 @@ Page({
 
     // 获取管理员名单并合并去重
     db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
-      if (userInfo?.role !== 'admin') {
-        adminRes.data.forEach(adminDoc => {
-          if (adminDoc.name !== operatorName) notifyNames.add(adminDoc.name);
-        });
-      }
+      adminRes.data.forEach(adminDoc => {
+        if (adminDoc.name !== operatorName) notifyNames.add(adminDoc.name);
+      });
       
       notifyNames.forEach(targetName => {
         if (!targetName) return;
@@ -1984,12 +2023,16 @@ Page({
             });
 
             if (receiverUserIds.length > 0) {
+              const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+              const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
+
               wx.cloud.callFunction({
                 name: 'sendSubscribeMessage',
                 data: {
                   receiverUserIds,
                   templateId: TEMPLATE_IDS.PROJECT_UPDATE,
                   page: `/pages/projectDetail/index?id=${this.data.id}`,
+                  miniprogramState,
                   data: {
                     thing1: { value: (p.address || p.customer || '未知项目').substring(0, 20) }, // 项目名称
                     time2: { value: nowStr }, // 更新时间

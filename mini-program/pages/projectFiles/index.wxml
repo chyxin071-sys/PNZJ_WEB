@@ -1,9 +1,10 @@
-<view class="container {{activeTab === 'files' && isUploader ? 'pb-20' : ''}}">
+<wxs src="../../utils/format.wxs" module="format" />
+<view class="container {{(activeTab === 'files' && isUploader) ? 'pb-20' : ''}}" style="{{activeTab === 'materials' ? 'padding-bottom: 240rpx;' : ''}}">
   <view class="header bg-white p-6 shadow-sm mb-4 border-b border-gray-100 flex items-center justify-between">
     <view>
       <view class="text-lg font-bold text-gray-900" style="display: flex; align-items: center;">
         <text>{{lead.name}}的项目资料</text>
-        <view bindtap="openEditProject" wx:if="{{isUploader}}" class="icon-edit-project"></view>
+        <canvas type="2d" id="materialShareCanvas" style="width: 500px; height: 400px; position: fixed; left: -9999px; top: -9999px;"></canvas>
       </view>
       <view class="text-sm text-gray-500 mt-1">{{lead.address}}</view>
     </view>
@@ -60,7 +61,14 @@
                 <scroll-view class="swipe-area" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
                   <view class="swipe-view" style="display: inline-flex; flex-direction: row; min-width: 100%; align-items: stretch;">
                     <!-- 顶层可滑动内容区 -->
-                <view class="bg-white p-4 flex flex-col justify-center" style="width: 100%; scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; white-space: normal;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
+                <view class="bg-white p-4 flex justify-center items-center" style="width: 100%; scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; white-space: normal;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
+                  <!-- 文件图标/缩略图 -->
+                  <view style="width: 80rpx; height: 80rpx; flex-shrink: 0; border-radius: 12rpx; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e2e8f0; margin-right: 20rpx;">
+                    <image wx:if="{{item.type === 'image' || format.getFileIconText(format.getFileExt(item.name)) === 'IMG'}}" src="{{format.formatImageUrl(item.fileID || item.url)}}" mode="aspectFill" style="width: 100%; height: 100%;"></image>
+                    <view wx:else style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: {{format.getFileIconColor(format.getFileExt(item.name))}}20;">
+                      <text style="font-size: 22rpx; font-weight: bold; color: {{format.getFileIconColor(format.getFileExt(item.name))}};">{{format.getFileIconText(format.getFileExt(item.name))}}</text>
+                    </view>
+                  </view>
                   <!-- 文件信息 -->
                   <view class="flex-1 overflow-hidden pl-2">
                     <view class="text-sm font-bold text-gray-900 mb-1 truncate flex items-center gap-2" style="white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
@@ -99,15 +107,6 @@
 
     <!-- === 主材清单 Tab === -->
     <block wx:if="{{activeTab === 'materials'}}">
-      <!-- 可见性开关 -->
-      <view wx:if="{{isUploader}}" style="padding: 24rpx 40rpx; background: #fff; margin-bottom: 24rpx; display: flex; justify-content: space-between; align-items: center; border-bottom: 1rpx solid #f1f5f9;">
-        <view style="display: flex; align-items: center; gap: 12rpx;">
-          <text style="font-size: 28rpx; color: #334155; font-weight: 500;">客户端可见性</text>
-          <text style="font-size: 24rpx; color: #94a3b8;">{{materialListVisible ? '客户可查看' : '仅内部可见'}}</text>
-        </view>
-        <switch checked="{{materialListVisible}}" bindchange="toggleMaterialListVisibility" color="var(--primary-600)" />
-      </view>
-
       <view wx:if="{{materials.length === 0}}" class="flex flex-col items-center justify-center py-20">
         <view class="w-24 h-24 mb-4 bg-gray-100 rounded-full flex items-center justify-center">
           <text class="text-gray-400 text-3xl">📦</text>
@@ -119,10 +118,16 @@
         <view style="margin-bottom: 40rpx;">
           <!-- 分类标题 -->
           <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24rpx;">
-            <view style="display: flex; align-items: center; gap: 12rpx;">
-              <view style="width: 8rpx; height: 32rpx; background: var(--primary-600); border-radius: 4rpx;"></view>
-              <view style="font-size: 32rpx; font-weight: bold; color: var(--primary-900);">{{group.category}}</view>
-              <view style="font-size: 24rpx; color: #94a3b8; margin-left: 8rpx;">{{group.items.length}} 项</view>
+            <view style="display: flex; flex-direction: column; gap: 4rpx;">
+              <view style="display: flex; align-items: center; gap: 12rpx;">
+                <view style="width: 8rpx; height: 32rpx; background: var(--primary-600); border-radius: 4rpx;"></view>
+                <view style="font-size: 32rpx; font-weight: bold; color: var(--primary-900);">{{group.category}}</view>
+                <view style="font-size: 24rpx; color: #94a3b8; margin-left: 8rpx;">{{group.items.length}} 项</view>
+              </view>
+              <!-- 类别状态 -->
+              <view wx:if="{{lead.materialCategoryStates[group.category]}}" style="font-size: 22rpx; color: {{lead.materialCategoryStates[group.category].status === '已确认' ? 'var(--emerald-600)' : 'var(--amber-600)'}}; margin-top: 4rpx;">
+                {{lead.materialCategoryStates[group.category].status === '已确认' ? '客户已确认 | ' + (lead.materialCategoryStates[group.category].confirmedAt || '') : '待确认 | 发送时间: ' + (lead.materialCategoryStates[group.category].sentAt || '')}}
+              </view>
             </view>
             <!-- 添加按钮 -->
             <view wx:if="{{isUploader}}" bindtap="openAddMaterial" data-category="{{group.category}}" style="display: flex; align-items: center; gap: 4rpx; color: var(--primary-600); font-size: 28rpx; padding: 8rpx 16rpx; border: 1rpx dashed var(--primary-300); border-radius: 8rpx;" hover-class="bg-gray-100">
@@ -148,6 +153,32 @@
                   <!-- 备注 -->
                   <view wx:if="{{item.remark}}" style="font-size: 24rpx; color: #94a3b8; margin-top: 12rpx; padding-top: 12rpx; border-top: 1rpx dashed #f1f5f9;">
                     <text style="margin-right: 8rpx;">备注:</text><text>{{item.remark}}</text>
+                  </view>
+
+                  <!-- 图片区域 -->
+                  <view style="margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx dashed #f1f5f9;">
+                    <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx;">
+                      <text style="font-size: 24rpx; color: #64748b; font-weight: bold;">材料图片</text>
+                      <view wx:if="{{isUploader}}" catchtap="toggleMaterialImageEdit" data-catindex="{{catIndex}}" data-index="{{index}}" style="font-size: 24rpx; color: {{item.isEditingImages ? 'var(--primary-600)' : '#94a3b8'}}; padding: 4rpx 16rpx; background: {{item.isEditingImages ? 'var(--primary-50)' : '#f8fafc'}}; border-radius: 24rpx;">
+                        {{item.isEditingImages ? '确认' : '编辑'}}
+                      </view>
+                    </view>
+                    <view style="display: flex; flex-wrap: wrap; gap: 16rpx;">
+                      <block wx:for="{{item.images || []}}" wx:key="*this" wx:for-item="imgUrl" wx:for-index="imgIdx">
+                        <view style="width: calc((100% - 48rpx) / 4); box-sizing: border-box; aspect-ratio: 1; position: relative; border-radius: 8rpx; overflow: hidden; border: 1rpx solid #e2e8f0;">
+                          <image src="{{imgUrl}}" mode="aspectFill" catchtap="previewMaterialImage" data-urls="{{item.images}}" data-current="{{imgUrl}}" style="width: 100%; height: 100%;"></image>
+                          <view wx:if="{{item.isEditingImages}}" catchtap="deleteMaterialImage" data-catindex="{{catIndex}}" data-index="{{index}}" data-imgindex="{{imgIdx}}" style="position: absolute; top: 0; right: 0; width: 40rpx; height: 40rpx; background: rgba(225, 29, 72, 0.9); border-bottom-left-radius: 8rpx; display: flex; align-items: center; justify-content: center;">
+                            <text style="color: white; font-size: 24rpx; font-weight: bold; line-height: 1;">×</text>
+                          </view>
+                        </view>
+                      </block>
+                      <view wx:if="{{item.isEditingImages}}" catchtap="addMaterialImage" data-catindex="{{catIndex}}" data-index="{{index}}" style="width: calc((100% - 48rpx) / 4); box-sizing: border-box; aspect-ratio: 1; border-radius: 8rpx; border: 2rpx dashed #cbd5e1; display: flex; align-items: center; justify-content: center; background: #f8fafc;">
+                        <text style="font-size: 48rpx; color: #94a3b8; font-weight: 300;">+</text>
+                      </view>
+                      <view wx:if="{{!item.isEditingImages && (!item.images || item.images.length === 0)}}" style="width: 100%; text-align: center; padding: 20rpx 0; color: #cbd5e1; font-size: 24rpx;">
+                        暂无图片
+                      </view>
+                    </view>
                   </view>
                 </view>
 
@@ -178,6 +209,23 @@
       <view bindtap="chooseAndUpload" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2);" class="active:opacity-80 transition-opacity">
         上传资料
       </view>
+    </view>
+  </view>
+
+  <!-- ====== 底部悬浮操作栏：仅当存在主材数据时显示发送确认按钮 ====== -->
+  <view wx:if="{{activeTab === 'materials' && materials.length > 0}}" style="position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; box-sizing: border-box; display: flex; flex-direction: column; gap: 16rpx;">
+    <view style="font-size: 24rpx; color: #64748b; text-align: center;">
+      将主材清单发送给客户，以供客户确认
+    </view>
+    <view style="display: flex; gap: 24rpx; width: 100%;">
+      <!-- 如果已建立工地，则可点击打开分享选择弹窗 -->
+      <button wx:if="{{projectId}}" bindtap="openShareCategoryModal" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2); margin: 0;" class="active:opacity-80 transition-opacity">
+        发送给客户确认
+      </button>
+      <!-- 如果未建立工地，点击时提示错误 -->
+      <button wx:else bindtap="handleNoProjectShare" style="flex: 1; background: var(--primary-900); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(74,64,58,0.2); margin: 0;" class="active:opacity-80 transition-opacity">
+        发送给客户确认
+      </button>
     </view>
   </view>
 
@@ -404,4 +452,31 @@
       </view>
     </view>
   </view>
+
+  <!-- 分享类别选择弹窗 -->
+  <view wx:if="{{showShareCategoryModal}}" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; justify-content: center; align-items: center;">
+    <view style="background: #fff; width: 85%; border-radius: 24rpx; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh;">
+      <view style="padding: 40rpx 40rpx 20rpx; font-size: 32rpx; font-weight: bold; text-align: center; color: #1e293b;">选择要发送的主材大项</view>
+      
+      <scroll-view scroll-y style="max-height: 50vh; padding: 0 40rpx; box-sizing: border-box;">
+        <checkbox-group bindchange="onShareCategoryChange">
+          <label wx:for="{{availableShareCategories}}" wx:key="*this" style="display: flex; align-items: center; justify-content: space-between; padding: 24rpx 0; border-bottom: 1rpx solid #f1f5f9;">
+            <view style="display: flex; align-items: center;">
+              <checkbox value="{{item}}" checked="{{true}}" color="var(--primary-600)" style="transform: scale(0.8);" />
+              <view style="font-size: 28rpx; color: #334155; margin-left: 12rpx;">{{item}}</view>
+            </view>
+            <!-- 标识已确认或待确认状态 -->
+            <view wx:if="{{lead.materialCategoryStates[item].status === '已确认'}}" style="font-size: 22rpx; color: var(--emerald-600); background: var(--emerald-50); padding: 4rpx 12rpx; border-radius: 12rpx;">已确认</view>
+            <view wx:elif="{{lead.materialCategoryStates[item].status === '待确认'}}" style="font-size: 22rpx; color: var(--amber-600); background: var(--amber-50); padding: 4rpx 12rpx; border-radius: 12rpx;">待确认</view>
+          </label>
+        </checkbox-group>
+      </scroll-view>
+
+      <view style="padding: 30rpx 40rpx 40rpx; display: flex; gap: 20rpx; flex-shrink: 0;">
+        <button bindtap="closeShareCategoryModal" style="flex: 1; height: 80rpx; line-height: 80rpx; border-radius: 40rpx; background: #f1f5f9; color: #64748b; font-size: 28rpx; margin: 0; padding: 0;">取消</button>
+        <button open-type="share" data-share-type="material" style="flex: 1; height: 80rpx; line-height: 80rpx; border-radius: 40rpx; background: var(--primary-900); color: #fff; font-size: 28rpx; margin: 0; padding: 0;">发送</button>
+      </view>
+    </view>
+  </view>
+
 </view>

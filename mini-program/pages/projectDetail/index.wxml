@@ -1,4 +1,4 @@
-<wxs src="./format.wxs" module="format" />
+<wxs src="../../utils/format.wxs" module="format" />
 
 <view class="page-container" wx:if="{{!loading && project}}">
 

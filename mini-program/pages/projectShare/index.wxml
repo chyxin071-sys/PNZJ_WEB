@@ -1,5 +1,5 @@
 <!--pages/projectShare/index.wxml-->
-<wxs src="./format.wxs" module="format" />
+<wxs src="../../utils/format.wxs" module="format" />
 <wxs module="ganttUtil">
   module.exports = {
     getDelayDays: function(actualEndDate, expectedEndDate) {
@@ -457,9 +457,16 @@
 
               <!-- 文件列表 -->
               <view wx:for="{{group.items}}" wx:key="fileID" style="margin-bottom: 24rpx; border-radius: 32rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); border: 2rpx solid #f3f4f6; background: #fff;">
-                <view style="padding: 32rpx; display: flex; flex-direction: column; justify-content: center; width: 100%; box-sizing: border-box;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
+                <view style="padding: 32rpx; display: flex; align-items: center; width: 100%; box-sizing: border-box;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
+                  <!-- 文件图标/缩略图 -->
+                  <view style="width: 80rpx; height: 80rpx; flex-shrink: 0; border-radius: 12rpx; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e2e8f0; margin-right: 20rpx;">
+                    <image wx:if="{{item.type === 'image' || format.getFileIconText(format.getFileExt(item.name)) === 'IMG'}}" src="{{format.formatImageUrl(item.fileID || item.url)}}" mode="aspectFill" style="width: 100%; height: 100%;"></image>
+                    <view wx:else style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: {{format.getFileIconColor(format.getFileExt(item.name))}}20;">
+                      <text style="font-size: 22rpx; font-weight: bold; color: {{format.getFileIconColor(format.getFileExt(item.name))}};">{{format.getFileIconText(format.getFileExt(item.name))}}</text>
+                    </view>
+                  </view>
                   <!-- 文件信息 -->
-                  <view style="flex: 1; overflow: hidden;">
+                  <view style="flex: 1; overflow: hidden; display: flex; flex-direction: column; justify-content: center;">
                     <view style="font-size: 28rpx; font-weight: bold; color: #1e293b; margin-bottom: 8rpx; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
                       {{item.name}}
                     </view>
@@ -485,34 +492,64 @@
     </view>
 
     <!-- === 材料清单 Tab === -->
-    <view wx:if="{{activeTab === 'materials'}}" style="margin: 0 20rpx; display: flex; flex-direction: column; min-height: 50vh; justify-content: space-between;">
-      <view style="flex: 1;">
+    <view wx:if="{{activeTab === 'materials'}}" style="padding: 0 32rpx; box-sizing: border-box; display: flex; flex-direction: column; min-height: 50vh; justify-content: space-between;">
+      <view style="flex: 1; padding-bottom: {{hasPendingConfirmation ? '160rpx' : '0'}};">
         <!-- 无数据状态 -->
-        <view wx:if="{{!materials || materials.length === 0}}" style="text-align: center; padding: 100rpx 0;">
-          <view style="font-size: 28rpx; color: #94a3b8;">暂无材料清单记录</view>
+        <view wx:if="{{!materials || materials.length === 0}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100rpx 0;">
+          <view style="width: 120rpx; height: 120rpx; margin-bottom: 20rpx; background: #f1f5f9; border-radius: 60rpx; display: flex; align-items: center; justify-content: center;">
+            <text style="font-size: 60rpx; color: #94a3b8;">📦</text>
+          </view>
+          <text style="font-size: 28rpx; color: #94a3b8;">暂无材料清单记录</text>
         </view>
 
         <!-- 数据列表 -->
         <block wx:for="{{groupedMaterials}}" wx:key="category" wx:for-item="group">
           <view style="margin-bottom: 40rpx;">
             <!-- 分类标题 -->
-            <view style="display: flex; align-items: center; gap: 12rpx; margin-bottom: 24rpx;">
-              <view style="width: 8rpx; height: 32rpx; background: var(--primary-600); border-radius: 4rpx;"></view>
-              <view style="font-size: 32rpx; font-weight: bold; color: var(--primary-900);">{{group.category}}</view>
-              <view style="font-size: 24rpx; color: #94a3b8; margin-left: 8rpx;">{{group.items.length}} 项</view>
+            <view style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24rpx;">
+              <view style="display: flex; flex-direction: column; gap: 4rpx;">
+                <view style="display: flex; align-items: center; gap: 12rpx;">
+                  <view style="width: 8rpx; height: 32rpx; background: var(--primary-600); border-radius: 4rpx;"></view>
+                  <view style="font-size: 32rpx; font-weight: bold; color: var(--primary-900);">{{group.category}}</view>
+                  <view style="font-size: 24rpx; color: #94a3b8; margin-left: 8rpx;">{{group.items.length}} 项</view>
+                </view>
+                <view wx:if="{{group.status}}" style="font-size: 22rpx; color: {{group.status === '已确认' ? 'var(--emerald-600)' : 'var(--amber-600)'}}; margin-top: 4rpx;">
+                  {{group.status === '已确认' ? '客户已确认 | ' + group.confirmedAt : '待确认 | 发送时间: ' + group.sentAt}}
+                </view>
+              </view>
             </view>
 
             <!-- 分类下的材料列表 -->
-            <view wx:for="{{group.items}}" wx:key="id" style="background: #fff; border-radius: 16rpx; margin-bottom: 24rpx; box-shadow: 0 4rpx 20rpx rgba(0,0,0,0.03); border: 1rpx solid #f1f5f9; overflow: hidden;">
-              <view style="padding: 24rpx;">
-                <view style="display: flex; justify-content: space-between; align-items: flex-start;">
-                  <view style="flex: 1;">
-                    <view style="font-size: 28rpx; font-weight: bold; color: #1e293b; margin-bottom: 6rpx;">{{item.name}}</view>
-                    <view style="display: flex; flex-wrap: wrap; gap: 16rpx; font-size: 24rpx; color: #64748b;">
-                      <view wx:if="{{item.brandModel}}"><text style="color: #94a3b8; margin-right: 8rpx;">型号:</text>{{item.brandModel}}</view>
-                      <view wx:if="{{item.quantity}}"><text style="color: #94a3b8; margin-right: 8rpx;">数量:</text>{{item.quantity}}</view>
+            <view wx:for="{{group.items}}" wx:key="id" style="margin-bottom: 24rpx; border-radius: 16rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); border: 1rpx solid #e2e8f0; background: #fff;">
+              <view style="width: 100%; box-sizing: border-box; white-space: normal; padding: 24rpx;">
+                <!-- 标题行 -->
+                <view wx:if="{{item.displayTitle}}" style="font-size: 32rpx; font-weight: bold; color: #1e293b; margin-bottom: {{item.displayLine1 || item.displayLine2 || item.remark ? '12rpx' : '0'}};">{{item.displayTitle}}</view>
+
+                <!-- 第一行信息 -->
+                <view wx:if="{{item.displayLine1}}" style="font-size: 28rpx; color: #334155; margin-bottom: {{item.displayLine2 || item.remark ? '8rpx' : '0'}};">{{item.displayLine1}}</view>
+
+                <!-- 第二行信息 -->
+                <view wx:if="{{item.displayLine2}}" style="font-size: 24rpx; color: #64748b; margin-bottom: {{item.remark ? '8rpx' : '0'}};">{{item.displayLine2}}</view>
+
+                <!-- 备注 -->
+                <view wx:if="{{item.remark}}" style="font-size: 24rpx; color: #94a3b8; margin-top: 12rpx; padding-top: 12rpx; border-top: 1rpx dashed #f1f5f9;">
+                  <text style="margin-right: 8rpx;">备注:</text><text>{{item.remark}}</text>
+                </view>
+
+                <!-- 图片区域 -->
+                <view style="margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx dashed #f1f5f9;">
+                  <view style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16rpx;">
+                    <text style="font-size: 24rpx; color: #64748b; font-weight: bold;">材料图片</text>
+                  </view>
+                  <view style="display: flex; flex-wrap: wrap; gap: 16rpx;">
+                    <block wx:for="{{item.images || []}}" wx:key="*this" wx:for-item="imgUrl">
+                      <view style="width: calc((100% - 48rpx) / 4); box-sizing: border-box; aspect-ratio: 1; position: relative; border-radius: 8rpx; overflow: hidden; border: 1rpx solid #e2e8f0;">
+                        <image src="{{imgUrl}}" mode="aspectFill" catchtap="previewMaterialImageShare" data-urls="{{item.images}}" data-current="{{imgUrl}}" style="width: 100%; height: 100%;"></image>
+                      </view>
+                    </block>
+                    <view wx:if="{{!item.images || item.images.length === 0}}" style="width: 100%; text-align: center; padding: 20rpx 0; color: #cbd5e1; font-size: 24rpx;">
+                      暂无图片
                     </view>
-                    <view wx:if="{{item.remark}}" style="font-size: 24rpx; color: #64748b; margin-top: 8rpx;"><text style="color: #94a3b8; margin-right: 8rpx;">备注:</text>{{item.remark}}</view>
                   </view>
                 </view>
               </view>
@@ -524,6 +561,13 @@
       <!-- 底部 Logo -->
       <view style="display: flex; align-items: center; justify-content: center; padding: 40rpx 0; margin-top: auto; padding-bottom: calc(40rpx + env(safe-area-inset-bottom));">
         <image src="/assets/icons/LOGO2.png" style="width: 360rpx; height: 72rpx; opacity: 0.85;" mode="aspectFit"></image>
+      </view>
+    </view>
+
+    <!-- 悬浮待确认按钮 -->
+    <view wx:if="{{hasPendingConfirmation && activeTab === 'materials'}}" style="position: fixed; bottom: 0; left: 0; right: 0; padding: 24rpx 40rpx; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-top: 1rpx solid #f1f5f9; z-index: 100; box-sizing: border-box;">
+      <view bindtap="confirmMaterialSnapshots" style="width: 100%; background: var(--amber-600); color: #fff; height: 88rpx; border-radius: 44rpx; display: flex; align-items: center; justify-content: center; font-size: 32rpx; font-weight: bold; box-shadow: 0 8rpx 24rpx rgba(192, 137, 59, 0.3);" class="active:opacity-80 transition-opacity">
+        待确认
       </view>
     </view>
   </block>

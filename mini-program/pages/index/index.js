@@ -966,12 +966,15 @@ Page({
           });
 
           // 触发微信订阅消息（静默请求）
+          const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+          const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
           wx.cloud.callFunction({
             name: 'sendSubscribeMessage',
             data: {
               receiverUserId: assignee.id,
               templateId: TEMPLATE_IDS.TODO_REMINDER,
               page: `/pages/todoForm/index?id=${newTodoId}`,
+              miniprogramState,
               data: {
                 thing1: { value: title.trim().substring(0, 20) },
                 time2: { value: dueDate || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}` },

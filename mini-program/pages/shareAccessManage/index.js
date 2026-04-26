@@ -56,15 +56,20 @@ Page({
     const userInfo = wx.getStorageSync('userInfo');
     const operatorName = userInfo ? userInfo.name : '管理员';
     const operatorRole = userInfo ? userInfo.role : 'admin';
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
     
     const db = wx.cloud.database();
     db.collection('followUps').add({
       data: {
         leadId: leadId,
         content: `【系统自动记录】\n${content}`,
-        creatorName: operatorName,
+        method: '系统记录',
+        createdBy: operatorName,
         creatorRole: operatorRole,
-        createTime: db.serverDate(),
+        createdAt: db.serverDate(),
+        displayTime: nowStr,
+        timestamp: db.serverDate(),
         type: 'system',
         location: null
       }
@@ -157,26 +162,33 @@ Page({
       const statusText = result === 'approved' ? '已通过' : '已拒绝';
       const now = new Date();
       const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      const { TEMPLATE_IDS } = require('../../utils/subscribe.js');
+      const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+      const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
 
-      // 查找该 openid 对应的 user（如果有）
+      // 无论外部用户是否有 users 记录，都直接通过 openId 下发微信订阅消息
+      wx.cloud.callFunction({
+        name: 'sendSubscribeMessage',
+        data: {
+          openIds: [request.openid],
+          templateId: TEMPLATE_IDS.SHARE_ACCESS_REQUEST,
+          page: `/pages/projectShare/index?id=${this.data.projectId}`,
+          miniprogramState,
+          data: {
+            thing1: { value: address.substring(0, 20) },
+            time2: { value: nowStr },
+            thing4: { value: '系统' },
+            thing6: { value: '查看申请' },
+            thing7: { value: `您的查看申请${statusText}`.substring(0, 20) }
+          }
+        }
+      }).catch(console.error);
+
+      // 查找该 openid 对应的 user（如果有），下发站内信
       db.collection('users').where({ openid: request.openid }).limit(1).get().then(userRes => {
-        if (userRes.data.length === 0) return; // 外部用户没有 users 记录，暂不通知
+        if (userRes.data.length === 0) return; // 外部用户没有 users 记录，则只发微信通知，不发站内信
 
         const userId = userRes.data[0]._id;
-        wx.cloud.callFunction({
-          name: 'sendSubscribeMessage',
-          data: {
-            receiverUserId: userId,
-            templateId: TEMPLATE_IDS.SHARE_ACCESS_REQUEST,
-            page: `/pages/projectShare/index?id=${this.data.projectId}`,
-            data: {
-              time1: { value: nowStr },
-              thing2: { value: `您的查看申请${statusText} | 工地：${address}` }
-            }
-          }
-        }).catch(() => {});
-        
-        // 同时发一条站内信通知申请人
         const operatorName = wx.getStorageSync('userInfo')?.name || '管理员';
         db.collection('notifications').add({
           data: {

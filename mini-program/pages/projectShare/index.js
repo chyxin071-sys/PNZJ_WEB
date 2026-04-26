@@ -48,7 +48,9 @@ Page({
         majorIdx: options.majorIdx !== undefined ? parseInt(options.majorIdx) : null,
         subIdx: options.subIdx !== undefined ? parseInt(options.subIdx) : null,
         showMode: options.majorIdx !== undefined ? 'report' : 'timeline',
-        isEmployee: isEmployee
+        isEmployee: isEmployee,
+        activeTab: options.tab || 'progress',
+        shareCategories: options.categories ? decodeURIComponent(options.categories).split(',') : null
       });
 
       if (isEmployee) {
@@ -252,10 +254,18 @@ Page({
   },
 
   // 提交申请
-  submitApply() {
+  async submitApply() {
     const { name, relation, phone } = this.data.applyForm;
     if (!name.trim()) return wx.showToast({ title: '请填写姓名', icon: 'none' });
     if (!relation.trim()) return wx.showToast({ title: '请填写与业主关系', icon: 'none' });
+
+    // 申请时静默请求微信订阅消息授权
+    try {
+      const { requestSubscribe } = require('../../utils/subscribe.js');
+      await requestSubscribe();
+    } catch (e) {
+      console.warn('请求订阅消息授权失败', e);
+    }
 
     wx.showLoading({ title: '提交中...' });
     const db = wx.cloud.database();
@@ -305,13 +315,19 @@ Page({
   addSystemFollowUp(leadId, content) {
     if (!leadId) return;
     const db = wx.cloud.database();
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
     db.collection('followUps').add({
       data: {
         leadId: leadId,
         content: `【系统自动记录】\n${content}`,
-        creatorName: '客户/外部访客',
+        method: '系统记录',
+        createdBy: '客户/外部访客',
         creatorRole: 'guest',
-        createTime: db.serverDate(),
+        createdAt: db.serverDate(),
+        displayTime: nowStr,
+        timestamp: db.serverDate(),
         type: 'system',
         location: null
       }
@@ -367,6 +383,8 @@ Page({
         });
 
         if (receiverUserIds.length > 0) {
+          const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+          const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
           // 发订阅消息（云函数批量处理去重）
           wx.cloud.callFunction({
             name: 'sendSubscribeMessage',
@@ -374,9 +392,13 @@ Page({
               receiverUserIds,
               templateId: TEMPLATE_IDS.SHARE_ACCESS_REQUEST,
               page: `/pages/shareAccessManage/index?projectId=${projectId}`,
+              miniprogramState,
               data: {
-                time1: { value: nowStr },
-                thing2: { value: notifyContent.substring(0, 20) }
+                thing1: { value: address.substring(0, 20) }, // 项目名称
+                time2: { value: nowStr }, // 申请时间
+                thing4: { value: applyName.substring(0, 20) }, // 申请人
+                thing6: { value: '申请查看工地' }, // 备注
+                thing7: { value: '请及时审核通过' } // 内容
               }
             }
           }).catch(err => console.error('发送订阅消息失败', err));
@@ -453,22 +475,160 @@ Page({
   },
 
   computeGroupedMaterials(materials) {
-    const categories = ['主材', '辅材', '全屋定制', '家电软装', '其他'];
+    const categories = ['瓷砖/木地板', '木门/金属门', '壁布/乳胶漆/护墙板', '集成吊顶/电器', '全屋定制衣柜', '全屋定制橱柜', '其他'];
+
+    // 为每条记录添加展示信息
+    const processedMaterials = materials.map(m => {
+      const item = { ...m };
+
+      // 根据分类定制展示信息
+      if (m.category === '瓷砖/木地板') {
+        item.displayTitle = [m.region, m.brand].filter(Boolean).join(' | ');
+        item.displayLine1 = [m.model ? `型号：${m.model}` : '', m.spec ? `规格：${m.spec}` : ''].filter(Boolean).join(' | ');
+        item.displayLine2 = m.quantity ? `数量：${m.quantity}` : '';
+      } else if (m.category === '木门/金属门') {
+        item.displayTitle = [m.region, m.brand].filter(Boolean).join(' | ');
+        item.displayLine1 = [
+          m.frameColor ? `边框：${m.frameColor}` : '',
+          m.coreColor ? `门芯：${m.coreColor}` : '',
+          m.doorModel ? `门型：${m.doorModel}` : ''
+        ].filter(Boolean).join(' | ');
+        item.displayLine2 = '';
+      } else if (m.category === '壁布/乳胶漆/护墙板') {
+        item.displayTitle = [m.region, m.itemCategory, m.brand].filter(Boolean).join(' | ');
+        item.displayLine1 = [m.model ? `型号：${m.model}` : '', m.quantity ? `数量：${m.quantity}` : ''].filter(Boolean).join(' | ');
+        item.displayLine2 = '';
+      } else if (m.category === '集成吊顶/电器') {
+        item.displayTitle = [m.region, m.name].filter(Boolean).join(' | ');
+        item.displayLine1 = [m.spec ? `规格：${m.spec}` : '', m.quantity ? `数量：${m.quantity}` : ''].filter(Boolean).join(' | ');
+        item.displayLine2 = '';
+      } else if (m.category === '全屋定制衣柜' || m.category === '全屋定制橱柜') {
+        const type = m.category === '全屋定制衣柜' ? '衣柜' : '橱柜';
+        item.displayTitle = [m.region, type, m.brand].filter(Boolean).join(' | ');
+        item.displayLine1 = [
+          m.cabinetBody ? `柜体：${m.cabinetBody}` : '',
+          m.cabinetDoor ? `柜门：${m.cabinetDoor}` : '',
+          m.handle ? `拉手：${m.handle}` : ''
+        ].filter(Boolean).join(' | ');
+        item.displayLine2 = '';
+      } else if (m.category === '其他') {
+        item.displayTitle = m.name || '';
+        item.displayLine1 = '';
+        item.displayLine2 = '';
+      }
+
+      return item;
+    });
+
     const groups = categories.map(cat => ({
       category: cat,
-      items: materials.filter(m => m.category === cat)
-    })).filter(g => g.items.length > 0);
-    
-    const otherItems = materials.filter(m => !categories.includes(m.category));
+      items: processedMaterials.filter(m => m.category === cat),
+      status: '',
+      sentAt: ''
+    }));
+
+    // 处理分类外的异常数据
+    const otherItems = processedMaterials.filter(m => !categories.includes(m.category));
     if (otherItems.length > 0) {
       const otherGroup = groups.find(g => g.category === '其他');
       if (otherGroup) {
         otherGroup.items.push(...otherItems);
-      } else {
-        groups.push({ category: '其他', items: otherItems });
       }
     }
     return groups;
+  },
+
+  // 格式化时间
+  formatTime(date) {
+    const d = new Date(date);
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hour = String(d.getHours()).padStart(2, '0');
+    const minute = String(d.getMinutes()).padStart(2, '0');
+    return `${month}-${day} ${hour}:${minute}`;
+  },
+
+  // 确认主材清单
+  confirmMaterialSnapshots() {
+    wx.showModal({
+      title: '确认材料清单',
+      content: '确认后，员工端将会收到通知。',
+      success: (res) => {
+        if (res.confirm) {
+          wx.showLoading({ title: '确认中...', mask: true });
+          
+          const leadId = this.data.project ? this.data.project.leadId : null;
+          if (!leadId) {
+            wx.hideLoading();
+            return wx.showToast({ title: '参数错误', icon: 'none' });
+          }
+
+          const db = wx.cloud.database();
+          const nowStr = this.formatTime(new Date());
+          
+          // 获取当前需要确认的分类
+          const pendingCategories = this.data.groupedMaterials
+            .filter(g => g.status === '待确认')
+            .map(g => g.category);
+          
+          if (pendingCategories.length === 0) {
+            wx.hideLoading();
+            return wx.showToast({ title: '没有待确认的分类', icon: 'none' });
+          }
+
+          // 添加跟进记录
+          this.addSystemFollowUp(leadId, `客户已确认主材清单 (${pendingCategories.join('、')})`);
+          
+          // 我们需要先获取最新的 lead 数据以确保不覆盖其他分类的状态
+          db.collection('leads').doc(leadId).get().then(leadRes => {
+            const currentStates = leadRes.data.materialCategoryStates || {};
+            const newStates = { ...currentStates };
+            
+            pendingCategories.forEach(cat => {
+                    if (newStates[cat]) {
+                      // 保留之前的快照等所有数据，仅更新状态和确认时间
+                      newStates[cat] = { ...newStates[cat], status: '已确认', confirmedAt: nowStr };
+                    }
+                  });
+
+            return db.collection('leads').doc(leadId).update({
+              data: {
+                materialCategoryStates: newStates
+              }
+            }).then(() => {
+              wx.hideLoading();
+              wx.showToast({ title: '确认成功', icon: 'success' });
+              
+              // 更新本地状态
+              const updatedGroupedMaterials = this.data.groupedMaterials.map(g => {
+                if (pendingCategories.includes(g.category)) {
+                  return { ...g, status: '已确认', confirmedAt: nowStr };
+                }
+                return g;
+              });
+
+              this.setData({
+                groupedMaterials: updatedGroupedMaterials,
+                hasPendingConfirmation: false
+              });
+
+              // 触发给员工发订阅消息及系统通知
+              this._notifyStaffMaterialsConfirmed(leadId, pendingCategories);
+            });
+          }).catch(err => {
+            wx.hideLoading();
+            console.error('确认材料清单失败', err);
+            wx.showToast({ title: '确认失败', icon: 'none' });
+          });
+        }
+      }
+    });
+  },
+
+  previewMaterialImageShare(e) {
+    const { urls, current } = e.currentTarget.dataset;
+    if (!urls || urls.length === 0) return;
+    wx.previewImage({ urls, current });
   },
 
   loadProject(id) {
@@ -512,6 +672,7 @@ Page({
           db.collection('leads').doc(p.leadId).get().then(leadRes => {
             const lead = leadRes.data;
             const materials = lead.materialList || [];
+            const materialCategoryStates = lead.materialCategoryStates || {};
             
             // 处理项目资料（分享页始终作为客户视图，无论打开者是否为员工，均只展示允许客户可见的文件，以便员工测试验证）
             let files = lead.files || [];
@@ -539,9 +700,70 @@ Page({
               };
             }).filter(g => g.items.length > 0); // 客户端始终隐藏空文件夹
 
+            const { shareCategories } = this.data;
+            let groupedMaterials = [];
+            
+            const categories = ['瓷砖/木地板', '木门/金属门', '壁布/乳胶漆/护墙板', '集成吊顶/电器', '全屋定制衣柜', '全屋定制橱柜', '其他'];
+            
+            // 客户端只展示已被发送给客户的分类（即存在状态且有快照的分类，兼容旧数据）
+            categories.forEach(cat => {
+              const state = materialCategoryStates[cat];
+              if (state) {
+                const snapshotData = state.snapshot || materials.filter(m => m.category === cat);
+                if (snapshotData && snapshotData.length > 0) {
+                  const processedItems = this.computeGroupedMaterials(snapshotData).find(g => g.category === cat)?.items || [];
+                  groupedMaterials.push({
+                    category: cat,
+                    items: processedItems,
+                    status: state.status,
+                    sentAt: state.sentAt,
+                    confirmedAt: state.confirmedAt
+                  });
+                }
+              }
+            });
+
+            // 处理分类外的异常数据 (如果有 snapshot 或 历史数据)
+            Object.keys(materialCategoryStates).forEach(cat => {
+              if (!categories.includes(cat)) {
+                const state = materialCategoryStates[cat];
+                if (state) {
+                  const snapshotData = state.snapshot || materials.filter(m => m.category === cat);
+                  if (snapshotData && snapshotData.length > 0) {
+                    const processedItems = this.computeGroupedMaterials(snapshotData).find(g => g.category === '其他')?.items || [];
+                    const otherGroup = groupedMaterials.find(g => g.category === '其他');
+                    if (otherGroup) {
+                      otherGroup.items.push(...processedItems);
+                    } else {
+                      groupedMaterials.push({
+                        category: '其他',
+                        items: processedItems,
+                        status: state.status,
+                        sentAt: state.sentAt,
+                        confirmedAt: state.confirmedAt
+                      });
+                    }
+                  }
+                }
+              }
+            });
+
+            // 如果分享链接指定了大项，则只展示指定的大项
+            if (shareCategories && shareCategories.length > 0) {
+              groupedMaterials = groupedMaterials.filter(g => shareCategories.includes(g.category));
+            }
+
+            let hasPendingConfirmation = false;
+            groupedMaterials.forEach(group => {
+              if (group.status === '待确认') {
+                hasPendingConfirmation = true;
+              }
+            });
+
             this.setData({ 
               materials, 
-              groupedMaterials: this.computeGroupedMaterials(materials),
+              groupedMaterials,
+              hasPendingConfirmation,
               files: sortedFiles,
               groupedFiles
             });
@@ -1023,12 +1245,16 @@ Page({
         if (res.data && res.data.length > 0) {
           const receiverUserIds = res.data.map(u => u._id);
           if (receiverUserIds.length > 0) {
+            const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+            const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
+
             wx.cloud.callFunction({
               name: 'sendSubscribeMessage',
               data: {
                 receiverUserIds,
                 templateId: TEMPLATE_IDS.PROJECT_UPDATE,
                 page: `/pages/projectDetail/index?id=${this.data.id}`,
+                miniprogramState,
                 data: {
                   thing1: { value: (project.address || project.customer || '未知项目').substring(0, 20) }, // 项目名称
                   time2: { value: nowStr }, // 更新时间
@@ -1042,6 +1268,92 @@ Page({
         }
       }).catch(console.error);
     }
+  },
+
+  _notifyStaffMaterialsConfirmed(leadId, categories) {
+    const db = wx.cloud.database();
+    
+    // 通过 leadId 获取项目信息，以获取关联的员工和地址
+    db.collection('projects').where({ leadId }).limit(1).get().then(projRes => {
+      if (projRes.data.length === 0) return;
+      const project = projRes.data[0];
+      const address = (project.address || '未知工地').substring(0, 20);
+      
+      const notifyUsers = new Set();
+      if (project.manager) project.manager.split(',').map(s=>s.trim()).filter(Boolean).forEach(u => notifyUsers.add(u));
+      if (project.sales) project.sales.split(',').map(s=>s.trim()).filter(Boolean).forEach(u => notifyUsers.add(u));
+      if (project.designer) project.designer.split(',').map(s=>s.trim()).filter(Boolean).forEach(u => notifyUsers.add(u));
+      
+      const notifyContent = `客户已确认主材清单：${categories.join('、')}`;
+      const nowStr = this.formatTime(new Date());
+
+      // 写入系统跟进记录
+      db.collection('followUps').add({
+        data: {
+          leadId: leadId,
+          content: notifyContent,
+          method: '系统记录',
+          createdBy: '客户',
+          createdAt: db.serverDate(),
+          displayTime: nowStr,
+          timestamp: db.serverDate()
+        }
+      });
+      db.collection('leads').doc(leadId).update({
+        data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+      });
+
+      db.collection('users').where({ role: 'admin' }).get().then(res => {
+        res.data.forEach(u => notifyUsers.add(u.name));
+        
+        const notifyNames = Array.from(notifyUsers);
+        
+        if (notifyNames.length > 0) {
+          // 发送小程序内部系统通知
+          notifyNames.forEach(userName => {
+            db.collection('notifications').add({
+              data: {
+                type: 'lead',
+                title: '客户有新跟进',
+                content: `【主材确认】工地【${address}】- ${notifyContent}`,
+                senderName: '客户',
+                senderRole: 'default',
+                targetUser: userName,
+                isRead: false,
+                createTime: db.serverDate(),
+                link: `/pages/leadDetail/index?id=${leadId}&tab=materials`
+              }
+            }).catch(err => console.error('发送系统通知失败', err));
+          });
+          
+          // 发送微信订阅消息
+          db.collection('users').where({ name: db.command.in(notifyNames) }).get().then(usersRes => {
+            const receiverUserIds = usersRes.data.map(u => u._id);
+            if (receiverUserIds.length > 0) {
+              const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+              const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
+
+              wx.cloud.callFunction({
+                name: 'sendSubscribeMessage',
+                data: {
+                  receiverUserIds,
+                  templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+                  page: `/pages/leadDetail/index?id=${leadId}&tab=materials`,
+                  miniprogramState,
+                  data: {
+                    thing1: { value: address.substring(0, 20) }, // 项目名称
+                    time2: { value: nowStr }, // 更新时间
+                    thing4: { value: '客户' }, // 操作员
+                    thing6: { value: '客户已确认主材清单' }, // 备注
+                    thing7: { value: `确认项：${categories.join('、')}`.substring(0, 20) } // 更新内容
+                  }
+                }
+              }).catch(console.error);
+            }
+          }).catch(console.error);
+        }
+      });
+    }).catch(console.error);
   },
 
   onShareAppMessage() {

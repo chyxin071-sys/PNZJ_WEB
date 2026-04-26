@@ -375,12 +375,15 @@ Page({
             
             db.collection('users').where({ name: saleName }).get().then(res => {
               if (res.data && res.data.length > 0) {
+                const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+                const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
                 wx.cloud.callFunction({
                   name: 'sendSubscribeMessage',
                   data: {
                     receiverUserId: res.data[0]._id,
                     templateId: TEMPLATE_IDS.PROJECT_UPDATE,
                     page: `/pages/leadDetail/index?id=${this.data.id}`,
+                    miniprogramState,
                     data: {
                       thing1: { value: d.name.substring(0, 20) },
                       time2: { value: nowStr },
@@ -412,12 +415,15 @@ Page({
 
             db.collection('users').where({ name: designerName }).get().then(res => {
               if (res.data && res.data.length > 0) {
+                const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+                const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
                 wx.cloud.callFunction({
                   name: 'sendSubscribeMessage',
                   data: {
                     receiverUserId: res.data[0]._id,
                     templateId: TEMPLATE_IDS.PROJECT_UPDATE,
                     page: `/pages/leadDetail/index?id=${this.data.id}`,
+                    miniprogramState,
                     data: {
                       thing1: { value: d.name.substring(0, 20) },
                       time2: { value: nowStr },

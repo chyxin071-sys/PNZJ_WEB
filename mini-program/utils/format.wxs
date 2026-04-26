@@ -19,6 +19,44 @@ var formatImageUrl = function(url) {
   }
 }
 
+var getFileExt = function(filename) {
+  if (!filename) return '';
+  var parts = filename.split('.');
+  if (parts.length > 1) {
+    return parts[parts.length - 1].toLowerCase();
+  }
+  return '';
+}
+
+var getFileIconColor = function(ext) {
+  if (ext === 'pdf') return '#ef4444'; // red
+  if (ext === 'xls' || ext === 'xlsx') return '#10b981'; // emerald
+  if (ext === 'doc' || ext === 'docx') return '#3b82f6'; // blue
+  if (ext === 'ppt' || ext === 'pptx') return '#f97316'; // orange
+  if (ext === 'dwg') return '#8b5cf6'; // violet
+  if (ext === 'zip' || ext === 'rar' || ext === '7z') return '#64748b'; // slate
+  if (ext === 'txt') return '#64748b'; // slate
+  if (ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'gif' || ext === 'webp') return '#14b8a6'; // teal
+  if (ext === 'mp4' || ext === 'mov' || ext === 'avi') return '#8b5cf6'; // violet
+  return '#94a3b8'; // slate
+}
+
+var getFileIconText = function(ext) {
+  if (ext === 'pdf') return 'PDF';
+  if (ext === 'xls' || ext === 'xlsx') return 'XLS';
+  if (ext === 'doc' || ext === 'docx') return 'DOC';
+  if (ext === 'ppt' || ext === 'pptx') return 'PPT';
+  if (ext === 'dwg') return 'DWG';
+  if (ext === 'zip' || ext === 'rar' || ext === '7z') return 'ZIP';
+  if (ext === 'txt') return 'TXT';
+  if (ext === 'jpg' || ext === 'jpeg' || ext === 'png' || ext === 'gif' || ext === 'webp') return 'IMG';
+  if (ext === 'mp4' || ext === 'mov' || ext === 'avi') return 'VID';
+  return 'FILE';
+}
+
 module.exports = {
-  formatImageUrl: formatImageUrl
+  formatImageUrl: formatImageUrl,
+  getFileExt: getFileExt,
+  getFileIconColor: getFileIconColor,
+  getFileIconText: getFileIconText
 };

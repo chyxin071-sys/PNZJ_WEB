@@ -627,12 +627,15 @@ Page({
 
         if (receiverUserIds.length > 0) {
           // 微信订阅消息（云函数批量去重发送）
+          const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+          const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
           wx.cloud.callFunction({
             name: 'sendSubscribeMessage',
             data: {
               receiverUserIds,
               templateId: TEMPLATE_IDS.PROJECT_UPDATE,
               page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+              miniprogramState,
               data: {
                 thing1: { value: (lead.name || '未知客户').substring(0, 20) },
                 time2: { value: nowStr },
@@ -1232,7 +1235,11 @@ Page({
     const operatorName = userInfo ? (userInfo.name || '未知') : '未知';
     
     const notifyUsers = new Set();
+    if (lead.sales && lead.sales !== operatorName) notifyUsers.add(lead.sales);
     if (lead.designer && lead.designer !== operatorName) notifyUsers.add(lead.designer);
+    if (lead.manager && lead.manager !== operatorName) notifyUsers.add(lead.manager);
+    if (lead.creatorName && lead.creatorName !== operatorName) notifyUsers.add(lead.creatorName);
+
     // 添加所有管理员
     db.collection('users').where({ isActive: true }).get().then(res => {
       const users = res.data;
@@ -1266,12 +1273,15 @@ Page({
 
       // 发送微信订阅消息
       if (receiverUserIds.length > 0) {
+        const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+        const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
         wx.cloud.callFunction({
           name: 'sendSubscribeMessage',
           data: {
             receiverUserIds,
             templateId: TEMPLATE_IDS.PROJECT_UPDATE,
             page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+            miniprogramState,
             data: {
               thing1: { value: (lead.name || '未知客户').substring(0, 20) },
               time2: { value: nowStr },
@@ -1329,12 +1339,15 @@ Page({
 
       // 发送微信订阅消息
       if (receiverUserIds.length > 0) {
+        const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+        const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
         wx.cloud.callFunction({
           name: 'sendSubscribeMessage',
           data: {
             receiverUserIds,
             templateId: TEMPLATE_IDS.PROJECT_UPDATE,
             page: `/pages/leadDetail/index?id=${this.data.leadId}`,
+            miniprogramState,
             data: {
               thing1: { value: (lead.name || '未知客户').substring(0, 20) },
               time2: { value: nowStr },

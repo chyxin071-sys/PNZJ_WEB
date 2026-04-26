@@ -532,11 +532,9 @@ Page({
       }
       
       db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
-        if (userInfo?.role !== 'admin') {
-          adminRes.data.forEach(adminDoc => {
-            if (adminDoc.name !== operatorName) notifyUsers.add(adminDoc.name);
-          });
-        }
+        adminRes.data.forEach(adminDoc => {
+          if (adminDoc.name !== operatorName) notifyUsers.add(adminDoc.name);
+        });
 
         notifyUsers.forEach(u => {
           if (!u) return;
@@ -554,6 +552,38 @@ Page({
             }
           });
         });
+
+        // 批量发送微信订阅消息
+        const namesArray = Array.from(notifyUsers).filter(Boolean);
+        if (namesArray.length > 0) {
+          db.collection('users').where({
+            name: db.command.in(namesArray)
+          }).get().then(usersRes => {
+            const receiverUserIds = usersRes.data.map(u => u._id);
+            if (receiverUserIds.length > 0) {
+              const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+              const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
+              const { TEMPLATE_IDS } = require('../../utils/subscribe.js');
+
+              wx.cloud.callFunction({
+                name: 'sendSubscribeMessage',
+                data: {
+                  receiverUserIds,
+                  templateId: TEMPLATE_IDS.PROJECT_UPDATE,
+                  page: `/pages/quoteDetail/index?leadId=${q.leadId}`,
+                  miniprogramState,
+                  data: {
+                    thing1: { value: (q.customer || '未知').substring(0, 20) }, // 项目名称
+                    time2: { value: nowStr }, // 更新时间
+                    thing4: { value: operatorName.substring(0, 20) }, // 操作员
+                    thing6: { value: '报价单已更新' }, // 备注
+                    thing7: { value: '详情请进入小程序查看' } // 更新内容
+                  }
+                }
+              }).catch(console.error);
+            }
+          }).catch(console.error);
+        }
       });
     }).catch(() => {});
   }
