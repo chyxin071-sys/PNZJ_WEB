@@ -127,13 +127,13 @@
               <view style="display: inline-flex; flex-direction: row; min-width: 100%; align-items: stretch;">
                 <view style="width: 100%; scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; white-space: normal; padding: 24rpx;">
                   <!-- 标题行 -->
-                  <view wx:if="{{item.displayTitle}}" style="font-size: 32rpx; font-weight: bold; color: #1e293b; margin-bottom: 12rpx;">{{item.displayTitle}}</view>
+                  <view wx:if="{{item.displayTitle}}" style="font-size: 32rpx; font-weight: bold; color: #1e293b; margin-bottom: {{item.displayLine1 || item.displayLine2 || item.remark ? '12rpx' : '0'}};">{{item.displayTitle}}</view>
 
                   <!-- 第一行信息 -->
-                  <view wx:if="{{item.displayLine1}}" style="font-size: 28rpx; color: #334155; margin-bottom: 8rpx;">{{item.displayLine1}}</view>
+                  <view wx:if="{{item.displayLine1}}" style="font-size: 28rpx; color: #334155; margin-bottom: {{item.displayLine2 || item.remark ? '8rpx' : '0'}};">{{item.displayLine1}}</view>
 
                   <!-- 第二行信息 -->
-                  <view wx:if="{{item.displayLine2}}" style="font-size: 24rpx; color: #64748b; margin-bottom: 8rpx;">{{item.displayLine2}}</view>
+                  <view wx:if="{{item.displayLine2}}" style="font-size: 24rpx; color: #64748b; margin-bottom: {{item.remark ? '8rpx' : '0'}};">{{item.displayLine2}}</view>
 
                   <!-- 备注 -->
                   <view wx:if="{{item.remark}}" style="font-size: 24rpx; color: #94a3b8; margin-top: 12rpx; padding-top: 12rpx; border-top: 1rpx dashed #f1f5f9;">
