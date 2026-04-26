@@ -52,7 +52,7 @@ page { background: #f5f4f2; }
 .divider { margin: 0 12rpx; color: var(--primary-200); }
 
 .card-right { display: flex; align-items: center; justify-content: center; padding-left: 20rpx; }
-.icon-more { width: 32rpx; height: 32rpx; background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>') no-repeat center/contain; }
+.icon-more { width: 32rpx; height: 32rpx; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='1'/%3E%3Ccircle cx='19' cy='12' r='1'/%3E%3Ccircle cx='5' cy='12' r='1'/%3E%3C/svg%3E") no-repeat center/contain; }
 
 .empty-state { padding: 80rpx 0; text-align: center; color: var(--primary-400); font-size: 28rpx; }
 .bottom-padding { height: 60rpx; }
