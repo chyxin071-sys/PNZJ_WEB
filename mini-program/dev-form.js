@@ -82,7 +82,7 @@ const formWxml = `
 
     <!-- 执行人 -->
     <view class="form-group">
-      <view class="label">指派给谁 (执行人) <text class="required">*</text></view>
+      <view class="label">执行人 <text class="required">*</text></view>
       <picker bindchange="onAssigneeChange" value="{{assigneeIndex}}" range="{{employees}}" range-key="displayName">
         <view class="picker-box">
           <text class="{{assigneeIndex === -1 ? 'ph' : ''}}">{{assigneeIndex !== -1 ? employees[assigneeIndex].displayName : '请选择人员'}}</text>

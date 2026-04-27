@@ -61,7 +61,7 @@
 
     <!-- 执行人 (多选) -->
     <view class="form-group">
-      <view class="label">指派给谁 (执行人可多选) <text class="required" wx:if="{{mode !== 'view'}}">*</text></view>
+      <view class="label">执行人 (可多选) <text class="required" wx:if="{{mode !== 'view'}}">*</text></view>
       <view class="multi-select-box" bindtap="{{mode === 'view' ? '' : 'showAssigneeModal'}}">
         <text class="{{selectedEmployeeNames ? '' : 'ph'}}">{{selectedEmployeeNames || '请选择执行人'}}</text>
         <view class="arrow-down" wx:if="{{mode !== 'view'}}"></view>

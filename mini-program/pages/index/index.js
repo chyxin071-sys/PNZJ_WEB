@@ -46,8 +46,8 @@ Page({
     today: '',
     searchQuery: '',
     timeFilterOptions: ['全部时间', '今天', '最近一周', '最近一月', '最近一年'],
-    timeFilterIndex: 2, // 默认最近一周
-    timeFilterLabel: '最近一周',
+    timeFilterIndex: 0, // 默认全部时间
+    timeFilterLabel: '全部时间',
 
     showFilterModal: false,
     
@@ -110,8 +110,8 @@ Page({
     if (app.globalData && app.globalData.todoFilters) {
       const f = app.globalData.todoFilters;
       this.setData({
-        timeFilterIndex: f.timeFilterIndex !== undefined ? f.timeFilterIndex : 1,
-        timeFilterLabel: f.timeFilterLabel || '最近一周',
+        timeFilterIndex: f.timeFilterIndex !== undefined ? f.timeFilterIndex : 0,
+        timeFilterLabel: f.timeFilterLabel || '全部时间',
         filterScope: f.filterScope || (isAdmin ? 'all' : 'related'),
         filterPriority: f.filterPriority || 'all',
         filterRelatedLeadId: f.filterRelatedLeadId || '',
@@ -357,9 +357,9 @@ Page({
 
     // 映射优先级和多执行人名称
     filtered = filtered.map(t => {
-      const priorityMap = { high: '紧急任务', medium: '重要任务', low: '普通任务' };
+      const priorityMap = { high: '紧急', medium: '重要', low: '普通' };
       
-      let assignedNames = '待指派';
+      let assignedNames = '待分配';
       if (t.assignees && t.assignees.length > 0) {
         assignedNames = t.assignees.length > 3 
           ? t.assignees.slice(0, 2).map(a => a.name).join('，') + ` 等${t.assignees.length}人` 
@@ -370,7 +370,7 @@ Page({
 
       return {
         ...t,
-        priorityText: priorityMap[t.priority] || '普通任务',
+        priorityText: priorityMap[t.priority] || '普通',
         assignedNames
       };
     });
@@ -421,7 +421,12 @@ Page({
 
     filtered = filtered.map(t => {
       let dueStatus = 'future';
+      let displayDueDate = t.dueDate;
       if (t.dueDate) {
+        const dateParts = t.dueDate.split('-');
+        if (dateParts.length === 3) {
+          displayDueDate = `${dateParts[1]}-${dateParts[2]}`;
+        }
         const dueObj = new Date(t.dueDate.replace(/-/g, '/'));
         dueObj.setHours(0, 0, 0, 0);
         const dueTime = dueObj.getTime();
@@ -434,7 +439,7 @@ Page({
           dueStatus = 'future';
         }
       }
-      return { ...t, dueStatus };
+      return { ...t, dueStatus, displayDueDate };
     });
 
     // 确保列表始终按创建时间倒序（最新的在上面）
@@ -462,9 +467,9 @@ Page({
           else key = t.dueDate;
         }
       } else if (this.data.groupType === 'priority') {
-        key = t.priorityText || '普通任务';
+        key = t.priorityText || '普通';
       } else if (this.data.groupType === 'assignee') {
-        key = t.assignedNames || '待指派';
+        key = t.assignedNames || '待分配';
       }
 
       if (!groups[key]) groups[key] = [];
@@ -484,7 +489,7 @@ Page({
         return (a.title || '').localeCompare(b.title || '');
       });
     } else if (this.data.groupType === 'priority') {
-      const orderMap = { '紧急任务': 1, '重要任务': 2, '普通任务': 3 };
+      const orderMap = { '紧急': 1, '重要': 2, '普通': 3 };
       groupedArray.sort((a, b) => (orderMap[a.title] || 4) - (orderMap[b.title] || 4));
     } else if (this.data.groupType === 'assignee') {
       groupedArray.sort((a, b) => a.title.localeCompare(b.title));
@@ -579,144 +584,150 @@ Page({
         const userInfo = wx.getStorageSync('userInfo');
         const operatorName = userInfo.name || '未知人员';
         
-        // 判断创建者是否为管理员
-        db.collection('users').where({ name: todo.creatorName }).get().then(creatorRes => {
-          const isCreatorAdmin = creatorRes.data && creatorRes.data.length > 0 && creatorRes.data[0].role === 'admin';
-          
-          if (isCreatorAdmin || userInfo.role === 'admin') {
-            // 管理员设置的代办（或管理员自己完成的代办），通知全员
-            db.collection('users').get().then(allUsersRes => {
-              allUsersRes.data.forEach(u => {
-                if (u.name !== operatorName) {
-                  db.collection('notifications').add({
-                    data: {
-                      type: 'todo',
-                      title: '待办任务已完成',
-                      content: `${operatorName} 已完成了待办任务：【${todo.title}】。`,
-                      senderName: operatorName,
-                      senderRole: userInfo.role || 'default',
-                      targetUser: u.name,
-                      isRead: false,
-                      createTime: db.serverDate(),
-                      link: `/pages/todoForm/index?id=${id}`
-                    }
-                  });
-                }
-              });
-            });
-          } else {
-            // 普通待办，仅通知相关人员和管理员
-            const notifyUsers = new Set();
-            
-            if (todo.creatorName && todo.creatorName !== operatorName) {
-              notifyUsers.add(todo.creatorName);
+        // 普通待办，仅通知相关人员
+        const notifyUsers = new Set();
+        
+        if (todo.creatorName && todo.creatorName !== operatorName) {
+          notifyUsers.add(todo.creatorName);
+        }
+        
+        if (todo.assignees && todo.assignees.length > 0) {
+          todo.assignees.forEach(a => {
+            if (a.name !== operatorName) {
+              notifyUsers.add(a.name);
             }
-            
-            if (todo.assignees && todo.assignees.length > 0) {
-              todo.assignees.forEach(a => {
-                if (a.name !== operatorName) {
-                  notifyUsers.add(a.name);
-                }
-              });
-            }
-            
-            const getAdmins = db.collection('users').where({ role: 'admin' }).get().then(res => res.data.map(u => u.name));
-            
-            let getLeadUsers = Promise.resolve([]);
-            if (todo.relatedTo && todo.relatedTo.type === 'lead' && todo.relatedTo.id) {
-              getLeadUsers = db.collection('leads').doc(todo.relatedTo.id).get().then(res => {
-                const l = res.data;
-                const users = [];
-                if (l.sales) users.push(...l.sales.split(',').map(s=>s.trim()));
-                if (l.designer) users.push(...l.designer.split(',').map(s=>s.trim()));
-                if (l.manager) users.push(...l.manager.split(',').map(s=>s.trim()));
-                if (l.creatorName) users.push(l.creatorName);
-                return users;
-              }).catch(() => []);
-            }
+          });
+        }
+        
+        let getLeadUsers = Promise.resolve([]);
+        if (todo.relatedTo && todo.relatedTo.type === 'lead' && todo.relatedTo.id) {
+          getLeadUsers = db.collection('leads').doc(todo.relatedTo.id).get().then(res => {
+            const l = res.data;
+            const users = [];
+            if (l.sales) users.push(...l.sales.split(',').map(s=>s.trim()));
+            if (l.designer) users.push(...l.designer.split(',').map(s=>s.trim()));
+            if (l.manager) users.push(...l.manager.split(',').map(s=>s.trim()));
+            if (l.creatorName) users.push(l.creatorName);
+            return users;
+          }).catch(() => []);
+        }
 
-            Promise.all([getAdmins, getLeadUsers]).then(([admins, leadUsers]) => {
-              admins.forEach(u => { if (u !== operatorName) notifyUsers.add(u); });
-              leadUsers.forEach(u => { if (u && u !== operatorName) notifyUsers.add(u); });
+        Promise.all([getLeadUsers]).then(([leadUsers]) => {
+          leadUsers.forEach(u => { if (u && u !== operatorName) notifyUsers.add(u); });
 
-              notifyUsers.forEach(userName => {
-                db.collection('notifications').add({
-                  data: {
-                    type: 'todo',
-                    title: '待办任务已完成',
-                    content: `${operatorName} 已完成了待办任务：【${todo.title}】。`,
-                    senderName: operatorName,
-                    senderRole: userInfo.role || 'default',
-                    targetUser: userName,
-                    isRead: false,
-                    createTime: db.serverDate(),
-                    link: `/pages/todoForm/index?id=${id}`
-                  }
-                });
-              });
+          notifyUsers.forEach(userName => {
+            db.collection('notifications').add({
+              data: {
+                type: 'todo',
+                title: '待办任务已完成',
+                content: `${operatorName} 已完成了待办任务：【${todo.title}】。`,
+                senderName: operatorName,
+                senderRole: userInfo.role || 'default',
+                targetUser: userName,
+                isRead: false,
+                createTime: db.serverDate(),
+                link: `/pages/todoForm/index?id=${id}`
+              }
             });
-          }
-        }).catch(err => console.error('查询创建者角色失败', err));
+          });
+        });
 
         
-        // 自动添加客户跟进记录（仅关联了客户的待办完成时）
-        if (todo.relatedTo && todo.relatedTo.type === 'lead' && todo.relatedTo.id) {
-          const now = new Date();
-          const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-          const followContent = `【待办已完成】${todo.title.trim()}`;
-          
-          db.collection('followUps').add({
-            data: {
-              leadId: todo.relatedTo.id,
-              content: followContent,
-              createdBy: operatorName,
-              createdAt: db.serverDate(),
-              method: '系统记录',
-              displayTime: nowStr,
-              timestamp: db.serverDate()
-            }
-          });
-          
-          // 更新客户的最后跟进时间
-          db.collection('leads').doc(todo.relatedTo.id).update({
-            data: {
-              lastFollowUp: nowStr,
-              lastFollowUpAt: Date.now()
-            }
-          });
+        // 自动添加客户跟进记录（仅关联了客户/工地的待办完成时）
+        if (todo.relatedTo && todo.relatedTo.type !== 'none' && todo.relatedTo.id) {
+          const addFollowUp = (leadId) => {
+            const now = new Date();
+            const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+            const followContent = `【待办已完成】${todo.title.trim()}`;
+            
+            db.collection('followUps').add({
+              data: {
+                leadId: leadId,
+                content: followContent,
+                createdBy: operatorName,
+                createdAt: db.serverDate(),
+                method: '系统记录',
+                displayTime: nowStr,
+                timestamp: db.serverDate()
+              }
+            });
+            
+            // 更新客户的最后跟进时间
+            db.collection('leads').doc(leadId).update({
+              data: {
+                lastFollowUp: nowStr,
+                lastFollowUpAt: Date.now()
+              }
+            });
 
-          // 给相关人发送未读通知，确保产生红点
-          db.collection('leads').doc(todo.relatedTo.id).get().then(resLead => {
-            const lead = resLead.data;
-            const notifyUsers = new Set();
-            if (lead.sales) notifyUsers.add(lead.sales);
-            if (lead.designer) notifyUsers.add(lead.designer);
-            if (lead.manager) notifyUsers.add(lead.manager);
-            if (lead.creatorName) notifyUsers.add(lead.creatorName);
+            // 给相关人发送未读通知，确保产生红点
+            db.collection('leads').doc(leadId).get().then(resLead => {
+              const lead = resLead.data;
+              const notifyUsers = new Set();
+              if (lead.sales) notifyUsers.add(lead.sales);
+              if (lead.designer) notifyUsers.add(lead.designer);
+              if (lead.manager) notifyUsers.add(lead.manager);
+              if (lead.creatorName) notifyUsers.add(lead.creatorName);
 
-            db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
-              adminRes.data.forEach(u => {
-                notifyUsers.add(u.name);
-              });
+              db.collection('users').where({ role: 'admin' }).get().then(adminRes => {
+                adminRes.data.forEach(u => {
+                  notifyUsers.add(u.name);
+                });
 
-              notifyUsers.forEach(u => {
-                if (!u) return;
-                db.collection('notifications').add({
-                  data: {
-                    type: 'lead',
-                    title: '跟进记录已更新',
-                    content: `${operatorName} 添加了待办完工记录：${followContent.substring(0, 30)}...`,
-                    senderName: operatorName,
-                    senderRole: userInfo.role || 'default',
-                    targetUser: u,
-                    isRead: false,
-                    createTime: db.serverDate(),
-                    link: `/pages/leadDetail/index?id=${todo.relatedTo.id}`
+                notifyUsers.forEach(u => {
+                  if (!u) return;
+                  db.collection('notifications').add({
+                    data: {
+                      type: 'lead',
+                      title: '跟进记录已更新',
+                      content: `${operatorName} 添加了待办完工记录：${followContent.substring(0, 30)}...`,
+                      senderName: operatorName,
+                      senderRole: userInfo.role || 'default',
+                      targetUser: u,
+                      isRead: false,
+                      createTime: db.serverDate(),
+                      link: `/pages/leadDetail/index?id=${leadId}`
+                    }
+                  }).catch(() => {});
+                });
+
+                // 发送微信订阅消息
+                db.collection('users').where({ name: db.command.in(Array.from(notifyUsers)) }).limit(100).get().then(usersRes => {
+                  const receiverUserIds = usersRes.data.map(u => u._id);
+                  if (receiverUserIds.length > 0) {
+                    const envVersion = wx.getAccountInfoSync().miniProgram.envVersion || 'release';
+                    const miniprogramState = envVersion === 'release' ? 'formal' : (envVersion === 'trial' ? 'trial' : 'developer');
+                    wx.cloud.callFunction({
+                      name: 'sendSubscribeMessage',
+                      data: {
+                        receiverUserIds,
+                        templateId: 'p6lxditVBaingWXD6RqGPmz-HR_eTNkXPbfPOH_Zeuc', // TEMPLATE_IDS.PROJECT_UPDATE
+                        page: `/pages/leadDetail/index?id=${leadId}`,
+                        miniprogramState,
+                        data: {
+                          thing1: { value: (lead.name || '未知客户').substring(0, 20) },
+                          time2: { value: nowStr },
+                          thing4: { value: (operatorName || '系统').substring(0, 20) },
+                          thing6: { value: '待办任务已完成' },
+                          thing7: { value: todo.title.substring(0, 20) }
+                        }
+                      }
+                    }).catch(console.error);
                   }
                 }).catch(() => {});
               });
-            });
-          }).catch(() => {});
+            }).catch(() => {});
+          };
+
+          if (todo.relatedTo.type === 'lead') {
+            addFollowUp(todo.relatedTo.id);
+          } else if (todo.relatedTo.type === 'project') {
+            db.collection('projects').doc(todo.relatedTo.id).get().then(res => {
+              if (res.data && res.data.leadId) {
+                addFollowUp(res.data.leadId);
+              }
+            }).catch(console.error);
+          }
         }
       }
       
@@ -767,7 +778,23 @@ Page({
 
       this.setData({ 
         availableLeads: relatedLeads,
-        createLeadNames: ['不关联', ...leadNames]
+        createLeadNames: leadNames
+      });
+    });
+    
+    db.collection('projects').get().then(res => {
+      const allProjects = res.data;
+      const relatedProjects = isAdmin ? allProjects : allProjects.filter(p => 
+        p.creatorName === myName || 
+        p.manager === myName || 
+        p.designer === myName
+      );
+      
+      const projectNames = relatedProjects.map(p => `${p.customer || '客户'} - ${p.address || '未知地址'}`);
+
+      this.setData({ 
+        availableProjects: relatedProjects,
+        createProjectNames: projectNames
       });
     });
 
@@ -840,20 +867,49 @@ Page({
       this.setData({
         [`newTodo.${field}`]: priorityMap[e.detail.value]
       });
-    } else if (field === 'relatedLead') {
-      const idx = e.detail.value;
-      if (idx == 0) { // 第0项是不关联
-        this.setData({
-          'newTodo.relatedLeadId': '',
-          'newTodo.relatedLeadName': ''
-        });
-      } else {
-        const lead = this.data.availableLeads[idx - 1]; // 偏移1
-        this.setData({
-          'newTodo.relatedLeadId': lead._id,
-          'newTodo.relatedLeadName': lead.name
-        });
-      }
+    }
+  },
+
+  onNewTodoTypeChange(e) {
+    const idx = parseInt(e.detail.value);
+    const typeValues = ['none', 'lead', 'project'];
+    const typeLabels = ['无关联', '关联客户', '关联工地'];
+    
+    const relatedType = typeValues[idx];
+    let createTargetNames = [];
+    if (relatedType === 'lead') {
+      createTargetNames = this.data.createLeadNames || [];
+    } else if (relatedType === 'project') {
+      createTargetNames = this.data.createProjectNames || [];
+    }
+
+    this.setData({
+      'newTodo.relatedType': relatedType,
+      'newTodo.relatedTypeLabel': typeLabels[idx],
+      'newTodo.relatedTargetId': '',
+      'newTodo.relatedTargetName': '',
+      createTargetNames: createTargetNames
+    });
+  },
+
+  onNewTodoTargetChange(e) {
+    const idx = parseInt(e.detail.value);
+    const relatedType = this.data.newTodo.relatedType;
+    
+    if (relatedType === 'lead') {
+      if (!this.data.availableLeads || this.data.availableLeads.length <= idx) return;
+      const target = this.data.availableLeads[idx];
+      this.setData({
+        'newTodo.relatedTargetId': target._id,
+        'newTodo.relatedTargetName': target.name
+      });
+    } else if (relatedType === 'project') {
+      if (!this.data.availableProjects || this.data.availableProjects.length <= idx) return;
+      const target = this.data.availableProjects[idx];
+      this.setData({
+        'newTodo.relatedTargetId': target._id,
+        'newTodo.relatedTargetName': `${target.customer || '客户'} - ${target.address || '未知地址'}`
+      });
     }
   },
 
@@ -923,11 +979,11 @@ Page({
 
     // 如果有选择关联客户
     let relatedTo = null;
-    if (this.data.newTodo.relatedLeadId) {
+    if (this.data.newTodo.relatedType && this.data.newTodo.relatedType !== 'none' && this.data.newTodo.relatedTargetId) {
       relatedTo = {
-        type: 'lead',
-        id: this.data.newTodo.relatedLeadId,
-        name: this.data.newTodo.relatedLeadName
+        type: this.data.newTodo.relatedType,
+        id: this.data.newTodo.relatedTargetId,
+        name: this.data.newTodo.relatedTargetName
       };
     }
 
@@ -955,7 +1011,7 @@ Page({
             data: {
               type: 'todo',
               title: '收到新的待办任务',
-              content: `${operatorName} 给你指派了新的待办任务：【${title.trim()}】。`,
+              content: `${operatorName} 给你分配了新的待办任务：【${title.trim()}】。`,
               senderName: operatorName,
               senderRole: userInfo.role || 'default',
               targetUser: assignee.name,
@@ -1052,26 +1108,38 @@ Page({
       wx.hideLoading();
       wx.showToast({ title: '新建成功', icon: 'success' });
       
-      // 自动添加客户跟进记录（仅关联了客户的待办创建时）
-      if (relatedTo && relatedTo.type === 'lead' && relatedTo.id) {
-        const followContent = `【待办已创建】${title.trim()} (预计完成：${dueDate || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`})`;
-        const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-        
-        db.collection('followUps').add({
-          data: {
-            leadId: relatedTo.id,
-            content: followContent,
-            createdBy: operatorName,
-            createdAt: db.serverDate(),
-            method: '系统记录',
-            displayTime: nowStr,
-            timestamp: db.serverDate()
-          }
-        });
-        
-        db.collection('leads').doc(relatedTo.id).update({
-          data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
-        });
+      // 自动添加客户跟进记录（仅关联了客户/工地的待办创建时）
+      if (relatedTo && relatedTo.type !== 'none' && relatedTo.id) {
+        const addFollowUp = (leadId) => {
+          const followContent = `【待办已创建】${title.trim()} (预计完成：${dueDate || `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`})`;
+          const nowStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+          
+          db.collection('followUps').add({
+            data: {
+              leadId: leadId,
+              content: followContent,
+              createdBy: operatorName,
+              createdAt: db.serverDate(),
+              method: '系统记录',
+              displayTime: nowStr,
+              timestamp: db.serverDate()
+            }
+          });
+          
+          db.collection('leads').doc(leadId).update({
+            data: { lastFollowUp: nowStr, lastFollowUpAt: Date.now() }
+          });
+        };
+
+        if (relatedTo.type === 'lead') {
+          addFollowUp(relatedTo.id);
+        } else if (relatedTo.type === 'project') {
+          db.collection('projects').doc(relatedTo.id).get().then(res => {
+            if (res.data && res.data.leadId) {
+              addFollowUp(res.data.leadId);
+            }
+          }).catch(console.error);
+        }
       }
 
       // 清空输入内容，避免触发 closeAddModal 的提示框

@@ -72,26 +72,24 @@
       <view class="todo-card {{item.status === 'completed' ? 'opacity-60' : ''}}" hover-class="card-hover" hover-stay-time="100" wx:for="{{todos}}" wx:key="_id" bindtap="onTodoTap" data-id="{{item._id}}">
         
         <!-- 头部：标题与打勾 -->
-        <view class="card-header">
-          <view class="checkbox {{item.status === 'completed' ? 'checked' : ''}}" catchtap="toggleTodo" data-id="{{item._id}}">
+        <view class="card-header" style="align-items: flex-start;">
+          <view class="checkbox {{item.status === 'completed' ? 'checked' : ''}}" catchtap="toggleTodo" data-id="{{item._id}}" style="margin-top: 6rpx;">
             <view wx:if="{{item.status === 'completed'}}" class="checkmark"></view>
           </view>
-          <view class="title-wrap">
-            <text class="title {{item.status === 'completed' ? 'line-through' : ''}}">{{item.title}}</text>
-            
-            <!-- 标题下方：优先级与截止日期并排 (圆角框) -->
-            <view class="meta-tags-row mt-1">
-              <view class="meta-badge priority-badge-{{item.priority}}">
+          <view class="title-wrap" style="flex: 1; min-width: 0;">
+            <view style="display: flex; justify-content: space-between; align-items: flex-start;">
+              <text class="title {{item.status === 'completed' ? 'line-through' : ''}}" style="flex: 1; padding-right: 16rpx;">{{item.title}}</text>
+              <view class="meta-badge priority-badge-{{item.priority}}" style="margin-bottom: 0; flex-shrink: 0;">
                 <view class="priority-dot priority-bg-{{item.priority}}"></view>  
                 <text>{{item.priorityText}}</text>
               </view>
-              <view class="meta-badge meta-date date-{{item.dueStatus}}" wx:if="{{item.dueDate && item.status !== 'completed'}}">
-                <view class="icon-calendar"></view>
-                <text>{{item.dueDate}} 截止</text>
-              </view>
-              <view class="meta-badge meta-completed-date" wx:if="{{item.status === 'completed' && item.completedAt}}">
-                <view class="icon-check-circle"></view>
-                <text>{{item.completedAt}} 完成</text>
+            </view>
+            
+            <!-- 标题下方：关联对象自适应宽度展示 -->
+            <view class="meta-tags-row mt-1" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}" style="margin-top: 12rpx;">
+              <view class="meta-badge meta-related" style="margin-bottom: 0; padding: 6rpx 16rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 12rpx; color: var(--primary-700); display: inline-flex; align-items: center; max-width: 100%; width: fit-content; box-sizing: border-box;">
+                <view class="icon-target" style="margin-bottom: 0; width: 18rpx; height: 18rpx; border-width: 2rpx; margin-right: 8rpx; flex-shrink: 0;"></view>
+                <text style="font-size: 24rpx; font-weight: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
               </view>
             </view>
           </view>
@@ -109,7 +107,7 @@
           </view>
         </view>
 
-        <!-- 底部：执行人、关联对象 -->
+        <!-- 底部：执行人、日期 -->
         <view class="card-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f1f5f9; padding-left: 64rpx; overflow: hidden;">
           <!-- 执行人多选展示 -->
             <view class="meta-assignee" style="display: flex; align-items: center; flex: 1; min-width: 0; padding-left: 0; margin-bottom: 0; height: 32rpx;">
@@ -119,10 +117,14 @@
               <text style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; line-height: 32rpx; height: 32rpx; color: var(--primary-700); min-width: 0; flex: 1;">{{item.assignedNames}}</text>
             </view>
 
-          <!-- 关联对象标签 (带图标) -->
-          <view class="meta-badge meta-related" style="flex-shrink: 0; margin-left: 16rpx; padding: 6rpx 16rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 12rpx; color: var(--primary-700); margin-bottom: 0; display: flex; align-items: center; max-width: 50%;" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
-            <view class="icon-target" style="margin-bottom: 0; width: 18rpx; height: 18rpx; border-width: 2rpx; margin-right: 8rpx; flex-shrink: 0;"></view>
-            <text style="font-size: 24rpx; font-weight: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
+          <!-- 日期展示 (右对齐) -->
+          <view class="meta-badge meta-date date-{{item.dueStatus}}" style="margin-bottom: 0; flex-shrink: 0;" wx:if="{{item.dueDate && item.status !== 'completed'}}">
+            <view class="icon-calendar"></view>
+            <text>{{item.displayDueDate}} 截止</text>
+          </view>
+          <view class="meta-badge meta-completed-date" style="margin-bottom: 0; flex-shrink: 0;" wx:if="{{item.status === 'completed' && item.completedAt}}">
+            <view class="icon-check-circle"></view>
+            <text>{{item.completedAt}} 完成</text>
           </view>
         </view>
 
@@ -141,24 +143,24 @@
         <!-- 分组内的卡片 -->
         <view class="todo-card {{item.status === 'completed' ? 'opacity-60' : ''}}" hover-class="card-hover" hover-stay-time="100" wx:for="{{group.items}}" wx:key="_id" bindtap="onTodoTap" data-id="{{item._id}}">
           <!-- 卡片内容同上 -->
-          <view class="card-header">
-            <view class="checkbox {{item.status === 'completed' ? 'checked' : ''}}" catchtap="toggleTodo" data-id="{{item._id}}">
+          <view class="card-header" style="align-items: flex-start;">
+            <view class="checkbox {{item.status === 'completed' ? 'checked' : ''}}" catchtap="toggleTodo" data-id="{{item._id}}" style="margin-top: 6rpx;">
               <view wx:if="{{item.status === 'completed'}}" class="checkmark"></view>
             </view>
-            <view class="title-wrap">
-              <text class="title {{item.status === 'completed' ? 'line-through' : ''}}">{{item.title}}</text>
-              <view class="meta-tags-row mt-1">
-                <view class="meta-badge priority-badge-{{item.priority}}">
+            <view class="title-wrap" style="flex: 1; min-width: 0;">
+              <view style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <text class="title {{item.status === 'completed' ? 'line-through' : ''}}" style="flex: 1; padding-right: 16rpx;">{{item.title}}</text>
+                <view class="meta-badge priority-badge-{{item.priority}}" style="margin-bottom: 0; flex-shrink: 0;">
                   <view class="priority-dot priority-bg-{{item.priority}}"></view>  
                   <text>{{item.priorityText}}</text>
                 </view>
-                <view class="meta-badge meta-date date-{{item.dueStatus}}" wx:if="{{item.dueDate && item.status !== 'completed'}}">
-                  <view class="icon-calendar"></view>
-                  <text>{{item.dueDate}} 截止</text>
-                </view>
-                <view class="meta-badge meta-completed-date" wx:if="{{item.status === 'completed' && item.completedAt}}">
-                  <view class="icon-check-circle"></view>
-                  <text>{{item.completedAt}} 完成</text>
+              </view>
+              
+              <!-- 标题下方：关联对象自适应宽度展示 -->
+              <view class="meta-tags-row mt-1" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}" style="margin-top: 12rpx;">
+                <view class="meta-badge meta-related" style="margin-bottom: 0; padding: 6rpx 16rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 12rpx; color: var(--primary-700); display: inline-flex; align-items: center; max-width: 100%; width: fit-content; box-sizing: border-box;">
+                  <view class="icon-target" style="margin-bottom: 0; width: 18rpx; height: 18rpx; border-width: 2rpx; margin-right: 8rpx; flex-shrink: 0;"></view>
+                  <text style="font-size: 24rpx; font-weight: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
                 </view>
               </view>
             </view>
@@ -172,14 +174,23 @@
               </view>
             </view>
           </view>
+          <!-- 底部：执行人、日期 -->
           <view class="card-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 16rpx; padding-top: 16rpx; border-top: 1rpx solid #f1f5f9; padding-left: 64rpx; overflow: hidden;">
-            <view class="meta-assignee" style="display: flex; align-items: center; flex: 1; min-width: 0; padding-left: 0; margin-bottom: 0;">
-              <view class="icon-user" style="flex-shrink: 0; margin-bottom: 0; margin-right: 12rpx;"></view>
-              <text style="display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; color: var(--primary-700); min-width: 0; flex: 1;">{{item.assignedNames}}</text>
+            <!-- 执行人多选展示 -->
+            <view class="meta-assignee" style="display: flex; align-items: center; flex: 1; min-width: 0; padding-left: 0; margin-bottom: 0; height: 32rpx;">
+              <view style="display: flex; justify-content: center; align-items: center; width: 32rpx; height: 32rpx; margin-right: 4rpx; flex-shrink: 0;">
+                <view class="icon-user" style="transform: scale(0.9) translateY(-6rpx); margin: 0;"></view>
+              </view>
+              <text style="display: flex; align-items: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 26rpx; line-height: 32rpx; height: 32rpx; color: var(--primary-700); min-width: 0; flex: 1;">{{item.assignedNames}}</text>
             </view>
-            <view class="meta-badge meta-related" style="flex-shrink: 0; margin-left: 16rpx; padding: 6rpx 16rpx; background: #f8fafc; border: 1rpx solid #e2e8f0; border-radius: 12rpx; color: var(--primary-700); margin-bottom: 0; display: flex; align-items: center; max-width: 50%;" wx:if="{{item.relatedTo && item.relatedTo.type !== 'none'}}" catchtap="goToRelated" data-type="{{item.relatedTo.type}}" data-id="{{item.relatedTo.id}}">
-              <view class="icon-target" style="margin-bottom: 0; width: 18rpx; height: 18rpx; border-width: 2rpx; margin-right: 8rpx; flex-shrink: 0;"></view>
-              <text style="font-size: 24rpx; font-weight: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;">{{item.relatedTo.type === 'project' ? '工地' : '客户'}}: {{item.relatedTo.name}}</text>
+            <!-- 日期展示 (右对齐) -->
+            <view class="meta-badge meta-date date-{{item.dueStatus}}" style="margin-bottom: 0; flex-shrink: 0;" wx:if="{{item.dueDate && item.status !== 'completed'}}">
+              <view class="icon-calendar"></view>
+              <text>{{item.displayDueDate}} 截止</text>
+            </view>
+            <view class="meta-badge meta-completed-date" style="margin-bottom: 0; flex-shrink: 0;" wx:if="{{item.status === 'completed' && item.completedAt}}">
+              <view class="icon-check-circle"></view>
+              <text>{{item.completedAt}} 完成</text>
             </view>
           </view>
         </view>
@@ -284,10 +295,19 @@
           </view>
           
           <view class="form-group">
-            <text class="label">关联客户 (选填)</text>
-            <picker bindchange="onNewTodoPickerChange" data-field="relatedLead" range="{{createLeadNames}}">
+            <text class="label">关联类型</text>
+            <picker bindchange="onNewTodoTypeChange" range="{{['无关联', '关联客户', '关联工地']}}">
               <view class="picker-view">
-                <text class="{{newTodo.relatedLeadName ? 'text-primary' : 'text-placeholder'}}">{{newTodo.relatedLeadName || '请选择要关联的客户'}}</text>
+                <text>{{newTodo.relatedTypeLabel || '无关联'}}</text>
+                <view class="arrow-down"></view>
+              </view>
+            </picker>
+          </view>
+          <view class="form-group" wx:if="{{newTodo.relatedType && newTodo.relatedType !== 'none'}}">
+            <text class="label">关联{{newTodo.relatedType === 'lead' ? '客户' : '工地'}} <text class="required">*</text></text>
+            <picker bindchange="onNewTodoTargetChange" range="{{createTargetNames}}">
+              <view class="picker-view">
+                <text class="{{newTodo.relatedTargetName ? 'text-primary' : 'text-placeholder'}}">{{newTodo.relatedTargetName || '请选择'}}</text>
                 <view class="arrow-down"></view>
               </view>
             </picker>

@@ -44,6 +44,10 @@ Page({
       return wx.showToast({ title: '请输入密码', icon: 'none' });
     }
 
+    // 在用户点击登录按钮的同步执行栈中请求订阅消息授权
+    // 这是微信小程序的强制要求（不能在异步回调里拉起授权）
+    requestSubscribe().catch(() => {});
+
     wx.showLoading({ title: '登录中...' });
     
     // 调用云数据库进行真实鉴权 (支持 phone 或 account)
@@ -122,9 +126,6 @@ Page({
         sessionToken: sessionToken 
       }
     }).catch(console.error);
-
-    // 登录时请求订阅消息授权
-    requestSubscribe().catch(() => {});
 
     setTimeout(() => {
       wx.switchTab({
