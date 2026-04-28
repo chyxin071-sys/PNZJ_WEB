@@ -13,14 +13,14 @@ exports.main = async (event, context) => {
     if (!userId) throw new Error('Missing userId');
     
     // 把微信 OpenID 绑定到用户的 wechatOpenId 字段上
+    // 并强制将 sessionToken 设置为当前微信的 OPENID
+    // 这样同一个微信账号在不同设备（如手机和PC）登录时，产生的 sessionToken 都是一样的
+    // 从而实现“同微信不互踢，异微信互踢”
     const updateData = {
       wechatOpenId: OPENID,
+      sessionToken: OPENID,
       updatedAt: db.serverDate()
     };
-
-    if (sessionToken) {
-      updateData.sessionToken = sessionToken;
-    }
     
     await db.collection('users').doc(userId).update({
       data: updateData

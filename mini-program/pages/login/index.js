@@ -91,12 +91,8 @@ Page({
     });
   },
 
-  doLoginSuccess(userInfo, passwordUsed) {
+  async doLoginSuccess(userInfo, passwordUsed) {
     wx.hideLoading();
-    
-    // 生成一个独一无二的 sessionToken（用于多端登录互踢）
-    const sessionToken = Date.now().toString(36) + Math.random().toString(36).substr(2);
-    wx.setStorageSync('sessionToken', sessionToken);
     
     // 把本次登录使用的密码临时存起来用于校验状态，但不展示在UI
     userInfo._loginPassword = passwordUsed;
@@ -118,14 +114,21 @@ Page({
 
     wx.showToast({ title: '登录成功', icon: 'success' });
 
-    // 使用云函数绑定当前微信的 OpenID 到此账号，同时更新 sessionToken，绕过前端权限限制
-    wx.cloud.callFunction({
-      name: 'bindOpenId',
-      data: { 
-        userId: userInfo._id || userInfo.id,
-        sessionToken: sessionToken 
+    // 使用云函数绑定当前微信的 OpenID 到此账号
+    // 通过将 OpenID 作为 sessionToken，实现“同微信多端登录不踢人，异微信登录互踢”
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'bindOpenId',
+        data: { 
+          userId: userInfo._id || userInfo.id
+        }
+      });
+      if (res.result && res.result.openid) {
+        wx.setStorageSync('sessionToken', res.result.openid);
       }
-    }).catch(console.error);
+    } catch (err) {
+      console.error('绑定 OpenID 失败:', err);
+    }
 
     setTimeout(() => {
       wx.switchTab({
