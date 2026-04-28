@@ -1,16 +1,18 @@
 // pages/notifications/index.js
 Page({
   data: {
-    activeTab: 'unread', // 'unread' or 'all'
+    activeTab: 'unread',
     notifications: [],
     loading: false,
     userInfo: null,
+    greeting: '你好',
   },
 
   onLoad() {
-    const userInfo = wx.getStorageSync('userInfo');
+    const userInfo = wx.getStorageSync('pnzj_user') || wx.getStorageSync('userInfo');
     if (userInfo) {
-      this.setData({ userInfo });
+      this.calculateJoinDays(userInfo);
+      this.setData({ userInfo, greeting: this.getGreeting() });
     }
   },
 
@@ -18,14 +20,36 @@ Page({
     if (typeof this.getTabBar === "function" && this.getTabBar()) {
       this.getTabBar().setData({ selected: 3 });
     }
-    const userInfo = wx.getStorageSync('userInfo');
+    const userInfo = wx.getStorageSync('pnzj_user') || wx.getStorageSync('userInfo');
     if (!userInfo) {
-      wx.reLaunch({
-        url: "/pages/login/index",
-      });
+      wx.reLaunch({ url: "/pages/login/index" });
       return;
     }
+    this.calculateJoinDays(userInfo);
+    this.setData({ userInfo, greeting: this.getGreeting() });
     this.fetchNotifications();
+  },
+
+  getGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 6) return '夜深了';
+    if (hour < 12) return '早上好';
+    if (hour < 14) return '中午好';
+    if (hour < 18) return '下午好';
+    return '晚上好';
+  },
+
+  calculateJoinDays(userInfo) {
+    if (userInfo.joinDate) {
+      const start = new Date(userInfo.joinDate);
+      const now = new Date();
+      start.setHours(0, 0, 0, 0);
+      now.setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil(Math.abs(now - start) / (1000 * 60 * 60 * 24)) + 1;
+      userInfo.joinDays = diffDays;
+    } else {
+      userInfo.joinDays = 0;
+    }
   },
 
   switchTab(e) {

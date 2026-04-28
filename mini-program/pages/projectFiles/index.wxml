@@ -61,7 +61,7 @@
                 <scroll-view class="swipe-area" scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{false}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
                   <view class="swipe-view" style="display: inline-flex; flex-direction: row; min-width: 100%; align-items: stretch;">
                     <!-- 顶层可滑动内容区 -->
-                <view class="bg-white p-4 flex justify-center items-center" style="width: 100%; scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; white-space: normal;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
+                <view class="bg-white p-4 flex justify-center items-center" style="width: calc(100vw - 2rem - 4rpx); scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; white-space: normal;" bindtap="previewFile" data-item="{{item}}" hover-class="bg-gray-50">
                   <!-- 文件图标/缩略图 -->
                   <view style="width: 80rpx; height: 80rpx; flex-shrink: 0; border-radius: 12rpx; overflow: hidden; background: #f8fafc; display: flex; align-items: center; justify-content: center; border: 1rpx solid #e2e8f0; margin-right: 20rpx;">
                     <image wx:if="{{item.type === 'image' || format.getFileIconText(format.getFileExt(item.name)) === 'IMG'}}" src="{{format.formatImageUrl(item.fileID || item.url)}}" mode="aspectFill" style="width: 100%; height: 100%;"></image>
@@ -139,8 +139,8 @@
           <!-- 分类下的主材列表 -->
           <view wx:for="{{group.items}}" wx:key="id" class="mb-4" style="border-radius: 16rpx; overflow: hidden; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.02); border: 1rpx solid #e2e8f0; background: #fff;">
             <scroll-view scroll-x enhanced="{{true}}" show-scrollbar="{{false}}" bounces="{{false}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
-              <view style="display: inline-flex; flex-direction: row; min-width: 100%; align-items: stretch;">
-                <view style="width: 100%; scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; white-space: normal; padding: 24rpx;">
+              <view class="swipe-view" style="display: inline-flex; flex-direction: row; min-width: 100%; align-items: stretch;">
+                  <view style="width: calc(100vw - 2rem - 2rpx); scroll-snap-align: start; flex-shrink: 0; box-sizing: border-box; white-space: normal; padding: 24rpx;">
                   <!-- 标题行 -->
                   <view wx:if="{{item.displayTitle}}" style="font-size: 32rpx; font-weight: bold; color: #1e293b; margin-bottom: {{item.displayLine1 || item.displayLine2 || item.remark ? '12rpx' : '0'}};">{{item.displayTitle}}</view>
 
