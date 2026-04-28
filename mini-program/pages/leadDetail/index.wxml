@@ -478,7 +478,7 @@ module.exports = { getStatusClass: getStatusClass };
         
         <!-- 左滑组件 (使用 scroll-view + scroll-snap 实现QQ级完美回弹和高度自适应) -->
         <view class="swipe-container" style="width: calc(100vw - 152rpx); border-radius: 16rpx; overflow: hidden; transform: translateZ(0);">
-          <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{true}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
+          <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{false}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
             <view class="swipe-view" style="display: inline-flex; min-width: 100%;">
               
               <!-- 表面内容卡片 (滚动对齐点) -->
