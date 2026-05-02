@@ -10,14 +10,16 @@ const ROLE_MAP: Record<string, string> = {
   admin: "超级管理员",
   sales: "销售",
   designer: "设计",
-  manager: "项目经理"
+  manager: "项目经理",
+  finance: "财务"
 };
 
 const ROLE_COLOR_MAP: Record<string, string> = {
   admin: "bg-purple-100 text-purple-700 border-purple-200",
   sales: "bg-blue-100 text-blue-700 border-blue-200",
   designer: "bg-pink-100 text-pink-700 border-pink-200",
-  manager: "bg-cyan-100 text-cyan-700 border-cyan-200"
+  manager: "bg-cyan-100 text-cyan-700 border-cyan-200",
+  finance: "bg-amber-100 text-amber-700 border-amber-200"
 };
 
 const PRIORITY_MAP: Record<string, string> = {
@@ -156,6 +158,7 @@ export default function TodosPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "completed">("pending");
   const [searchQuery, setSearchQuery] = useState("");
   const [dateSort, setDateSort] = useState<"asc" | "desc">("asc");
+  const [sortMode, setSortMode] = useState<"创建时间" | "截止日期" | "优先级" | "按执行人">("截止日期");
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week" | "month">("all");
   const [personFilter, setPersonFilter] = useState<string>("all"); // specific employee id
   const [relatedLeadFilter, setRelatedLeadFilter] = useState<string>("all"); // 关联客户筛选
@@ -216,7 +219,7 @@ export default function TodosPage() {
         const currentUser = userInfoStr ? JSON.parse(userInfoStr) : null;
         
         let filteredLeads = data;
-        // 如果不是管理员，只保留：1. 与自己有关的线索 2. 状态为“已签单”的公开线索
+        // 如果不是管理员，只保留：1. 与自己有关的线索 2. 状态为"已签单"的公开线索
         if (currentUser && currentUser.role !== 'admin') {
           filteredLeads = data.filter(lead => 
             lead.sales === currentUser.name || 
@@ -387,12 +390,28 @@ export default function TodosPage() {
       }
       return true;
     }).sort((a, b) => {
-      // 排序逻辑：默认按 createdAt 创建时间倒序排列（最新的在最上面）
+      const dir = dateSort === 'asc' ? 1 : -1;
+      if (sortMode === '优先级') {
+        const order: Record<string, number> = { high: 3, medium: 2, low: 1, normal: 1 };
+        const pa = order[a.priority] || 0;
+        const pb = order[b.priority] || 0;
+        if (pa !== pb) return pb - pa;
+        // 同优先级按截止日期升序兜底
+        if (a.dueDate && b.dueDate) return a.dueDate.localeCompare(b.dueDate);
+        return 0;
+      }
+      if (sortMode === '截止日期') {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return dir * a.dueDate.localeCompare(b.dueDate);
+      }
+      // 创建时间
       const timeA = new Date(a.createdAt).getTime();
       const timeB = new Date(b.createdAt).getTime();
-      return timeB - timeA;
+      return dir * (timeA - timeB);
     });
-  }, [todos, filterView, filterStatus, dateFilter, personFilter, relatedLeadFilter, searchQuery]);
+  }, [todos, filterView, filterStatus, dateFilter, personFilter, relatedLeadFilter, searchQuery, dateSort, sortMode]);
 
   const pendingCount = filteredTodos.filter(t => t.status === 'pending').length;
   const completedCount = filteredTodos.filter(t => t.status === 'completed').length;
@@ -404,7 +423,7 @@ export default function TodosPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [filterView, filterStatus, dateFilter, personFilter, relatedLeadFilter, searchQuery, dateSort]);
+  }, [filterView, filterStatus, dateFilter, personFilter, relatedLeadFilter, searchQuery, dateSort, sortMode]);
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailTodo, setDetailTodo] = useState<any>(null);
@@ -568,6 +587,85 @@ export default function TodosPage() {
     return currentUser.role === 'admin' || currentUser.name === todo.createdBy?.name;
   };
 
+  const renderTodoCard = (todo: any) => (
+    <div
+      key={todo.id}
+      className={`bg-white rounded-xl border p-5 transition-all duration-300 flex flex-col sm:flex-row sm:items-center gap-5 group relative overflow-hidden
+        ${todo.status === 'completed' ? 'border-primary-100 opacity-60 bg-primary-50/30' : 'border-primary-200 hover:border-primary-400 shadow-sm hover:shadow-md'}
+      `}
+    >
+      <div className="flex items-start gap-4 flex-1 min-w-0 cursor-pointer" onClick={() => openDetailModal(todo)}>
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id); }}
+          className={`mt-1 shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300
+            ${todo.status === 'completed' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-primary-300 hover:border-primary-500 text-transparent hover:text-primary-200'}
+          `}
+        >
+          <Check className="w-4 h-4" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className={`text-lg font-bold truncate transition-colors duration-300 ${todo.status === 'completed' ? 'text-primary-400 line-through' : 'text-primary-900 group-hover:text-primary-700'}`}>
+              {todo.title}
+            </h3>
+            {todo.status !== 'completed' && todo.priority && PRIORITY_MAP[todo.priority] && (
+              <span className={`px-2 py-0.5 rounded text-xs font-bold border ${PRIORITY_COLOR_MAP[todo.priority]}`}>
+                {PRIORITY_MAP[todo.priority]}
+              </span>
+            )}
+          </div>
+          <p className={`text-sm line-clamp-2 ${todo.status === 'completed' ? 'text-primary-400' : 'text-primary-600'}`}>{todo.description}</p>
+          {todo.attachments && todo.attachments.length > 0 && (
+            <div className="flex items-center gap-2 mt-3">
+              {todo.attachments.map((att: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-primary-50 border border-primary-100 rounded text-xs text-primary-600">
+                  {att.type === 'image' ? <ImageIcon className="w-3.5 h-3.5 text-primary-400" /> : <Paperclip className="w-3.5 h-3.5 text-primary-400" />}
+                  <span className="truncate max-w-[100px]">{att.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="flex flex-wrap sm:flex-col sm:items-end gap-3 sm:gap-2 shrink-0 sm:w-64 pl-10 sm:pl-0 border-t sm:border-t-0 sm:border-l border-primary-100 pt-3 sm:pt-0 sm:pl-5 relative">
+        {canEditOrDelete(todo) && (
+          <div className="absolute -top-3 -right-2 sm:-right-4 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-bl-lg shadow-sm border border-primary-100">
+            <button onClick={() => openEditModal(todo)} className="p-1.5 text-primary-400 hover:text-primary-900 hover:bg-primary-50 rounded transition-colors" title="编辑"><Edit2 className="w-3.5 h-3.5" /></button>
+            <div className="relative">
+              <button onClick={() => setDeleteConfirmId(todo.id)} className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors" title="删除"><Trash2 className="w-3.5 h-3.5" /></button>
+              {deleteConfirmId === todo.id && (
+                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-rose-100 rounded-lg shadow-xl p-3 z-50 animate-in fade-in">
+                  <p className="text-xs font-bold text-primary-900 mb-3 text-center">确定删除该待办？</p>
+                  <div className="flex gap-2 justify-center">
+                    <button onClick={() => setDeleteConfirmId(null)} className="px-3 py-1 bg-primary-50 text-primary-600 rounded text-xs hover:bg-primary-100">取消</button>
+                    <button onClick={() => handleDelete(todo.id)} className="px-3 py-1 bg-rose-500 text-white rounded text-xs hover:bg-rose-600">删除</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 bg-primary-50 px-2.5 py-1 rounded-md w-full sm:w-auto overflow-hidden mt-2 sm:mt-0">
+          <Target className="w-3.5 h-3.5 text-primary-400 shrink-0" />
+          <span className="shrink-0 text-xs font-medium text-primary-500">客户</span>
+          <button onClick={() => todo.relatedTo?.id && router.push(`/leads/${todo.relatedTo.id}`)} className="text-xs font-bold text-primary-900 hover:text-primary-600 truncate hover:underline" title={todo.relatedTo?.name}>
+            {todo.relatedTo?.name || '未关联客户'}
+          </button>
+        </div>
+        <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${getDueDateColorClass(todo.dueDate, todo.status)}`}>
+          <Calendar className="w-3.5 h-3.5" />
+          {todo.dueDate} 截止
+        </div>
+        <div className="flex items-center gap-3 text-xs text-primary-500">
+          <span className="flex items-center gap-1 max-w-[200px] truncate" title={todo.assignees?.length > 0 ? todo.assignees.map((a: any) => a.name).join(', ') : todo.assignedTo?.name || '未分配'}>
+            <Users className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">执行人: {todo.assignees?.length > 0 ? todo.assignees.map((a: any) => a.name).join(', ') : todo.assignedTo?.name || '未分配'}</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <MainLayout>
       <div className="p-8 max-w-[1200px] mx-auto space-y-6">
@@ -679,39 +777,31 @@ export default function TodosPage() {
               className="w-48"
             />
 
-            {/* 人员筛选 (仅限团队全部视图) */}
-            {filterView === '团队全部' && (
-              <CustomSelect
-                value={personFilter}
-                onChange={(val: any) => setPersonFilter(val)}
-                options={[
-                  { label: "所有员工", value: "all" },
-                  ...employees.map(emp => ({
-                    label: emp.name,
-                    value: emp._id || emp.id,
-                    render: () => (
-                      <div className="flex items-center justify-between w-full">
-                        <span>{emp.name}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${ROLE_COLOR_MAP[emp.role] || ''}`}>
-                          {ROLE_MAP[emp.role] || emp.role}
-                        </span>
-                      </div>
-                    )
-                  }))
-                ]}
-                className="w-48"
-              />
-            )}
 
-            {/* 日期升降序 */}
-            <button
-              onClick={() => setDateSort(dateSort === 'asc' ? 'desc' : 'asc')}
-              className="px-3 py-2 bg-white border border-primary-200 rounded-lg text-sm text-primary-700 flex items-center gap-1.5 hover:bg-primary-50 transition-colors"
-              title="切换日期排序"
-            >
-              {dateSort === 'asc' ? <ArrowUpAZ className="w-4 h-4 text-primary-500" /> : <ArrowDownAZ className="w-4 h-4 text-primary-500" />}
-              {dateSort === 'asc' ? '日期升序' : '日期降序'}
-            </button>
+            {/* 排序方式 */}
+            <CustomSelect
+              value={sortMode}
+              onChange={(val: any) => setSortMode(val)}
+              options={[
+                { label: "按截止日期", value: "截止日期" },
+                { label: "按创建时间", value: "创建时间" },
+                { label: "按优先级", value: "优先级" },
+                { label: "按执行人", value: "按执行人" },
+              ]}
+              className="w-32"
+            />
+
+            {/* 升降序（仅截止日期/创建时间模式） */}
+            {(sortMode === '截止日期' || sortMode === '创建时间') && (
+              <button
+                onClick={() => setDateSort(dateSort === 'asc' ? 'desc' : 'asc')}
+                className="px-3 py-2 bg-white border border-primary-200 rounded-lg text-sm text-primary-700 flex items-center gap-1.5 hover:bg-primary-50 transition-colors"
+                title="切换升降序"
+              >
+                {dateSort === 'asc' ? <ArrowUpAZ className="w-4 h-4 text-primary-500" /> : <ArrowDownAZ className="w-4 h-4 text-primary-500" />}
+                {dateSort === 'asc' ? '升序' : '降序'}
+              </button>
+            )}
 
             {/* 搜索框 */}
             <div className="relative flex-1 min-w-[200px]">
@@ -728,136 +818,51 @@ export default function TodosPage() {
         </div>
 
         {/* 待办列表主体 */}
-        <div className="space-y-4">
-          {filteredTodos.length > 0 ? paginatedTodos.map((todo) => (
-            <div 
-              key={todo.id} 
-              className={`bg-white rounded-xl border p-5 transition-all duration-300 flex flex-col sm:flex-row sm:items-center gap-5 group relative overflow-hidden
-                ${todo.status === 'completed' ? 'border-primary-100 opacity-60 bg-primary-50/30' : 'border-primary-200 hover:border-primary-400 shadow-sm hover:shadow-md'}
-              `}
-            >
-              {/* 左侧：打勾按钮与标题描述 */}
-              <div 
-                className="flex items-start gap-4 flex-1 min-w-0 cursor-pointer"
-                onClick={() => openDetailModal(todo)}
-              >
-                <button 
-                  onClick={(e) => { e.stopPropagation(); toggleTodoStatus(todo.id); }}
-                  className={`mt-1 shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300
-                    ${todo.status === 'completed' ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-primary-300 hover:border-primary-500 text-transparent hover:text-primary-200'}
-                  `}
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className={`text-lg font-bold truncate transition-colors duration-300
-                      ${todo.status === 'completed' ? 'text-primary-400 line-through' : 'text-primary-900 group-hover:text-primary-700'}
-                    `}>
-                      {todo.title}
-                    </h3>
-                    {todo.status !== 'completed' && todo.priority && PRIORITY_MAP[todo.priority] && (
-                      <span className={`px-2 py-0.5 rounded text-xs font-bold border ${PRIORITY_COLOR_MAP[todo.priority]}`}>
-                        {PRIORITY_MAP[todo.priority]}
-                      </span>
-                    )}
+        {sortMode === '按执行人' ? (() => {
+          const groups: Record<string, any[]> = {};
+          filteredTodos.forEach(todo => {
+            const key = todo.assignees?.[0]?.name || todo.assignedTo?.name || '未分配';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(todo);
+          });
+          const sortedGroups = Object.entries(groups).sort(([a], [b]) =>
+            a === '未分配' ? 1 : b === '未分配' ? -1 : a.localeCompare(b, 'zh')
+          );
+          return sortedGroups.length > 0 ? (
+            <div className="space-y-6">
+              {sortedGroups.map(([name, groupTodos]) => (
+                <div key={name} className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary-900 flex items-center justify-center text-white text-sm font-bold shrink-0">{name.charAt(0)}</div>
+                    <span className="font-bold text-primary-900 text-sm">{name}</span>
+                    <span className="text-xs text-primary-400 bg-primary-50 px-2 py-0.5 rounded-full">{groupTodos.length} 项</span>
+                    <div className="flex-1 h-px bg-primary-100" />
                   </div>
-                  <p className={`text-sm line-clamp-2 ${todo.status === 'completed' ? 'text-primary-400' : 'text-primary-600'}`}>
-                    {todo.description}
-                  </p>
-                  
-                  {/* 附件展示区 */}
-                  {todo.attachments && todo.attachments.length > 0 && (
-                    <div className="flex items-center gap-2 mt-3">
-                      {todo.attachments.map((att: any, idx: number) => (
-                        <div key={idx} className="flex items-center gap-1.5 px-2 py-1 bg-primary-50 border border-primary-100 rounded text-xs text-primary-600 hover:bg-primary-100 transition-colors">
-                          {att.type === 'image' ? <ImageIcon className="w-3.5 h-3.5 text-primary-400" /> : <Paperclip className="w-3.5 h-3.5 text-primary-400" />}
-                          <span className="truncate max-w-[100px]">{att.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="space-y-3">{groupTodos.map(renderTodoCard)}</div>
                 </div>
-              </div>
-
-              {/* 右侧：关联信息与属性标签 */}
-              <div className="flex flex-wrap sm:flex-col sm:items-end gap-3 sm:gap-2 shrink-0 sm:w-64 pl-10 sm:pl-0 border-t sm:border-t-0 sm:border-l border-primary-100 pt-3 sm:pt-0 sm:pl-5 relative">
-                
-                {/* 悬浮的操作按钮 (仅创建者或Admin可见) */}
-                {canEditOrDelete(todo) && (
-                  <div className="absolute -top-3 -right-2 sm:-right-4 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-bl-lg shadow-sm border border-primary-100">
-                    <button 
-                      onClick={() => openEditModal(todo)}
-                      className="p-1.5 text-primary-400 hover:text-primary-900 hover:bg-primary-50 rounded transition-colors"
-                      title="编辑"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                    </button>
-                    <div className="relative">
-                      <button 
-                        onClick={() => setDeleteConfirmId(todo.id)}
-                        className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
-                        title="删除"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                      {deleteConfirmId === todo.id && (
-                        <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-rose-100 rounded-lg shadow-xl p-3 z-50 animate-in fade-in">
-                          <p className="text-xs font-bold text-primary-900 mb-3 text-center">确定删除该待办？</p>
-                          <div className="flex gap-2 justify-center">
-                            <button onClick={() => setDeleteConfirmId(null)} className="px-3 py-1 bg-primary-50 text-primary-600 rounded text-xs hover:bg-primary-100">取消</button>
-                            <button onClick={() => handleDelete(todo.id)} className="px-3 py-1 bg-rose-500 text-white rounded text-xs hover:bg-rose-600">删除</button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 关联跳转 */}
-                <div className="flex items-center gap-1.5 bg-primary-50 px-2.5 py-1 rounded-md w-full sm:w-auto overflow-hidden mt-2 sm:mt-0">
-                  <Target className="w-3.5 h-3.5 text-primary-400 shrink-0" />
-                  <span className="shrink-0 text-xs font-medium text-primary-500">客户</span>
-                  <button
-                    onClick={() => todo.relatedTo?.id && router.push(`/leads/${todo.relatedTo.id}`)}
-                    className="text-xs font-bold text-primary-900 hover:text-primary-600 truncate hover:underline"
-                    title={todo.relatedTo?.name}
-                  >
-                    {todo.relatedTo?.name || '未关联客户'}
-                  </button>
-                </div>
-
-                {/* 截止时间 */}
-                <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${getDueDateColorClass(todo.dueDate, todo.status)}`}>
-                  <Calendar className="w-3.5 h-3.5" />
-                  {todo.dueDate} 截止
-                </div>
-
-                {/* 执行人 */}
-                <div className="flex items-center gap-3 text-xs text-primary-500">
-                  <span className="flex items-center gap-1 max-w-[200px] truncate" title={todo.assignees?.length > 0 ? todo.assignees.map((a: any) => a.name).join(', ') : todo.assignedTo?.name || '未分配'}>
-                    <Users className="w-3.5 h-3.5 shrink-0" /> 
-                    <span className="truncate">执行人: {todo.assignees?.length > 0 ? todo.assignees.map((a: any) => a.name).join(', ') : todo.assignedTo?.name || '未分配'}</span>
-                  </span>
-                </div>
-
-              </div>
+              ))}
             </div>
-          )) : (
+          ) : (
             <div className="bg-white rounded-xl border border-primary-100 border-dashed p-16 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mb-4">
-                <Check className="w-8 h-8 text-primary-300" />
-              </div>
+              <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mb-4"><Check className="w-8 h-8 text-primary-300" /></div>
               <h3 className="text-lg font-bold text-primary-900 mb-1">暂无匹配待办</h3>
-              <p className="text-sm text-primary-500 max-w-sm">
-                当前筛选条件下没有找到任何任务。您可以调整上方的筛选器，或者点击“新建待办”创建新任务。
-              </p>
+              <p className="text-sm text-primary-500 max-w-sm">当前筛选条件下没有找到任何任务。</p>
             </div>
-          )}
-        </div>
+          );
+        })() : (
+          <div className="space-y-4">
+            {filteredTodos.length > 0 ? paginatedTodos.map(renderTodoCard) : (
+              <div className="bg-white rounded-xl border border-primary-100 border-dashed p-16 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mb-4"><Check className="w-8 h-8 text-primary-300" /></div>
+                <h3 className="text-lg font-bold text-primary-900 mb-1">暂无匹配待办</h3>
+                <p className="text-sm text-primary-500 max-w-sm">当前筛选条件下没有找到任何任务。您可以调整上方的筛选器，或者点击"新建待办"创建新任务。</p>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* 分页控件 */}
-        {filteredTodos.length > 0 && (
+        {/* 分页控件（按执行人分组时不显示） */}
+        {filteredTodos.length > 0 && sortMode !== '按执行人' && (
           <div className="bg-white rounded-xl border border-primary-100 shadow-sm p-4 flex flex-col sm:flex-row items-center justify-between text-sm text-primary-600 gap-4">
             <p>显示 {(currentPage - 1) * itemsPerPage + 1} 至 {Math.min(currentPage * itemsPerPage, filteredTodos.length)} 条，共 {filteredTodos.length} 条</p>
             <div className="flex space-x-2">
@@ -950,7 +955,10 @@ export default function TodosPage() {
                   <span className="text-xs text-primary-400 font-medium">派发人</span>
                   <span className="text-sm font-bold text-primary-900 flex items-center gap-1.5">
                     <User className="w-4 h-4 text-purple-500" />
-                    {detailTodo.createdBy?.name && detailTodo.createdBy.name !== '系统' ? detailTodo.createdBy.name : '系统自动'}
+                    {(() => {
+                      const name = detailTodo.createdBy?.name || detailTodo.creatorName;
+                      return name && name !== '系统' ? name : '系统自动';
+                    })()}
                   </span>
                 </div>
               </div>

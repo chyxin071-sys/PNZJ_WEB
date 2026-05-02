@@ -17,6 +17,7 @@ export default function QuotesPage() {
 
   const [quotesData, setQuotesData] = useState<any[]>([]);
   const [leadsData, setLeadsData] = useState<any[]>([]);
+  const [salesUsers, setSalesUsers] = useState<any[]>([]);
 
   // 高级筛选器状态
   const [isAdvancedFilterOpen, setIsAdvancedFilterOpen] = useState(false);
@@ -34,6 +35,9 @@ export default function QuotesPage() {
   useEffect(() => {
     fetchQuotes();
     fetchLeads();
+    fetch('/api/employees').then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setSalesUsers(data.filter((u: any) => u.role === 'sales'));
+    }).catch(console.error);
     if (searchParams.get('saved') === '1') {
       setShowSavedToast(true);
       setTimeout(() => setShowSavedToast(false), 3000);
@@ -81,7 +85,7 @@ export default function QuotesPage() {
           versionMap[q.id] = (versionMap[key] || 0) + 1;
           versionMap[key] = versionMap[q.id];
         });
-        setQuotesData(formatted.map(q => ({ ...q, versionNo: versionMap[q.id] || 1 })));
+        setQuotesData(formatted.map((q: any) => ({ ...q, versionNo: versionMap[q.id] || 1 })));
       }
     } catch (e) {
       console.error('Failed to fetch quotes', e);
@@ -129,7 +133,8 @@ export default function QuotesPage() {
       (q.customer || '').includes(searchQuery) ||
       (q.phone || '').includes(searchQuery) ||
       (q.address && q.address.includes(searchQuery)) ||
-      (q.id || '').toLowerCase().includes(searchQuery.toLowerCase())
+      (q.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (q.customerNo || '').toLowerCase().includes(searchQuery.toLowerCase())
     )
     .filter(q => {
       const min = parseFloat(filterMinAmount);
@@ -141,6 +146,13 @@ export default function QuotesPage() {
       if (filterDay && !q.date.endsWith(`-${filterDay.padStart(2, '0')}`)) return false;
       if (filterPersonnel !== '全部' && q.sales !== filterPersonnel) return false;
       return true;
+    })
+    .sort((a, b) => {
+      // 先按 leadId 分组（同一客户的报价单聚合），再按创建时间倒序
+      const aKey = a.leadId || a.customer || '';
+      const bKey = b.leadId || b.customer || '';
+      if (aKey !== bKey) return aKey.localeCompare(bKey);
+      return b._timestamp - a._timestamp;
     });
 
   const totalPages = Math.ceil(filteredQuotes.length / itemsPerPage);
@@ -312,7 +324,7 @@ export default function QuotesPage() {
                       
                       {isPersonnelDropdownOpen && (
                         <div className="absolute left-0 right-0 top-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1 z-40">
-                          {["全部", "王销售", "李销售", "刘销售", "张销售"].map((option) => (
+                          {["全部", ...salesUsers.map(u => u.name)].map((option) => (
                             <div 
                               key={option}
                               onClick={(e) => { 

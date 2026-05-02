@@ -13,8 +13,13 @@ export default function Dashboard() {
   const [leadsData, setLeadsData] = useState<any[]>([]);
   const [projectsData, setProjectsData] = useState<any[]>([]);
   const [todosData, setTodosData] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
+    const userData = localStorage.getItem('pnzj_user') || localStorage.getItem('userInfo');
+    if (userData) {
+      try { setCurrentUser(JSON.parse(userData)); } catch(e) {}
+    }
     const fetchDashboardData = async () => {
       try {
         const [leadsRes, projectsRes, todosRes] = await Promise.all([
@@ -169,6 +174,15 @@ export default function Dashboard() {
             <p className="text-primary-600 mt-2">欢迎回来，以下是公司核心业务数据与多维度分析</p>
           </div>
           <div className="flex items-center gap-4">
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => router.push('/analytics')}
+                className="flex items-center gap-1.5 px-4 py-2 bg-primary-900 text-white text-sm font-medium rounded-lg hover:bg-primary-800 transition-colors shadow-sm"
+              >
+                <Activity className="w-4 h-4" />
+                数据分析
+              </button>
+            )}
             <div className="sm:text-right md:block">
               <p className="text-sm font-medium text-primary-600">{new Date().toISOString().split('T')[0]} {['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'][new Date().getDay()]}</p>
             </div>

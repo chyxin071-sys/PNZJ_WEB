@@ -102,7 +102,7 @@ function ProjectsContent() {
     return diffDays;
   };
 
-  const statuses = ["全部", "未开工", "施工中", "已竣工", "已停工"];
+  const statuses = ["全部", "未开工", "施工中", "已竣工"];
 
   // Sort by health status to put "严重延期" and "预警" on top, then sort by createdAt descending
   const sortedProjects = [...projectsData].sort((a, b) => {
@@ -121,7 +121,7 @@ function ProjectsContent() {
 
   const filteredProjects = sortedProjects.filter(p => {
     if (activeStatus !== "全部" && p.status !== activeStatus) return false;
-    if (searchQuery && !p.customer.includes(searchQuery) && !p.manager.includes(searchQuery)) return false;
+    if (searchQuery && !p.customer.includes(searchQuery) && !p.manager.includes(searchQuery) && !(p.address || '').includes(searchQuery)) return false;
 
     // 高级筛选: 开工时间
     if (filterYear !== "全部") {

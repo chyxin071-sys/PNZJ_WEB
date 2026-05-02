@@ -8,12 +8,30 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const leadId = searchParams.get('leadId');
+    const fetchAll = searchParams.get('all') === '1';
     const page = parseInt(searchParams.get('page') || '0');
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get('pageSize') || '100')));
-    const skip = page > 0 ? (page - 1) * pageSize : 0;
-    const limit = page > 0 ? pageSize : 100;
 
     const whereClause = leadId ? `.where({ leadId: "${leadId}" })` : '';
+
+    // all=1：先 count 再分批拉取全部，突破 100 条限制
+    if (fetchAll) {
+      const total = await tcbCount(`db.collection("followUps")${whereClause}.count()`);
+      const batchSize = 100;
+      const batches = Math.ceil(total / batchSize);
+      const tasks = [];
+      for (let i = 0; i < batches; i++) {
+        tasks.push(
+          tcbQuery(`db.collection("followUps")${whereClause}.orderBy("createdAt", "desc").skip(${i * batchSize}).limit(${batchSize}).get()`)
+        );
+      }
+      const results = await Promise.all(tasks);
+      const data = results.flat();
+      return NextResponse.json(data);
+    }
+
+    const skip = page > 0 ? (page - 1) * pageSize : 0;
+    const limit = page > 0 ? pageSize : 100;
     const query = `db.collection("followUps")${whereClause}.orderBy("createdAt", "desc").skip(${skip}).limit(${limit}).get()`;
     const data = await tcbQuery(query);
 
@@ -53,7 +71,7 @@ export async function POST(request: Request) {
 
     // 同步更新 lead 的 lastFollowUp 字段
     try {
-      const updateQuery = `db.collection("leads").doc("${leadId}").update({ data: { lastFollowUp: "${nowStr}", updatedAt: { $date: ${Date.now()} } } })`;
+      const updateQuery = `db.collection("leads").doc("${leadId}").update({ data: { lastFollowUp: "${nowStr}", lastFollowUpAt: ${Date.now()}, updatedAt: { $date: ${Date.now()} } } })`;
       await tcbUpdate(updateQuery);
     } catch (e) {}
 

@@ -101,7 +101,8 @@ export async function POST(request: Request) {
       name: user.name,
       phone: user.phone,
       role: user.role,
-      status: user.status
+      status: user.status,
+      account: user.account
     };
 
     return NextResponse.json({ 

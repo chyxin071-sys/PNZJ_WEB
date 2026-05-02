@@ -75,7 +75,15 @@ export default function EmployeesPage() {
             role: item.role || 'sales',
             department: item.department || roleMap[item.role || 'sales'].dept,
             status: item.isActive === false || item.is_active === false ? 'inactive' : 'active',
-            joinDate: jDate
+            joinDate: jDate,
+            avatarUrl: item.avatarUrl || '',
+            joinDays: jDate ? (() => {
+              const start = new Date(jDate);
+              const now = new Date();
+              start.setHours(0, 0, 0, 0);
+              now.setHours(0, 0, 0, 0);
+              return Math.ceil(Math.abs(now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+            })() : 0
           };
         });
         setEmployees(mappedData);
@@ -387,6 +395,7 @@ export default function EmployeesPage() {
                 { key: 'sales', label: '销售部', color: 'bg-blue-50 text-blue-700 border-blue-100', dot: 'bg-blue-400' },
                 { key: 'designer', label: '设计部', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-400' },
                 { key: 'manager', label: '工程部', color: 'bg-amber-50 text-amber-700 border-amber-100', dot: 'bg-amber-400' },
+                { key: 'finance', label: '财务部', color: 'bg-rose-50 text-rose-700 border-rose-100', dot: 'bg-rose-400' },
               ].map(dept => {
                 const members = employees.filter(e => e.role === dept.key && e.status !== 'inactive');
                 if (members.length === 0) return null;
@@ -402,14 +411,20 @@ export default function EmployeesPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-0 divide-y sm:divide-y-0 divide-primary-50">
                       {members.map(emp => (
                         <div key={emp.id} className="flex items-center gap-4 px-6 py-4 hover:bg-primary-50/30 transition-colors">
-                          <div className="w-10 h-10 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-900 font-bold text-sm shrink-0">
-                            {emp.name.charAt(0)}
+                          <div className="w-10 h-10 rounded-full bg-primary-50 border border-primary-100 flex items-center justify-center text-primary-900 font-bold text-sm shrink-0 overflow-hidden">
+                            {emp.avatarUrl
+                              ? <img src={emp.avatarUrl.startsWith('cloud://') ? `https://${emp.avatarUrl.replace('cloud://','').split('.')[0]}.tcb.qcloud.la/${emp.avatarUrl.split('/').slice(3).join('/')}` : emp.avatarUrl} alt="" className="w-full h-full object-cover" />
+                              : emp.name.charAt(0)
+                            }
                           </div>
                           <div className="min-w-0">
-                            <p className="text-sm font-bold text-primary-900 flex items-center gap-1.5">
+                            <p className="text-sm font-bold text-primary-900 flex items-center gap-1.5 flex-wrap">
                               {emp.name}
                               {currentUser && (currentUser._id === emp.id || currentUser.id === emp.id) && (
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary-900 text-white">我</span>
+                              )}
+                              {emp.joinDays > 0 && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-600 border border-rose-100">第 {emp.joinDays} 天</span>
                               )}
                             </p>
                             <p className="text-xs text-primary-500 font-mono mt-0.5 truncate">{emp.phone || '暂无电话'}</p>
@@ -503,7 +518,10 @@ export default function EmployeesPage() {
                       )}
                       {isAdmin && (
                         <td className="py-4 px-6 text-primary-600 font-medium font-mono text-sm">
-                          {emp.joinDate}
+                          <div>{emp.joinDate || '-'}</div>
+                          {emp.joinDays > 0 && (
+                            <div className="text-xs text-rose-500 font-sans mt-0.5">第 {emp.joinDays} 天</div>
+                          )}
                         </td>
                       )}
                       {isAdmin && (

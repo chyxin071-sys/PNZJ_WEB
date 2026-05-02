@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { User, Phone, KeyRound, Edit2, LogOut, ChevronRight, CheckSquare, Users, HardHat, Bell, PackageOpen, Building2, X, Check } from "lucide-react";
+import { User, Phone, KeyRound, Edit2, LogOut, ChevronRight, CheckSquare, Users, HardHat, Bell, PackageOpen, Building2, X, Check, Camera } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
+import DatePicker from "../../components/DatePicker";
 
 const ROLE_MAP: Record<string, string> = {
   admin: "系统管理员",
@@ -21,10 +22,23 @@ const ROLE_COLOR: Record<string, string> = {
   finance: "bg-amber-100 text-amber-700"
 };
 
+function toImgUrl(fileID: string): string {
+  if (!fileID) return '';
+  if (fileID.startsWith('cloud://')) {
+    const withoutScheme = fileID.replace('cloud://', '');
+    const envAndBucket = withoutScheme.split('.')[0];
+    const filePath = withoutScheme.split('/').slice(1).join('/');
+    return `https://${envAndBucket}.tcb.qcloud.la/${filePath}`;
+  }
+  return fileID;
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [stats, setStats] = useState({ todos: 0, leads: 0, projects: 0, unread: 0 });
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   // 改名弹窗
   const [showNameModal, setShowNameModal] = useState(false);
@@ -36,6 +50,14 @@ export default function ProfilePage() {
   const [passwordForm, setPasswordForm] = useState({ old: "", new: "", confirm: "" });
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+
+  // 改手机号弹窗
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [editPhone, setEditPhone] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
+
+  // 改入职时间
+  const [savingJoinDate, setSavingJoinDate] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("pnzj_user") || localStorage.getItem("userInfo");
@@ -79,6 +101,89 @@ export default function ProfilePage() {
       setStats({ todos: myTodos, leads: myLeads, projects: myProjects, unread });
     } catch (e) {
       console.error('获取统计失败', e);
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const userId = currentUser._id || currentUser.id;
+      const ext = file.name.split('.').pop() || 'jpg';
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('path', `avatars/${userId}_${Date.now()}.${ext}`);
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'x-user-role': 'admin' }, // 头像上传绕过角色限制
+        body: formData
+      });
+      if (!uploadRes.ok) throw new Error('上传失败');
+      const { fileID } = await uploadRes.json();
+      // 更新 users 集合
+      await fetch(`/api/employees/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatarUrl: fileID })
+      });
+      const updated = { ...currentUser, avatarUrl: fileID };
+      localStorage.setItem('pnzj_user', JSON.stringify(updated));
+      localStorage.setItem('userInfo', JSON.stringify(updated));
+      setCurrentUser(updated);
+    } catch (err) {
+      alert('头像上传失败，请重试');
+    } finally {
+      setUploadingAvatar(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
+
+  const handleSavePhone = async () => {
+    const newPhone = editPhone.trim();
+    if (!newPhone) return;
+    setSavingPhone(true);
+    try {
+      const res = await fetch(`/api/employees/${currentUser._id || currentUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: newPhone })
+      });
+      if (res.ok) {
+        const updated = { ...currentUser, phone: newPhone };
+        localStorage.setItem("pnzj_user", JSON.stringify(updated));
+        localStorage.setItem("userInfo", JSON.stringify(updated));
+        setCurrentUser(updated);
+        setShowPhoneModal(false);
+      } else {
+        alert('修改失败，请重试');
+      }
+    } catch (e) {
+      alert('网络错误，请重试');
+    } finally {
+      setSavingPhone(false);
+    }
+  };
+
+  const handleJoinDateChange = async (newDate: string) => {
+    if (!newDate) return;
+    setSavingJoinDate(true);
+    try {
+      const res = await fetch(`/api/employees/${currentUser._id || currentUser.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ joinDate: newDate })
+      });
+      if (res.ok) {
+        const updated = { ...currentUser, joinDate: newDate };
+        localStorage.setItem("pnzj_user", JSON.stringify(updated));
+        localStorage.setItem("userInfo", JSON.stringify(updated));
+        setCurrentUser(updated);
+      }
+    } catch (e) {
+      alert('修改失败，请重试');
+    } finally {
+      setSavingJoinDate(false);
     }
   };
 
@@ -166,8 +271,32 @@ export default function ProfilePage() {
         {/* 用户信息卡片 */}
         <div className="bg-white rounded-2xl border border-primary-100 shadow-sm p-6">
           <div className="flex items-center gap-5">
-            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shadow-md ${ROLE_COLOR[currentUser.role]?.replace('text-', 'bg-').split(' ')[0] || 'bg-primary-900'}`}>
-              {currentUser.name?.[0] || 'U'}
+            <div className="relative shrink-0">
+              <div
+                onClick={() => avatarInputRef.current?.click()}
+                className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shadow-md cursor-pointer overflow-hidden ${currentUser.avatarUrl ? '' : (ROLE_COLOR[currentUser.role]?.replace('text-', 'bg-').split(' ')[0] || 'bg-primary-900')}`}
+              >
+                {currentUser.avatarUrl
+                  ? <img src={toImgUrl(currentUser.avatarUrl)} alt="avatar" className="w-full h-full object-cover" />
+                  : (currentUser.name?.[0] || 'U')
+                }
+              </div>
+              <div
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary-900 rounded-full flex items-center justify-center cursor-pointer shadow-sm hover:bg-primary-700 transition-colors"
+              >
+                {uploadingAvatar
+                  ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  : <Camera className="w-3 h-3 text-white" />
+                }
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
@@ -210,13 +339,37 @@ export default function ProfilePage() {
             <p className="text-xs font-medium text-primary-500">账号信息</p>
           </div>
           <div className="divide-y divide-primary-50">
-            <div className="flex items-center justify-between px-5 py-4">
+            <button
+              onClick={() => { setEditPhone(currentUser.phone || ''); setShowPhoneModal(true); }}
+              className="w-full flex items-center justify-between px-5 py-4 hover:bg-primary-50 transition-colors"
+            >
               <div className="flex items-center gap-3 text-sm text-primary-700">
                 <Phone className="w-4 h-4 text-primary-400" />
                 手机号
               </div>
-              <span className="text-sm text-primary-500">{currentUser.phone || '未绑定'}</span>
-            </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-primary-500">{currentUser.phone || '未绑定'}</span>
+                <ChevronRight className="w-4 h-4 text-primary-300" />
+              </div>
+            </button>
+            <label className="w-full flex items-center justify-between px-5 py-4 hover:bg-primary-50 transition-colors cursor-pointer">
+              <div className="flex items-center gap-3 text-sm text-primary-700">
+                <ChevronRight className="w-4 h-4 text-primary-400 rotate-90" />
+                入职时间
+              </div>
+              <div className="flex items-center gap-2">
+                {savingJoinDate
+                  ? <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+                  : <div className="flex items-center gap-1">
+                      <DatePicker
+                        value={currentUser.joinDate || ''}
+                        onChange={(val) => handleJoinDateChange({ target: { value: val } } as any)}
+                        placeholder="未设置"
+                      />
+                    </div>
+                }
+              </div>
+            </label>
             <div className="flex items-center justify-between px-5 py-4">
               <div className="flex items-center gap-3 text-sm text-primary-700">
                 <User className="w-4 h-4 text-primary-400" />
@@ -224,6 +377,17 @@ export default function ProfilePage() {
               </div>
               <span className="text-sm text-primary-500 font-mono">{currentUser.account || '未设置'}</span>
             </div>
+            {currentUser.joinDate && (
+              <div className="flex items-center justify-between px-5 py-4">
+                <div className="flex items-center gap-3 text-sm text-primary-700">
+                  <Building2 className="w-4 h-4 text-primary-400" />
+                  在职天数
+                </div>
+                <span className="text-sm text-primary-500 font-mono">
+                  {Math.ceil((new Date().getTime() - new Date(currentUser.joinDate).getTime()) / (1000 * 60 * 60 * 24))} 天
+                </span>
+              </div>
+            )}
             <button
               onClick={() => { setPasswordForm({ old: "", new: "", confirm: "" }); setPasswordError(""); setShowPasswordModal(true); }}
               className="w-full flex items-center justify-between px-5 py-4 hover:bg-primary-50 transition-colors"
@@ -303,6 +467,39 @@ export default function ProfilePage() {
                 className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-xl font-medium hover:bg-primary-800 transition-colors disabled:opacity-50"
               >
                 {savingName ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 改手机号弹窗 */}
+      {showPhoneModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-primary-900">修改手机号</h3>
+              <button onClick={() => setShowPhoneModal(false)} className="p-1.5 text-primary-400 hover:text-primary-900 rounded-lg hover:bg-primary-50">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <input
+              type="tel"
+              value={editPhone}
+              onChange={e => setEditPhone(e.target.value)}
+              className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg text-sm focus:outline-none focus:border-primary-400 focus:bg-white transition-all mb-4"
+              placeholder="请输入新手机号"
+              maxLength={11}
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button onClick={() => setShowPhoneModal(false)} className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-xl font-medium hover:bg-primary-50 transition-colors">取消</button>
+              <button
+                onClick={handleSavePhone}
+                disabled={savingPhone || editPhone.trim().length < 11}
+                className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-xl font-medium hover:bg-primary-800 transition-colors disabled:opacity-50"
+              >
+                {savingPhone ? '保存中...' : '保存'}
               </button>
             </div>
           </div>

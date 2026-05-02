@@ -22,6 +22,8 @@ function LeadsContent() {
     area: "",
     budget: "暂无",
     source: "自然进店",
+    notes: "",
+    customSource: "",
   });
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -30,6 +32,7 @@ function LeadsContent() {
     status: "全部",
     sales: "全部",
     designer: "全部",
+    manager: "全部",
     year: new Date().getFullYear().toString(),
     month: "全部",
     day: ""
@@ -48,7 +51,7 @@ function LeadsContent() {
   const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
-    const userData = localStorage.getItem("userInfo") || localStorage.getItem("pnzj_user");
+    const userData = localStorage.getItem("pnzj_user") || localStorage.getItem("userInfo");
     if (userData) {
       try { setCurrentUser(JSON.parse(userData)); } catch (e) { console.error(e); }
     }
@@ -88,11 +91,16 @@ function LeadsContent() {
               console.error('Date parse error', err);
             }
           }
+          // 红点：lastFollowUpAt 比本地最后阅读时间更新则显示
+          const lastRead = parseInt(localStorage.getItem(`followup_read_${item._id}`) || '0');
+          const lastFollowUpAt = item.lastFollowUpAt || 0;
+          const hasUnread = lastFollowUpAt > lastRead;
           return {
             ...item,
             id: item._id,
             createdAt: dateStr,
-            _timestamp: timestamp
+            _timestamp: timestamp,
+            unread: hasUnread
           };
         });
         
@@ -173,7 +181,7 @@ function LeadsContent() {
       manager: defaultManager || "",
       lastFollowUp: "暂无",
       unread: false,
-      notes: "新录入客户",
+      notes: newLead.notes || "新录入客户",
       creatorName: currentUser?.name || '未知'
     };
 
@@ -186,7 +194,7 @@ function LeadsContent() {
       if (res.ok) {
         fetchLeads(); // 重新拉取
         setIsModalOpen(false);
-        setNewLead({ name: "", phone: "", rating: "B", address: "", requirementType: "毛坯", area: "", budget: "暂无", source: "自然进店" });
+        setNewLead({ name: "", phone: "", rating: "B", address: "", requirementType: "毛坯", area: "", budget: "暂无", source: "自然进店", notes: "", customSource: "" });
         
         setShowToast("录入成功！");
         setTimeout(() => setShowToast(false), 2500);
@@ -390,6 +398,13 @@ function LeadsContent() {
         if (l.designer !== filters.designer) return false;
       }
     }
+    if (filters.manager !== "全部") {
+      if (filters.manager === "未分配") {
+        if (l.manager && l.manager !== "" && l.manager !== "未分配") return false;
+      } else {
+        if (l.manager !== filters.manager) return false;
+      }
+    }
     if (filters.status !== "全部" && l.status !== filters.status) return false;
     
     // 日期筛选
@@ -530,14 +545,14 @@ function LeadsContent() {
           <button 
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`relative flex items-center justify-center min-w-[44px] min-h-[44px] px-3 sm:px-4 py-2.5 rounded-lg text-sm transition-colors whitespace-nowrap font-medium shrink-0 border ${
-              isFilterOpen || Object.values(filters).some(v => v !== "全部" && v !== "")
+              isFilterOpen || Object.values(filters).some(v => v !== "全部" && v !== "" && v !== new Date().getFullYear().toString())
                 ? "bg-primary-50 border-primary-300 text-primary-900 ring-2 ring-primary-100" 
                 : "bg-white border-primary-100 hover:bg-primary-50 text-primary-900"
             }`}
           >
             <Filter className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">高级筛选</span>
-            {(filters.scope !== "全部线索" || filters.sales !== "全部" || filters.designer !== "全部" || filters.status !== "全部" || filters.year !== "全部" || filters.month !== "全部" || filters.day) && (
+            {(filters.scope !== "全部线索" || filters.sales !== "全部" || filters.designer !== "全部" || filters.manager !== "全部" || filters.status !== "全部" || filters.year !== "全部" || filters.month !== "全部" || filters.day) && (
               <span className="absolute top-2.5 right-2.5 sm:static sm:ml-2 w-2 h-2 rounded-full bg-rose-500"></span>
             )}
             <ChevronDown className={`hidden sm:inline-block w-4 h-4 ml-1 opacity-50 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
@@ -567,9 +582,9 @@ function LeadsContent() {
                       ))}
                     </div>
                   </div>
-                  <div className="relative z-40">
+                  <div className="relative z-50">
                     <label className="block text-xs font-medium text-primary-600 mb-1">跟进状态</label>
-                    <div 
+                    <div
                       onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'filter-status' ? null : 'filter-status'); }}
                       className={`w-full px-3 py-2 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${openDropdown === 'filter-status' ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
                     >
@@ -577,7 +592,7 @@ function LeadsContent() {
                       <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform duration-200 ${openDropdown === 'filter-status' ? 'rotate-180' : ''}`} />
                     </div>
                     {openDropdown === 'filter-status' && (
-                      <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
+                      <div className="absolute z-50 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
                         {["全部", "待跟进", "沟通中", "已量房", "方案阶段", "已交定金", "已签单", "已流失"].map(option => (
                           <div 
                             key={option}
@@ -595,7 +610,7 @@ function LeadsContent() {
                   </div>
                   <div className="relative z-40">
                     <label className="block text-xs font-medium text-primary-600 mb-1">销售人员</label>
-                    <div 
+                    <div
                       onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'filter-sales' ? null : 'filter-sales'); }}
                       className={`w-full px-3 py-2 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${openDropdown === 'filter-sales' ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
                     >
@@ -603,8 +618,8 @@ function LeadsContent() {
                       <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform duration-200 ${openDropdown === 'filter-sales' ? 'rotate-180' : ''}`} />
                     </div>
                     {openDropdown === 'filter-sales' && (
-                      <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
-                        {["全部", ...users.filter(u => u.role === 'sales' || u.role === 'admin').sort((a,b) => a.role === 'sales' ? -1 : 1).map(u => u.name)].map(option => (
+                      <div className="absolute z-50 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
+                        {["全部", ...users.filter(u => u.role === 'sales').map(u => u.name)].map(option => (
                           <div
                             key={option}
                             onClick={() => { setFilters({...filters, sales: option}); setOpenDropdown(null); }}
@@ -621,7 +636,7 @@ function LeadsContent() {
                   </div>
                   <div className="relative z-30">
                     <label className="block text-xs font-medium text-primary-600 mb-1">设计人员</label>
-                    <div 
+                    <div
                       onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'filter-designer' ? null : 'filter-designer'); }}
                       className={`w-full px-3 py-2 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${openDropdown === 'filter-designer' ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
                     >
@@ -629,8 +644,8 @@ function LeadsContent() {
                       <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform duration-200 ${openDropdown === 'filter-designer' ? 'rotate-180' : ''}`} />
                     </div>
                     {openDropdown === 'filter-designer' && (
-                      <div className="absolute z-40 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
-                        {["全部", "未分配", ...users.filter(u => u.role === 'designer' || u.role === 'admin').sort((a,b) => a.role === 'designer' ? -1 : 1).map(u => u.name)].map(option => (
+                      <div className="absolute z-50 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
+                        {["全部", "未分配", ...users.filter(u => u.role === 'designer').map(u => u.name)].map(option => (
                           <div
                             key={option}
                             onClick={() => { setFilters({...filters, designer: option}); setOpenDropdown(null); }}
@@ -646,6 +661,32 @@ function LeadsContent() {
                     )}
                   </div>
                   <div className="relative z-20">
+                    <label className="block text-xs font-medium text-primary-600 mb-1">项目经理</label>
+                    <div
+                      onClick={(e) => { e.stopPropagation(); setOpenDropdown(openDropdown === 'filter-manager' ? null : 'filter-manager'); }}
+                      className={`w-full px-3 py-2 bg-primary-50 border border-transparent rounded-lg text-sm transition-all cursor-pointer flex justify-between items-center ${openDropdown === 'filter-manager' ? 'bg-white border-primary-300 ring-2 ring-primary-100' : 'hover:bg-primary-100/50'}`}
+                    >
+                      <span className="text-primary-900">{filters.manager}</span>
+                      <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform duration-200 ${openDropdown === 'filter-manager' ? 'rotate-180' : ''}`} />
+                    </div>
+                    {openDropdown === 'filter-manager' && (
+                      <div className="absolute z-50 w-full mt-1.5 bg-white border border-primary-100 rounded-xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150 py-1" onClick={e => e.stopPropagation()}>
+                        {["全部", "未分配", ...users.filter(u => u.role === 'manager').map(u => u.name)].map(option => (
+                          <div
+                            key={option}
+                            onClick={() => { setFilters({...filters, manager: option}); setOpenDropdown(null); }}
+                            className="px-2 py-1 mx-1"
+                          >
+                            <div className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-colors ${filters.manager === option ? 'bg-primary-50/80 text-primary-900 font-medium' : 'text-primary-700 hover:bg-primary-50'}`}>
+                              <span className="text-sm">{option}</span>
+                              {filters.manager === option && <Check className="w-4 h-4 text-primary-900" />}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative z-10">
                     <label className="block text-xs font-medium text-primary-600 mb-1">创建日期</label>
                     <div className="flex items-center gap-2">
                       <div className="relative z-10 w-1/3">
@@ -710,8 +751,8 @@ function LeadsContent() {
                     </div>
                   </div>
                   <div className="pt-2 flex gap-2">
-                    <button 
-                      onClick={() => setFilters({ scope: "全部线索", status: "全部", sales: "全部", designer: "全部", year: new Date().getFullYear().toString(), month: "全部", day: "" })}
+                    <button
+                      onClick={() => setFilters({ scope: "全部线索", status: "全部", sales: "全部", designer: "全部", manager: "全部", year: new Date().getFullYear().toString(), month: "全部", day: "" })}
                       className="flex-1 px-3 py-2 border border-primary-200 text-primary-600 rounded-lg hover:bg-primary-50 transition-colors text-sm font-medium"
                     >
                       重置
@@ -1199,6 +1240,16 @@ function LeadsContent() {
                   <label className="block text-sm font-medium text-primary-900 mb-1">房屋面积 (m²)</label>
                   <input type="number" value={newLead.area} onChange={e => setNewLead({...newLead, area: e.target.value})} className="w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all outline-none text-sm text-primary-900 placeholder:text-primary-400" placeholder="例如：120" />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-primary-900 mb-1">备注</label>
+                <textarea
+                  value={newLead.notes}
+                  onChange={e => setNewLead({...newLead, notes: e.target.value})}
+                  rows={2}
+                  className="w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all outline-none text-sm text-primary-900 placeholder:text-primary-400 resize-none"
+                  placeholder="客户备注信息（可选）"
+                />
               </div>
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium">取消</button>

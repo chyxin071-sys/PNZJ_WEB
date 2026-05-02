@@ -20,8 +20,10 @@ export default function DatePicker({ value, onChange, placeholder = "选择日�
     }
     return new Date();
   });
-  
+  const [calendarPos, setCalendarPos] = useState({ top: 0, left: 0, width: 256 });
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -33,10 +35,27 @@ export default function DatePicker({ value, onChange, placeholder = "选择日�
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const handleOpen = () => {
+    if (disabled) return;
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const calH = 320; // 日历大约高度
+      setCalendarPos({
+        top: spaceBelow > calH ? rect.bottom + 4 : rect.top - calH - 4,
+        left: rect.left,
+        width: Math.max(rect.width, 256)
+      });
+    }
+    setIsOpen(!isOpen);
+  };
   const getFirstDayOfMonth = (year: number, month: number) => {
     const day = new Date(year, month, 1).getDay();
     return day === 0 ? 6 : day - 1;
+  };
+
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0).getDate();
   };
 
   const handleDateClick = (d: number) => {
@@ -57,8 +76,9 @@ export default function DatePicker({ value, onChange, placeholder = "选择日�
     <div className="relative" ref={containerRef}>
       <button
         type="button"
+        ref={buttonRef}
         disabled={disabled}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={handleOpen}
         className={`w-full flex items-center justify-between text-left ${className} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       >
         <span className={value ? "" : "text-primary-400"}>{value || placeholder}</span>
@@ -66,7 +86,10 @@ export default function DatePicker({ value, onChange, placeholder = "选择日�
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 bg-white rounded-xl shadow-xl border border-primary-100 p-4 z-50 w-64 animate-in fade-in zoom-in-95 duration-150">
+        <div
+          style={{ position: 'fixed', top: calendarPos.top, left: calendarPos.left, width: calendarPos.width, zIndex: 9999 }}
+          className="bg-white rounded-xl shadow-xl border border-primary-100 p-4 animate-in fade-in zoom-in-95 duration-150"
+        >
           <div className="flex justify-between items-center mb-3">
             <button 
               type="button" 

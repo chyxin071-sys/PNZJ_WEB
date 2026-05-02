@@ -58,6 +58,7 @@ export default function NotificationsPage() {
   const [activeTab, setActiveTab] = useState<'unread' | 'all' | 'starred'>('unread');
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [avatarMap, setAvatarMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const userData = localStorage.getItem("pnzj_user") || localStorage.getItem("userInfo");
@@ -72,12 +73,30 @@ export default function NotificationsPage() {
     try {
       const params = new URLSearchParams({
         userName: currentUser.name,
-        role: currentUser.role
+        role: currentUser.role,
+        all: '1',
+        tab: 'all'
       });
       const res = await fetch(`/api/notifications?${params}`);
       if (res.ok) {
         const data = await res.json();
-        setNotifications(Array.isArray(data) ? data : []);
+        const list = Array.isArray(data) ? data : [];
+        setNotifications(list);
+
+        // 批量拉取发送人头像
+        const senderNames = new Set(list.map((n: any) => n.senderName).filter((n: any) => n && n !== '系统'));
+        if (senderNames.size > 0) {
+          fetch('/api/employees')
+            .then(r => r.ok ? r.json() : [])
+            .then((users: any[]) => {
+              if (Array.isArray(users)) {
+                const map: Record<string, string> = {};
+                users.forEach((u: any) => { if (u.avatarUrl && senderNames.has(u.name)) map[u.name] = u.avatarUrl; });
+                setAvatarMap(map);
+              }
+            })
+            .catch(() => {});
+        }
       }
     } catch (e) {
       console.error('获取通知失败', e);
@@ -218,8 +237,13 @@ export default function NotificationsPage() {
                       <div className="absolute left-0 top-0 bottom-0 w-1 bg-rose-500 rounded-r-sm" />
                     )}
 
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border ${getIconBg(notif.type)}`}>
-                      {getIcon(notif.type)}
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border overflow-hidden ${avatarMap[notif.senderName] ? 'border-primary-100' : getIconBg(notif.type)}`}>
+                      {avatarMap[notif.senderName]
+                        ? <img src={avatarMap[notif.senderName].startsWith('cloud://') ? `https://${avatarMap[notif.senderName].replace('cloud://','').split('.')[0]}.tcb.qcloud.la/${avatarMap[notif.senderName].split('/').slice(3).join('/')}` : avatarMap[notif.senderName]} alt="" className="w-full h-full object-cover" />
+                        : notif.senderName && notif.senderName !== '系统'
+                          ? <span className="text-base font-bold text-primary-700">{notif.senderName[0]}</span>
+                          : getIcon(notif.type)
+                      }
                     </div>
 
                     <div className="flex-1 min-w-0">

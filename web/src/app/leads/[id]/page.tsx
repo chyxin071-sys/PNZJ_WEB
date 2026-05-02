@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, User, Calendar, MessageSquare, FileText, FolderOpen, ArrowRight, Plus, Edit2, Check, ChevronDown, Trash2, X, Pencil, CheckCircle2, Clock } from "lucide-react";
+import { ChevronLeft, MapPin, User, Calendar, MessageSquare, FileText, FolderOpen, ArrowRight, Plus, Edit2, Check, ChevronDown, Trash2, X, Pencil, CheckCircle2, Clock, Upload, Image as ImageIcon, Play } from "lucide-react";
 import MainLayout from "../../../components/MainLayout";
 import CustomerDocuments from "../../../../src/components/CustomerDocuments";
 import CustomerInfo from "../../../components/CustomerInfo";
@@ -66,7 +66,10 @@ export default function LeadDetailPage() {
         console.error(e);
       }
     }
-    
+
+    // 进入页面默认在跟进记录 tab，直接标记已读
+    localStorage.setItem(`followup_read_${leadId}`, Date.now().toString());
+
     // 获取所有的 users 列表以供分配和签单人选择
     fetch('/api/employees')
       .then(res => res.json())
@@ -79,6 +82,13 @@ export default function LeadDetailPage() {
   const isAssignedToMe = (leadData: any) => {
     if (!currentUser) return false;
     return leadData.sales === currentUser.name || leadData.designer === currentUser.name || leadData.manager === currentUser.name || leadData.creatorName === currentUser.name || leadData.signer === currentUser.name;
+  };
+
+  // 入户密码：admin 或与该客户相关的人员可见
+  const canSeeDoorPassword = (leadData: any) => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    return isAssignedToMe(leadData);
   };
 
   const maskName = (name: string, leadData: any) => {
@@ -147,7 +157,7 @@ export default function LeadDetailPage() {
         fetch(`/api/leads/${leadId}`),
         fetch(`/api/quotes?leadId=${leadId}`),
         fetch(`/api/projects?leadId=${leadId}`),
-        fetch(`/api/followUps?leadId=${leadId}`)
+        fetch(`/api/followUps?leadId=${leadId}&all=1`)
       ]);
 
       if (!leadRes.ok) { setLeadNotFound(true); return; }
@@ -241,7 +251,7 @@ export default function LeadDetailPage() {
         setEditForm(formatted);
         
         // 从云端拉取真实跟进记录
-        fetch(`/api/followUps?leadId=${leadId}`)
+        fetch(`/api/followUps?leadId=${leadId}&all=1`)
           .then(res => res.json())
           .then(followUpsData => {
              const timelineData = Array.isArray(followUpsData.data || followUpsData) ? (followUpsData.data || followUpsData).map((f: any) => ({
@@ -432,6 +442,24 @@ export default function LeadDetailPage() {
             createdBy: currentUser?.name || '系统'
           })
         }).then(() => fetchLeadDetail());
+
+        // 通知相关人员（sales + creatorName + admin）
+        const operatorName = currentUser?.name || '系统';
+        const targets = [...new Set([lead.sales, lead.creatorName, 'admin'].filter(Boolean).filter(n => n !== operatorName))];
+        targets.forEach(targetUser => {
+          fetch('/api/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              targetUser,
+              type: 'lead',
+              title: '客户状态已更新',
+              content: `${operatorName} 将客户【${lead.name}】的状态更改为：${option}`,
+              senderName: operatorName,
+              link: `/leads/${leadId}`
+            })
+          }).catch(() => {});
+        });
       }
     } catch (e) {}
   };
@@ -466,6 +494,20 @@ export default function LeadDetailPage() {
             createdBy: currentUser?.name || '系统'
           })
         });
+
+        // 全员广播签单通知
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetUser: 'all',
+            type: 'lead',
+            title: '🎉 恭喜签单！',
+            content: `${signModal.signer} 完成了客户【${lead.name}】的签单，签单日期：${signModal.date}`,
+            senderName: currentUser?.name || '系统',
+            link: `/leads/${leadId}`
+          })
+        }).catch(() => {});
 
         // 标记已签单，用于返回列表时播放动画
         if (typeof window !== 'undefined') {
@@ -649,17 +691,23 @@ export default function LeadDetailPage() {
       // 关键：重新拉取跟进记录以更新页面
       fetchAllData();
       
-      // 触发全员通知 (BUG-07 修复)
-      fetch('/api/notifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targets: ['admin', lead.designer].filter(Boolean),
-          title: '设计工作流已开启',
-          content: `【${lead.name}】的设计工作流已开启，预计从 ${designStartDate} 开始`,
-          link: `/leads/${leadId}`
-        })
-      }).catch(()=>{});
+      // 触发通知：designer + 所有admin
+      const operatorName = currentUser?.name || '系统';
+      const designNotifyTargets = [...new Set([lead.designer, 'admin'].filter(Boolean).filter(n => n !== operatorName))];
+      designNotifyTargets.forEach(targetUser => {
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetUser,
+            type: 'lead',
+            title: '设计工作流已开启',
+            content: `${operatorName} 为客户【${lead.name}】开启了设计出图工作流，预计从 ${designStartDate} 开始`,
+            senderName: operatorName,
+            link: `/leads/${leadId}`
+          })
+        }).catch(() => {});
+      });
     } catch (e) { console.error(e); }
   };
 
@@ -731,10 +779,84 @@ export default function LeadDetailPage() {
     } catch (e) { console.error(e); }
   };
 
+  // ===== 开始设计节点 =====
+  const startDesignNode = async (idx: number) => {
+    if (!lead?.designNodes) return;
+    const nodes: any[] = JSON.parse(JSON.stringify(lead.designNodes));
+    const today = new Date().toISOString().split('T')[0];
+    nodes[idx].status = 'current';
+    nodes[idx].actualStartDate = today;
+    try {
+      await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designNodes: nodes })
+      });
+      setLead({ ...lead, designNodes: nodes });
+      await fetch('/api/followUps', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId, content: `开始设计工作：【${nodes[idx].name}】（实际开始：${today}）`, method: '系统记录', createdBy: currentUser?.name || '系统' })
+      });
+    } catch (e) { console.error(e); }
+  };
+
+  // ===== 设计节点图片上传 =====
+  const toImgUrl = (fileID: string) => {
+    if (!fileID) return '';
+    if (fileID.startsWith('cloud://')) {
+      const withoutScheme = fileID.replace('cloud://', '');
+      const dotIdx = withoutScheme.indexOf('.');
+      const slashIdx = withoutScheme.indexOf('/');
+      const bucket = withoutScheme.substring(0, dotIdx);
+      const path = withoutScheme.substring(slashIdx + 1);
+      return `https://${bucket}.tcb.qcloud.la/${path}`;
+    }
+    return fileID;
+  };
+
+  const uploadDesignNodeImage = async (idx: number, file: File) => {
+    if (!lead?.designNodes) return;
+    const ext = file.name.split('.').pop() || 'jpg';
+    const path = `design-nodes/${leadId}/${idx}/${Date.now()}.${ext}`;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('path', path);
+    try {
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'x-user-role': currentUser?.role || '' },
+        body: formData
+      });
+      if (!res.ok) { alert('上传失败'); return; }
+      const { fileID } = await res.json();
+      const nodes: any[] = JSON.parse(JSON.stringify(lead.designNodes));
+      if (!nodes[idx].images) nodes[idx].images = [];
+      nodes[idx].images.push(fileID);
+      await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designNodes: nodes })
+      });
+      setLead({ ...lead, designNodes: nodes });
+    } catch (e) { console.error(e); alert('上传失败'); }
+  };
+
+  const deleteDesignNodeImage = async (nodeIdx: number, imgIdx: number) => {
+    if (!lead?.designNodes) return;
+    const nodes: any[] = JSON.parse(JSON.stringify(lead.designNodes));
+    nodes[nodeIdx].images = (nodes[nodeIdx].images || []).filter((_: any, i: number) => i !== imgIdx);
+    await fetch(`/api/leads/${leadId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ designNodes: nodes })
+    });
+    setLead({ ...lead, designNodes: nodes });
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "沟通中": return "bg-blue-50 text-blue-700 border-blue-100";
-      case "已量房": return "bg-indigo-50 text-indigo-700 border-indigo-100";
       case "已交定金": return "bg-pink-50 text-pink-700 border-pink-100";
       case "方案阶段": return "bg-purple-50 text-purple-700 border-purple-100";
       case "已签单": return "bg-emerald-50 text-emerald-700 border-emerald-100";
@@ -936,6 +1058,12 @@ export default function LeadDetailPage() {
                     <p className="text-xs text-primary-500 mb-1">客户来源</p>
                     <p className="text-sm font-medium text-primary-900">{lead.source}</p>
                   </div>
+                  {canSeeDoorPassword(lead) && (
+                    <div>
+                      <p className="text-xs text-primary-500 mb-1">入户密码</p>
+                      <p className="text-sm font-medium text-primary-900">{lead.doorPassword || <span className="text-primary-400">未填写</span>}</p>
+                    </div>
+                  )}
             </div>
           </div>
         </div>
@@ -948,7 +1076,10 @@ export default function LeadDetailPage() {
               <div className="p-4 border-b border-primary-100 flex items-center justify-between shrink-0">
                 <div className="flex gap-1">
                   <button
-                    onClick={() => setActiveLeftTab('follow')}
+                    onClick={() => {
+                      setActiveLeftTab('follow');
+                      localStorage.setItem(`followup_read_${leadId}`, Date.now().toString());
+                    }}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeLeftTab === 'follow' ? 'bg-primary-900 text-white' : 'text-primary-600 hover:bg-primary-50'}`}
                   >
                     跟进记录
@@ -1665,6 +1796,12 @@ export default function LeadDetailPage() {
                     <label className="block text-sm font-medium text-primary-900 mb-1">预算</label>
                     <input type="text" value={editForm.budget} onChange={e => setEditForm({...editForm, budget: e.target.value})} className="w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all outline-none text-sm text-primary-900" />
                   </div>
+                  {canSeeDoorPassword(lead) && (
+                    <div>
+                      <label className="block text-sm font-medium text-primary-900 mb-1">入户密码</label>
+                      <input type="text" value={editForm.doorPassword || ''} onChange={e => setEditForm({...editForm, doorPassword: e.target.value})} placeholder="选填" className="w-full px-4 py-2.5 bg-primary-50 border border-transparent rounded-lg focus:border-primary-300 focus:bg-white focus:ring-2 focus:ring-primary-100 transition-all outline-none text-sm text-primary-900" />
+                    </div>
+                  )}
                 </div>
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium">取消</button>

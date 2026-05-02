@@ -135,6 +135,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       case 'sales': return '销售';
       case 'designer': return '设计师';
       case 'manager': return '项目经理';
+      case 'finance': return '财务';
       default: return '未知身份';
     }
   };
@@ -429,32 +430,13 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                     <p className="text-xs text-primary-600 mt-0.5">{getRoleName(currentUser?.role)}</p>
                   </div>
                   <div className="p-1">
-                    <Link 
-                      href="/employees"
+                    <Link
+                      href="/profile"
                       onClick={() => setIsUserMenuOpen(false)}
                       className="flex items-center w-full px-3 py-2 text-sm text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer"
                     >
                       <User className="w-4 h-4 mr-2" />
                       个人信息
-                    </Link>
-                    <button 
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        setPasswordForm({ old: "", new: "", confirm: "" });
-                        setIsPasswordModalOpen(true);
-                      }}
-                      className="flex items-center w-full px-3 py-2 text-sm text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <KeyRound className="w-4 h-4 mr-2" />
-                      修改密码
-                    </button>
-                    <Link 
-                      href="/employees"
-                      onClick={() => setIsUserMenuOpen(false)}
-                      className="flex items-center w-full px-3 py-2 text-sm text-primary-600 hover:text-primary-900 hover:bg-primary-50 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      系统设置
                     </Link>
                   </div>
                   <div className="p-1 border-t border-primary-100">

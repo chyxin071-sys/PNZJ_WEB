@@ -33,6 +33,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (body.account) updateData.account = body.account;
     if (body.department) updateData.department = body.department;
     if (body.joinDate) updateData.joinDate = body.joinDate;
+    if (body.avatarUrl !== undefined) updateData.avatarUrl = body.avatarUrl;
 
     // Admin reset password - 同时更新明文和哈希
     if (body.password) {

@@ -7,8 +7,8 @@ const ENV = process.env.NEXT_PUBLIC_TCB_ENV_ID!;
 export async function POST(request: Request) {
   try {
     const role = request.headers.get('x-user-role');
-    if (role === 'designer' || role === 'sales') {
-      return NextResponse.json({ error: '权限不足：只读组（设计/销售）禁止上传文件' }, { status: 403 });
+    if (role === 'sales') {
+      return NextResponse.json({ error: '权限不足：销售角色禁止上传文件' }, { status: 403 });
     }
 
     const formData = await request.formData();

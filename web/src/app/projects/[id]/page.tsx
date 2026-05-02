@@ -259,12 +259,29 @@ export default function ProjectDetailPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             leadId: project.leadId,
-            content: `工地正式开工，预计完工日期：${patch.expectedEndDate}`,
+            content: `工地正式开工\n开工日期：${baseStartDate}\n项目经理：${project.manager || '未分配'}\n预计完工：${patch.expectedEndDate}`,
             method: '系统记录',
             createdBy: userName
           })
         });
       }
+
+      // 通知相关人员（manager + admin）
+      const targets = [...new Set([project.manager, 'admin'].filter(Boolean).filter(n => n !== userName))];
+      targets.forEach(targetUser => {
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetUser,
+            type: 'project',
+            title: '工地正式开工',
+            content: `${userName} 确认了工地【${project.name || project.address}】正式开工，开工日期：${baseStartDate}，预计完工：${patch.expectedEndDate}`,
+            senderName: userName,
+            link: `/projects/${id}`
+          })
+        }).catch(() => {});
+      });
     }
   };
 
@@ -426,6 +443,26 @@ export default function ProjectDetailPage() {
           })
         });
       }
+
+      // 通知相关人员（manager + admin）
+      const notifyTargets = [...new Set([project.manager, 'admin'].filter(Boolean).filter(n => n !== userName))];
+      const notifyContent = allDone
+        ? `${userName} 完成了工地【${project.name || project.address}】的【${nodes[majorIdx].name}】阶段全部验收`
+        : `${userName} 提交了工地【${project.name || project.address}】的【${nodes[majorIdx].name} - ${sub.name}】现场记录`;
+      notifyTargets.forEach(targetUser => {
+        fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            targetUser,
+            type: 'project',
+            title: '工地进度更新',
+            content: notifyContent,
+            senderName: userName,
+            link: `/projects/${id}`
+          })
+        }).catch(() => {});
+      });
     } else alert('提交失败');
   };
 
@@ -461,7 +498,7 @@ export default function ProjectDetailPage() {
             leadId: project.leadId,
             content: `修改并重算了工地排期\n预计开工：${startStr}\n预计完工：${expectedEndDate}`,
             method: '系统记录',
-            createdBy: currentUser?.name || '系统'
+            createdBy: userName || '系统'
           })
         });
       }
