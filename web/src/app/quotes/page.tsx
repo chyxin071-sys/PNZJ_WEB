@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Search, Filter, MoreHorizontal, FileEdit, FileCheck, FileX, Printer, Calculator, PackagePlus, X, ArrowRight, Building2, SlidersHorizontal, ChevronDown, CheckCircle2 } from "lucide-react";
 import MainLayout from "../../components/MainLayout";
 import CustomerInfo from "../../components/CustomerInfo";
 
-export default function QuotesPage() {
+function QuotesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [activeStatus, setActiveStatus] = useState("全部");
@@ -558,5 +558,13 @@ export default function QuotesPage() {
         )}
       </div>
     </MainLayout>
+  );
+}
+
+export default function QuotesPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <QuotesContent />
+    </Suspense>
   );
 }
