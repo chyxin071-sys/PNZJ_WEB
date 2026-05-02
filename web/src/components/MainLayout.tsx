@@ -14,6 +14,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [passwordForm, setPasswordForm] = useState({ old: "", new: "", confirm: "" });
   const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
   const [showOldPwd, setShowOldPwd] = useState(false);
@@ -441,7 +442,10 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                   </div>
                   <div className="p-1 border-t border-primary-100">
                     <button 
-                      onClick={handleLogout}
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        setIsLogoutConfirmOpen(true);
+                      }}
                       className="flex items-center w-full px-3 py-2 text-sm text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors font-medium cursor-pointer"
                     >
                       <LogOut className="w-4 h-4 mr-2" />
@@ -462,6 +466,40 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
       </main>
+
+      {/* 退出登录确认弹窗 */}
+      {isLogoutConfirmOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-in fade-in zoom-in duration-200">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-12 h-12 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-4">
+                <LogOut className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-primary-900 mb-2">确认退出登录？</h3>
+              <p className="text-sm text-primary-500 mb-6">
+                退出后需要重新输入账号密码才能进入系统。
+              </p>
+              <div className="flex w-full gap-3">
+                <button
+                  onClick={() => setIsLogoutConfirmOpen(false)}
+                  className="flex-1 py-2.5 px-4 rounded-xl border border-primary-200 text-primary-700 font-medium hover:bg-primary-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={() => {
+                    setIsLogoutConfirmOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-rose-600 text-white font-medium hover:bg-rose-700 transition-colors"
+                >
+                  确认退出
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 修改密码弹窗 */}
       {isPasswordModalOpen && (
