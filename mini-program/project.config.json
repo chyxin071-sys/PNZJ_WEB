@@ -3,7 +3,7 @@
   "cloudfunctionRoot": "cloudfunctions/",
   "projectname": "pnzj-mini-program",
   "description": "品诺筑家",
-  "appid": "wxc9f24e9a9f57bc7a",
+  "appid": "",
   "setting": {
     "urlCheck": false,
     "es6": true,

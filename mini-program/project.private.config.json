@@ -1,21 +1,4 @@
 {
-  "libVersion": "3.15.2",
-  "projectname": "mini-PNZJ-CM",
-  "setting": {
-    "urlCheck": false,
-    "coverView": false,
-    "lazyloadPlaceholderEnable": false,
-    "skylineRenderEnable": false,
-    "preloadBackgroundData": false,
-    "autoAudits": false,
-    "useApiHook": true,
-    "showShadowRootInWxmlPanel": false,
-    "useStaticServer": false,
-    "useLanDebug": false,
-    "showES6CompileOption": false,
-    "compileHotReLoad": true,
-    "checkInvalidKey": true,
-    "ignoreDevUnusedFiles": true,
-    "bigPackageSizeSupport": false
-  }
+  "appid": "wxc9f24e9a9f57bc7a",
+  "projectname": "pnzj-mini-program"
 }
