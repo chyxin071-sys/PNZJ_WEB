@@ -445,7 +445,7 @@ export default function LeadDetailPage() {
 
         // 通知相关人员（sales + creatorName + admin）
         const operatorName = currentUser?.name || '系统';
-        const targets = [...new Set([lead.sales, lead.creatorName, 'admin'].filter(Boolean).filter(n => n !== operatorName))];
+        const targets = Array.from(new Set([lead.sales, lead.creatorName, 'admin'].filter(Boolean).filter(n => n !== operatorName)));
         targets.forEach(targetUser => {
           fetch('/api/notifications', {
             method: 'POST',
