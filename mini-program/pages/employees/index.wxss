@@ -25,6 +25,7 @@ page { background: #f5f4f2; }
 
 .card-left { display: flex; align-items: center; gap: 24rpx; flex: 1; }
 .avatar { width: 88rpx; height: 88rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 36rpx; font-weight: bold; flex-shrink: 0; }
+.avatar-img { object-fit: cover; background: #f1f5f9; }
 /* 头像颜色映射 */
 .avatar.admin { background: #faf5ff; color: #7e22ce; border: 2rpx solid #f3e8ff; }
 .avatar.sales { background: #eff6ff; color: #1d4ed8; border: 2rpx solid #dbeafe; }
@@ -83,6 +84,7 @@ page { background: #f5f4f2; }
 .member-card { display: flex; align-items: center; gap: 24rpx; padding: 28rpx 32rpx; border-bottom: 1rpx solid #f8f7f5; }
 .member-card:last-child { border-bottom: none; }
 .member-avatar { width: 72rpx; height: 72rpx; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30rpx; font-weight: bold; flex-shrink: 0; }
+.member-avatar-img { object-fit: cover; background: #f1f5f9; }
 .avatar-admin { background: #faf5ff; color: #7e22ce; }
 .avatar-sales { background: #eff6ff; color: #1d4ed8; }
 .avatar-designer { background: var(--emerald-50); color: var(--emerald-600); }

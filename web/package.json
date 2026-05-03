@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "clean": "powershell -Command \"Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue\"",
+    "fresh": "powershell -Command \"Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue\" && npm run dev"
   },
   "dependencies": {
     "@cloudbase/js-sdk": "^2.27.2",

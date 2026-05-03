@@ -16,6 +16,7 @@ Page({
     showPhoneModal: false,
     editPhone: "",
     unreadCount: 0,
+    showAvatarModal: false,
   },
 
   /**
@@ -91,6 +92,105 @@ Page({
       console.error('获取未读通知失败', err);
     });
   },
+
+  viewAvatarFull() {
+    wx.previewImage({
+      urls: [this.data.userInfo.avatarUrl],
+      current: this.data.userInfo.avatarUrl,
+    });
+  },
+
+  previewAvatar() {
+    this.setData({ showAvatarModal: true });
+  },
+
+  closeAvatarModal() {
+    this.setData({ showAvatarModal: false });
+  },
+
+  resetAvatar() {
+    this.setData({ showAvatarModal: false });
+    wx.showModal({
+      title: '还原默认头像',
+      content: '确定要移除自定义头像，恢复为默认头像吗？',
+      success: (res) => {
+        if (!res.confirm) return;
+        wx.showLoading({ title: '处理中' });
+        const db = wx.cloud.database();
+        const userId = this.data.userInfo._id || this.data.userInfo.id;
+        db.collection('users').doc(userId).update({
+          data: { avatarUrl: '' }
+        }).then(() => {
+          wx.hideLoading();
+          const updatedUser = { ...this.data.userInfo, avatarUrl: '' };
+          wx.setStorageSync('pnzj_user', updatedUser);
+          wx.setStorageSync('userInfo', updatedUser);
+          this.setData({ userInfo: updatedUser });
+          wx.showToast({ title: '已还原默认', icon: 'success' });
+        }).catch(() => {
+          wx.hideLoading();
+          wx.showToast({ title: '操作失败', icon: 'none' });
+        });
+      }
+    });
+  },
+
+  changeAvatar() {
+    this.setData({ showAvatarModal: false });
+    wx.chooseMedia({
+      count: 1,
+      mediaType: ['image'],
+      sizeType: ['compressed'],
+      sourceType: ['album', 'camera'],
+      success: (res) => {
+        const tempPath = res.tempFiles[0].tempFilePath;
+        wx.showLoading({ title: '处理中' });
+
+        // 上传前二次压缩，quality 60 大幅减小体积，加快加载速度
+        wx.compressImage({
+          src: tempPath,
+          quality: 60,
+          success: (compressRes) => {
+            const userId = this.data.userInfo._id || this.data.userInfo.id;
+            const cloudPath = `avatars/${userId}_${Date.now()}.jpg`;
+            wx.showLoading({ title: '上传中' });
+
+            wx.cloud.uploadFile({
+              cloudPath,
+              filePath: compressRes.tempFilePath,
+              success: (uploadRes) => {
+                const avatarUrl = uploadRes.fileID;
+                const db = wx.cloud.database();
+                db.collection('users').doc(userId).update({
+                  data: { avatarUrl }
+                }).then(() => {
+                  wx.hideLoading();
+                  const updatedUser = { ...this.data.userInfo, avatarUrl };
+                  wx.setStorageSync('pnzj_user', updatedUser);
+                  wx.setStorageSync('userInfo', updatedUser);
+                  this.setData({ userInfo: updatedUser });
+                  wx.showToast({ title: '头像已更新', icon: 'success' });
+                }).catch(() => {
+                  wx.hideLoading();
+                  wx.showToast({ title: '保存失败', icon: 'none' });
+                });
+              },
+              fail: (err) => {
+                wx.hideLoading();
+                console.error('头像上传失败', err);
+                wx.showToast({ title: '上传失败，请重试', icon: 'none' });
+              }
+            });
+          },
+          fail: () => {
+            wx.hideLoading();
+            wx.showToast({ title: '图片处理失败', icon: 'none' });
+          }
+        });
+      }
+    });
+  },
+
 
   openEditName() {
     this.setData({

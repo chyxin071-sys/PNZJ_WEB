@@ -980,6 +980,8 @@ Page({
       editSingleNodeIndex: idx,
       editSingleNodeData: {
         name: nodes[idx].name,
+        isCustom: nodes[idx].isCustom || false,
+        nameIndex: nodes[idx].nameIndex || 0,
         startDate: nodes[idx].startDate,
         endDate: nodes[idx].endDate
       }
@@ -988,6 +990,27 @@ Page({
 
   closeEditDesignNodeModal() {
     this.setData({ showEditDesignNodeModal: false });
+  },
+
+  onEditSingleNodeNamePicker(e) {
+    const valIdx = e.detail.value;
+    const valStr = this.data.designNodeOptions[valIdx];
+    let nodeData = this.data.editSingleNodeData;
+    
+    if (valStr === '自定义') {
+      nodeData.isCustom = true;
+      nodeData.name = '';
+    } else {
+      nodeData.isCustom = false;
+      nodeData.name = valStr;
+    }
+    nodeData.nameIndex = valIdx;
+    
+    this.setData({ editSingleNodeData: nodeData });
+  },
+
+  onEditSingleNodeName(e) {
+    this.setData({ 'editSingleNodeData.name': e.detail.value });
   },
 
   onEditSingleNodeStartDate(e) {
@@ -1002,6 +1025,9 @@ Page({
     let nodeData = this.data.editSingleNodeData;
     let idx = this.data.editSingleNodeIndex;
     
+    if (nodeData.isCustom && (!nodeData.name || nodeData.name.trim() === '')) {
+      return wx.showToast({ title: '节点名称不能为空', icon: 'none' });
+    }
     if (!nodeData.startDate || !nodeData.endDate) {
       return wx.showToast({ title: '请选择预计开始和完成日期', icon: 'none' });
     }
@@ -1014,9 +1040,13 @@ Page({
 
     let nodes = JSON.parse(JSON.stringify(this.data.lead.designNodes || []));
     
+    const oldName = nodes[idx].name;
     const oldStartDate = nodes[idx].startDate;
     const oldEndDate = nodes[idx].endDate;
     
+    nodes[idx].name = nodeData.name;
+    nodes[idx].isCustom = nodeData.isCustom;
+    nodes[idx].nameIndex = nodeData.nameIndex;
     nodes[idx].startDate = nodeData.startDate;
     nodes[idx].endDate = nodeData.endDate;
 
@@ -1033,8 +1063,19 @@ Page({
       });
       wx.hideLoading();
       wx.showToast({ title: '节点已更新', icon: 'success' });
-      this.addSystemFollowUp(`编辑了设计节点【${nodeData.name}】的排期时间\n由 ${oldStartDate} 至 ${oldEndDate}\n改为 ${nodeData.startDate} 至 ${nodeData.endDate}`);
-      this.notifyDesignAction(`编辑了客户【${this.data.lead.name}】的设计节点：【${nodeData.name}】的排期时间。`);
+      
+      let followUpMsg = '';
+      let notifyMsg = '';
+      if (oldName !== nodeData.name) {
+        followUpMsg = `编辑了设计节点【${oldName}】\n重命名为【${nodeData.name}】\n排期由 ${oldStartDate} 至 ${oldEndDate}\n改为 ${nodeData.startDate} 至 ${nodeData.endDate}`;
+        notifyMsg = `编辑了客户【${this.data.lead.name}】的设计节点：【${oldName}】重命名为【${nodeData.name}】并修改了排期。`;
+      } else {
+        followUpMsg = `编辑了设计节点【${nodeData.name}】的排期时间\n由 ${oldStartDate} 至 ${oldEndDate}\n改为 ${nodeData.startDate} 至 ${nodeData.endDate}`;
+        notifyMsg = `编辑了客户【${this.data.lead.name}】的设计节点：【${nodeData.name}】的排期时间。`;
+      }
+      
+      this.addSystemFollowUp(followUpMsg);
+      this.notifyDesignAction(notifyMsg);
     }).catch((err) => {
       console.error('Edit design node failed:', err);
       wx.hideLoading();

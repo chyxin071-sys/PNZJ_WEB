@@ -3,8 +3,9 @@
   <!-- 头部用户信息卡片 -->
   <view class="profile-header">
     <view class="user-card">
-      <view class="avatar-wrap avatar-bg-{{userInfo.role || 'default'}}">
-        <text class="avatar-text">{{userInfo.name ? userInfo.name[0] : '用'}}</text>
+      <view class="avatar-wrap avatar-bg-{{userInfo.role || 'default'}}" bindtap="previewAvatar">
+        <image wx:if="{{userInfo.avatarUrl}}" src="{{userInfo.avatarUrl}}" class="avatar-img" mode="aspectFill" />
+        <text wx:else class="avatar-text">{{userInfo.name ? userInfo.name[0] : '用'}}</text>
       </view>
       <view class="user-info">
         <view class="name-row">
@@ -17,6 +18,18 @@
         </view>
       </view>
     </view>
+  </view>
+
+  <!-- 头像预览弹窗 -->
+  <view class="modal-mask" wx:if="{{showAvatarModal}}" bindtap="closeAvatarModal"></view>
+  <view class="avatar-modal" wx:if="{{showAvatarModal}}">
+    <view class="avatar-preview-wrap avatar-bg-{{userInfo.role || 'default'}}">
+      <image wx:if="{{userInfo.avatarUrl}}" src="{{userInfo.avatarUrl}}" class="avatar-preview-img" mode="aspectFill" bindtap="viewAvatarFull" />
+      <text wx:else class="avatar-preview-text">{{userInfo.name ? userInfo.name[0] : '用'}}</text>
+    </view>
+    <view class="avatar-modal-btn" bindtap="changeAvatar">更换头像</view>
+    <view class="avatar-modal-btn avatar-modal-btn-reset" wx:if="{{userInfo.avatarUrl}}" bindtap="resetAvatar">还原默认</view>
+    <view class="avatar-modal-cancel" bindtap="closeAvatarModal">取消</view>
   </view>
 
   <!-- 修改姓名弹窗 -->

@@ -154,7 +154,8 @@ Page({
         data: {
           method: this.data.activeMethod,
           content: (this.data.content || '').trim(),
-          editedAt: db.serverDate()
+          editedAt: db.serverDate(),
+          editedBy: operatorName
         }
       }).then(() => {
         this.sendNotification(operatorName, nowStr, true);

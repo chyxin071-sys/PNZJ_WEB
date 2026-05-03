@@ -161,7 +161,28 @@ Page({
         });
 
         this.setData({ notifications: list, loading: false });
-        
+
+        // 批量拉取发送人头像
+        const senderNames = [...new Set(
+          list.map(n => n.senderName).filter(n => n && n !== '系统')
+        )];
+        if (senderNames.length > 0) {
+          db.collection('users')
+            .where({ name: db.command.in(senderNames) })
+            .field({ name: true, avatarUrl: true })
+            .get()
+            .then(userRes => {
+              const avatarMap = {};
+              userRes.data.forEach(u => { if (u.avatarUrl) avatarMap[u.name] = u.avatarUrl; });
+              const updated = this.data.notifications.map(n => ({
+                ...n,
+                senderAvatarUrl: avatarMap[n.senderName] || ''
+              }));
+              this.setData({ notifications: updated });
+            })
+            .catch(() => {}); // 头像加载失败不影响主流程
+        }
+
         // 使用全局方法更新未读数到 tab bar
         if (typeof this.getTabBar === 'function' && this.getTabBar()) {
           this.getTabBar().fetchGlobalUnread();

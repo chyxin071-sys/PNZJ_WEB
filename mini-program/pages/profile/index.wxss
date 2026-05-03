@@ -22,11 +22,35 @@
   height: 140rpx;
   border-radius: 70rpx;
   border: 6rpx solid #f1f5f9;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.avatar-img {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: 70rpx;
+}
+.avatar-edit-badge {
+  position: absolute;
+  bottom: -4rpx;
+  right: -4rpx;
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 22rpx;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 22rpx;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 4rpx solid #fff;
+  box-shadow: 0 2rpx 6rpx rgba(59,130,246,0.3);
 }
 .avatar-text {
   font-size: 56rpx;
@@ -360,7 +384,78 @@
   flex-shrink: 0;
 }
 
-/* 退出登�?*/
+/* 头像预览弹窗 */
+.avatar-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72%;
+  background: #fff;
+  border-radius: 28rpx;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 40rpx 0;
+  box-shadow: 0 10rpx 40rpx rgba(0,0,0,0.15);
+  overflow: hidden;
+}
+
+.avatar-preview-wrap {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 24rpx;
+}
+
+.avatar-preview-img {
+  width: 200rpx;
+  height: 200rpx;
+  border-radius: 100rpx;
+}
+
+.avatar-preview-text {
+  font-size: 80rpx;
+  font-weight: bold;
+}
+
+.avatar-modal-name {
+  font-size: 34rpx;
+  font-weight: bold;
+  color: var(--primary-900);
+  margin-bottom: 40rpx;
+}
+
+.avatar-modal-btn {
+  width: 100%;
+  text-align: center;
+  padding: 32rpx 0;
+  font-size: 32rpx;
+  color: var(--primary-900);
+  font-weight: bold;
+  border-top: 1rpx solid #f1f5f9;
+}
+
+.avatar-modal-btn-reset {
+  font-weight: normal;
+  color: var(--primary-500);
+}
+
+.avatar-modal-cancel {
+  width: 100%;
+  text-align: center;
+  padding: 32rpx 0;
+  font-size: 32rpx;
+  color: var(--primary-400);
+  border-top: 1rpx solid #f1f5f9;
+}
+
+
 .logout-btn {
   background: #fff;
   margin: 0 40rpx;

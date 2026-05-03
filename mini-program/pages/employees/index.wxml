@@ -34,7 +34,8 @@
     <scroll-view scroll-y class="list-scroll">
       <view class="employee-card hover-scale" wx:for="{{filteredEmployees}}" wx:key="_id" bindtap="showActionSheet" data-employee="{{item}}">
         <view class="card-left">
-          <view class="avatar {{item.role}}">{{item.name[0]}}</view>
+          <image wx:if="{{item.avatarUrl}}" src="{{item.avatarUrl}}" class="avatar avatar-img" mode="aspectFill" />
+          <view wx:else class="avatar {{item.role}}">{{item.name[0]}}</view>
           <view class="info">
             <view class="name-row" style="display: flex; align-items: center; gap: 12rpx; flex-wrap: wrap;">
               <text class="name" style="font-size: 32rpx; font-weight: bold; color: var(--primary-900);">{{item.name}}</text>
@@ -75,7 +76,8 @@
         </view>
         <view class="dept-members">
           <view class="member-card" wx:for="{{item.members}}" wx:for-item="emp" wx:key="_id">
-            <view class="member-avatar avatar-{{emp.role}}">{{emp.name[0]}}</view>
+            <image wx:if="{{emp.avatarUrl}}" src="{{emp.avatarUrl}}" class="member-avatar member-avatar-img" mode="aspectFill" />
+            <view wx:else class="member-avatar avatar-{{emp.role}}">{{emp.name[0]}}</view>
             <view class="member-info">
               <view class="member-name-row">
                 <text class="member-name">{{emp.name}}</text>

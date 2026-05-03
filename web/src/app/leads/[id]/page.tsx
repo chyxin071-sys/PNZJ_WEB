@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ChevronLeft, MapPin, User, Calendar, MessageSquare, FileText, FolderOpen, ArrowRight, Plus, Edit2, Check, ChevronDown, Trash2, X, Pencil, CheckCircle2, Clock, Upload, Image as ImageIcon, Play } from "lucide-react";
+import { ChevronLeft, MapPin, User, Calendar, MessageSquare, FileText, FolderOpen, ArrowRight, Plus, Edit2, Check, ChevronDown, Trash2, X, Pencil, CheckCircle2, Clock, Upload, Image as ImageIcon, Play, Loader2, File, Film, Eye, EyeOff, Download } from "lucide-react";
 import MainLayout from "../../../components/MainLayout";
-import CustomerDocuments from "../../../../src/components/CustomerDocuments";
+import CustomerDocuments from "../../../components/CustomerDocuments";
 import CustomerInfo from "../../../components/CustomerInfo";
 import { getNextWorkingDay, calculateEndDate, formatDate } from "../../../lib/date";
 import DatePicker from "../../../components/DatePicker";
+import FolderSelectModal from "../../../components/FolderSelectModal";
 
 function formatDateRange(start: string, end: string) {
   if (!start || !end) return `${start || '-'} ~ ${end || '-'}`;
@@ -18,6 +19,72 @@ function formatDateRange(start: string, end: string) {
     return `${start} ~ ${endParts[1]}-${endParts[2]}`;
   }
   return `${start} ~ ${end}`;
+}
+
+function formatSize(bytes: number): string {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+function getFileType(name: string): 'image' | 'video' | 'doc' | 'file' {
+  const ext = name.split('.').pop()?.toLowerCase() || '';
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic'].includes(ext)) return 'image';
+  if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return 'video';
+  if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'].includes(ext)) return 'doc';
+  return 'file';
+}
+
+function FileIcon({ type }: { type: string }) {
+  const cls = "w-4 h-4";
+  switch (type) {
+    case 'image': return <ImageIcon className={`${cls} text-blue-500`} />;
+    case 'video': return <Film className={`${cls} text-purple-500`} />;
+    case 'doc': return <FileText className={`${cls} text-rose-500`} />;
+    default: return <File className={`${cls} text-primary-500`} />;
+  }
+}
+
+// 图片预览组件
+function ImagePreview({ fileID, imgIdx, nodeIdx, canDelete, onDelete, getImageUrl }: any) {
+  const [url, setUrl] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getImageUrl(fileID).then((u: string) => {
+      setUrl(u);
+      setLoading(false);
+    });
+  }, [fileID]);
+
+  if (loading) {
+    return (
+      <div className="aspect-square rounded-lg bg-primary-100 animate-pulse flex items-center justify-center">
+        <ImageIcon className="w-6 h-6 text-primary-300" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative group aspect-square rounded-lg overflow-hidden bg-primary-50 cursor-pointer">
+      <img
+        src={url}
+        alt={`节点图片 ${imgIdx + 1}`}
+        className="w-full h-full object-cover"
+        onClick={() => window.open(url, '_blank')}
+      />
+      {canDelete && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute top-1 right-1 p-1 bg-rose-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-rose-600"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function LeadDetailPage() {
@@ -43,6 +110,7 @@ export default function LeadDetailPage() {
   
   // 确认更换人员的弹窗状态
   const [personnelConfirm, setPersonnelConfirm] = useState<{ role: string, oldName: string, newName: string } | null>(null);
+  const [isChangingPersonnel, setIsChangingPersonnel] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [signModal, setSignModal] = useState({ isOpen: false, date: '', signer: '' });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -51,11 +119,20 @@ export default function LeadDetailPage() {
   const [users, setUsers] = useState<any[]>([]);
 
   // 设计进度状态
-  const [activeLeftTab, setActiveLeftTab] = useState<'follow' | 'design'>('follow');
+  const [activeLeftTab, setActiveLeftTab] = useState<'follow' | 'design' | 'files'>('follow');
   const [showStartDesignModal, setShowStartDesignModal] = useState(false);
-  const [showEditDesignModal, setShowEditDesignModal] = useState(false);
   const [designStartDate, setDesignStartDate] = useState('');
   const [editDesignNodes, setEditDesignNodes] = useState<any[]>([]);
+  const [expandedNodeIdx, setExpandedNodeIdx] = useState<number | null>(null);
+  const [uploadingNodeIdx, setUploadingNodeIdx] = useState<number | null>(null);
+  const [nodeImageUrls, setNodeImageUrls] = useState<{ [key: string]: string }>({});
+
+  // 设计节点文件上传相关
+  const [showDesignFileFolderModal, setShowDesignFileFolderModal] = useState(false);
+  const [pendingDesignFiles, setPendingDesignFiles] = useState<File[]>([]);
+  const [currentUploadNodeIdx, setCurrentUploadNodeIdx] = useState<number | null>(null);
+
+  const designNodeOptions = ['平面布局', '效果图渲染', '施工图深化', '定制图纸绘制', '自定义'];
 
   useEffect(() => {
     const userData = localStorage.getItem("pnzj_user") || localStorage.getItem("userInfo") || localStorage.getItem("user");
@@ -203,7 +280,9 @@ export default function LeadDetailPage() {
           user: f.createdBy || f.user || '未知',
           time: parseFollowUpTime(f),
           content: f.content || '',
-          _timestamp: parseFollowUpTimestamp(f)
+          _timestamp: parseFollowUpTimestamp(f),
+          editedBy: f.editedBy,
+          editedAt: f.editedAt
         })) : [];
 
         if (timelineData.length === 0 && dateStr) {
@@ -247,8 +326,8 @@ export default function LeadDetailPage() {
           createdAt: dateStr,
           lastFollowUp: data.lastFollowUp || "暂无"
         };
-        setLead(formatted);
-        setEditForm(formatted);
+        // 仅在数据确实有变化时更新，避免闪烁
+        setLead((prev: any) => JSON.stringify(prev) === JSON.stringify(formatted) ? prev : formatted);
         
         // 从云端拉取真实跟进记录
         fetch(`/api/followUps?leadId=${leadId}&all=1`)
@@ -260,7 +339,9 @@ export default function LeadDetailPage() {
                 user: f.createdBy || f.user || '未知',
                 time: parseFollowUpTime(f),
                 content: f.content || '',
-                _timestamp: parseFollowUpTimestamp(f)
+                _timestamp: parseFollowUpTimestamp(f),
+                editedBy: f.editedBy,
+                editedAt: f.editedAt
              })) : [];
 
              if (timelineData.length === 0) {
@@ -274,7 +355,7 @@ export default function LeadDetailPage() {
                });
              }
              timelineData.sort((a: any, b: any) => (b._timestamp || 0) - (a._timestamp || 0));
-             setTimeline(timelineData);
+             setTimeline((prev: any) => JSON.stringify(prev) === JSON.stringify(timelineData) ? prev : timelineData);
           });
       }
     } catch (e) {
@@ -310,10 +391,20 @@ export default function LeadDetailPage() {
     }
   };
 
+  // 初始加载
   useEffect(() => {
     if (leadId) {
       fetchAllData();
     }
+  }, [leadId]);
+
+  // 轮询：每隔 5 秒自动刷新跟进记录和基本信息
+  useEffect(() => {
+    const timer = setInterval(() => {
+      // 静默刷新，不显示 loading
+      fetchLeadDetail();
+    }, 5000);
+    return () => clearInterval(timer);
   }, [leadId]);
 
   if (leadNotFound) {
@@ -365,7 +456,11 @@ export default function LeadDetailPage() {
       await fetch(`/api/followUps/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: editNoteContent })
+        body: JSON.stringify({ 
+          content: editNoteContent,
+          editedBy: currentUser?.name || '未知用户',
+          editedAt: new Date().toISOString()
+        })
       });
       setEditingNoteId(null);
       fetchLeadDetail();
@@ -557,11 +652,12 @@ export default function LeadDetailPage() {
   };
 
   const handleConfirmPersonnelChange = async () => {
-    if (!personnelConfirm) return;
+    if (!personnelConfirm || isChangingPersonnel) return;
 
     const fieldMap: Record<string, string> = { '销售': 'sales', '设计': 'designer', '项目经理': 'manager' };
     const field = fieldMap[personnelConfirm.role];
 
+    setIsChangingPersonnel(true);
     try {
       await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
@@ -587,6 +683,8 @@ export default function LeadDetailPage() {
       fetchLeadDetail();
     } catch (e) {
       console.error('更换人员失败', e);
+    } finally {
+      setIsChangingPersonnel(false);
     }
 
     setPersonnelConfirm(null);
@@ -594,103 +692,130 @@ export default function LeadDetailPage() {
     setTimeout(() => setShowToast(false), 3000);
   };
 
-  // ===== 设计进度工具函数 =====
-  const recalcDesignGantt = (nodes: any[], startDate: string) => {
-    let cursor = startDate;
-    return nodes.map(n => {
-      if (n.status === 'completed') {
-        if (n.actualEndDate) cursor = formatDate(getNextWorkingDay(new Date(n.actualEndDate.replace(/-/g, '/'))));
-        return n;
-      }
-      const start = n.manualStartDate || cursor;
-      const end = calculateEndDate(start, Number(n.duration) || 1);
-      cursor = formatDate(getNextWorkingDay(new Date(end.replace(/-/g, '/'))));
-      return { ...n, startDate: start, endDate: end };
-    });
-  };
-
   const openStartDesignModal = () => {
     const today = new Date().toISOString().split('T')[0];
     const defaultNodes = [
-      { id: Date.now() + 1, name: '平面布局', duration: 2, status: 'current' },
-      { id: Date.now() + 2, name: '效果图渲染', duration: 5, status: 'pending' },
-      { id: Date.now() + 3, name: '施工图深化', duration: 3, status: 'pending' },
-      { id: Date.now() + 4, name: '定制图纸绘制', duration: 5, status: 'pending' },
+      { id: Date.now(), name: '平面布局', isCustom: false, nameIndex: 0, startDate: today, endDate: today, status: 'pending' }
     ];
     setDesignStartDate(today);
-    setEditDesignNodes(recalcDesignGantt(defaultNodes, today));
+    setEditDesignNodes(defaultNodes);
     setShowStartDesignModal(true);
   };
 
-  const openEditDesignModal = () => {
-    if (!lead?.designNodes) return;
-    const nodes = JSON.parse(JSON.stringify(lead.designNodes));
-    const start = lead.designStartDate || new Date().toISOString().split('T')[0];
-    setEditDesignNodes(recalcDesignGantt(nodes, start));
-    setShowEditDesignModal(true);
-  };
-
-  const handleDesignNodeNameChange = (idx: number, val: string) => {
-    const nodes = [...editDesignNodes];
-    nodes[idx] = { ...nodes[idx], name: val };
-    setEditDesignNodes(nodes);
-  };
-
-  const handleDesignNodeDurChange = (idx: number, val: string) => {
-    const nodes = [...editDesignNodes];
-    nodes[idx] = { ...nodes[idx], duration: parseInt(val) || 1 };
-    const start = lead?.designStartDate || designStartDate || new Date().toISOString().split('T')[0];
-    setEditDesignNodes(recalcDesignGantt(nodes, start));
-  };
-
-  const handleDesignStartDateChange = (val: string) => {
-    setDesignStartDate(val);
-    setEditDesignNodes(recalcDesignGantt(editDesignNodes, val));
-  };
-
   const addDesignNode = () => {
-    const nodes = [...editDesignNodes, { id: Date.now(), name: '新设计节点', duration: 1, status: 'pending' }];
-    const start = lead?.designStartDate || designStartDate || new Date().toISOString().split('T')[0];
-    setEditDesignNodes(recalcDesignGantt(nodes, start));
+    const newNode = {
+      id: Date.now(),
+      name: '',
+      isCustom: true,
+      nameIndex: 4, // 默认选中"自定义"
+      startDate: designStartDate || new Date().toISOString().split('T')[0],
+      endDate: designStartDate || new Date().toISOString().split('T')[0],
+      status: 'pending'
+    };
+    setEditDesignNodes([...editDesignNodes, newNode]);
   };
 
   const removeDesignNode = (idx: number) => {
-    const nodes = editDesignNodes.filter((_, i) => i !== idx);
-    const start = lead?.designStartDate || designStartDate || new Date().toISOString().split('T')[0];
-    setEditDesignNodes(recalcDesignGantt(nodes, start));
+    if (editDesignNodes.length <= 1) {
+      alert('至少保留一个节点');
+      return;
+    }
+    setEditDesignNodes(editDesignNodes.filter((_, i) => i !== idx));
+  };
+
+  const updateDesignNodeNamePicker = (idx: number, nameIdx: number) => {
+    const nodes = [...editDesignNodes];
+    const selectedName = designNodeOptions[nameIdx];
+    if (selectedName === '自定义') {
+      nodes[idx].isCustom = true;
+      nodes[idx].name = '';
+    } else {
+      nodes[idx].isCustom = false;
+      nodes[idx].name = selectedName;
+    }
+    nodes[idx].nameIndex = nameIdx;
+    setEditDesignNodes(nodes);
+  };
+
+  const updateDesignNodeName = (idx: number, name: string) => {
+    const nodes = [...editDesignNodes];
+    nodes[idx].name = name;
+    setEditDesignNodes(nodes);
+  };
+
+  const updateDesignNodeStartDate = (idx: number, date: string) => {
+    const nodes = [...editDesignNodes];
+    nodes[idx].startDate = date;
+    setEditDesignNodes(nodes);
+  };
+
+  const updateDesignNodeEndDate = (idx: number, date: string) => {
+    const nodes = [...editDesignNodes];
+    nodes[idx].endDate = date;
+    setEditDesignNodes(nodes);
   };
 
   const confirmStartDesign = async () => {
-    if (!designStartDate || editDesignNodes.length === 0) return;
-    const nodes = recalcDesignGantt(editDesignNodes.map((n, i) => ({ 
-      ...n, 
-      status: i === 0 ? 'current' : 'pending',
-      actualStartDate: i === 0 ? designStartDate : undefined
-    })), designStartDate);
+    // 验证
+    if (editDesignNodes.length === 0) {
+      alert('请至少保留一个节点');
+      return;
+    }
+
+    const hasEmptyName = editDesignNodes.some(n => !n.name || n.name.trim() === '');
+    if (hasEmptyName) {
+      alert('节点名称不能为空');
+      return;
+    }
+
+    const hasEmptyDate = editDesignNodes.some(n => !n.startDate || !n.endDate);
+    if (hasEmptyDate) {
+      alert('请选择预计开始和完成日期');
+      return;
+    }
+
+    // 检查日期是否合理
+    const hasInvalidDate = editDesignNodes.some(n => new Date(n.startDate) > new Date(n.endDate));
+    if (hasInvalidDate) {
+      alert('开始时间不能晚于结束时间');
+      return;
+    }
+
+    // 计算每个节点的工期天数
+    const nodes = editDesignNodes.map(n => {
+      const start = new Date(n.startDate.replace(/-/g, '/'));
+      const end = new Date(n.endDate.replace(/-/g, '/'));
+      const duration = Math.max(1, Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      return {
+        ...n,
+        duration,
+        status: 'pending',
+        images: []
+      };
+    });
+
     try {
       await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designNodes: nodes, designStartDate })
+        body: JSON.stringify({ designNodes: nodes, designStartDate: nodes[0].startDate })
       });
-      setLead({ ...lead, designNodes: nodes, designStartDate });
+      setLead({ ...lead, designNodes: nodes, designStartDate: nodes[0].startDate });
       setShowStartDesignModal(false);
-      
+
       const startNode = nodes[0];
       const endNode = nodes[nodes.length - 1];
       await fetch('/api/followUps', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          leadId, 
-          content: `开启设计出图工作流\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`, 
-          method: '系统记录', 
-          createdBy: currentUser?.name || '系统' 
+        body: JSON.stringify({
+          leadId,
+          content: `开启设计出图工作流\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`,
+          method: '系统记录',
+          createdBy: currentUser?.name || '系统'
         })
       });
-      // 关键：重新拉取跟进记录以更新页面
-      fetchAllData();
-      
+
       // 触发通知：designer + 所有admin
       const operatorName = currentUser?.name || '系统';
       const designNotifyTargets = [...new Set([lead.designer, 'admin'].filter(Boolean).filter(n => n !== operatorName))];
@@ -702,41 +827,18 @@ export default function LeadDetailPage() {
             targetUser,
             type: 'lead',
             title: '设计工作流已开启',
-            content: `${operatorName} 为客户【${lead.name}】开启了设计出图工作流，预计从 ${designStartDate} 开始`,
+            content: `${operatorName} 为客户【${lead.name}】开启了设计出图工作流，预计从 ${nodes[0].startDate} 开始`,
             senderName: operatorName,
             link: `/leads/${leadId}`
           })
         }).catch(() => {});
       });
-    } catch (e) { console.error(e); }
-  };
 
-  const confirmEditDesign = async () => {
-    if (editDesignNodes.length === 0) return;
-    const start = lead?.designStartDate || new Date().toISOString().split('T')[0];
-    const nodes = recalcDesignGantt(editDesignNodes, start);
-    try {
-      await fetch(`/api/leads/${leadId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designNodes: nodes })
-      });
-      setLead({ ...lead, designNodes: nodes });
-      setShowEditDesignModal(false);
-      const startNode = nodes[0];
-      const endNode = nodes[nodes.length - 1];
-      await fetch('/api/followUps', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          leadId, 
-          content: `修改并重算了设计出图排期\n预计开始：${startNode.startDate}\n预计结束：${endNode.endDate}`, 
-          method: '系统记录', 
-          createdBy: currentUser?.name || '系统' 
-        })
-      });
       fetchAllData();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      alert('开启失败');
+    }
   };
 
   const completeDesignNode = async (idx: number) => {
@@ -749,20 +851,20 @@ export default function LeadDetailPage() {
     if (!nodes[idx].actualStartDate) {
       nodes[idx].actualStartDate = nodes[idx].startDate || today;
     }
-    if (idx + 1 < nodes.length) {
+    // 自动开始下一个节点
+    if (idx + 1 < nodes.length && nodes[idx + 1].status === 'pending') {
       nodes[idx + 1].status = 'current';
       nodes[idx + 1].actualStartDate = today;
     }
-    const start = lead.designStartDate || today;
-    const recalced = recalcDesignGantt(nodes, start);
     try {
       await fetch(`/api/leads/${leadId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ designNodes: recalced })
+        body: JSON.stringify({ designNodes: nodes })
       });
-      setLead({ ...lead, designNodes: recalced });
-      const completedNode = nodes[idx];
+      setLead({ ...lead, designNodes: nodes });
+
+      // 写入跟进记录
       const nextNode = idx + 1 < nodes.length ? nodes[idx + 1] : null;
       let content = `已完成设计出图节点：【${nodeName}】（实际完成：${today}）`;
       if (nextNode) {
@@ -776,7 +878,10 @@ export default function LeadDetailPage() {
         body: JSON.stringify({ leadId, content, method: '系统记录', createdBy: currentUser?.name || '系统' })
       });
       fetchAllData();
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      alert('完成节点失败');
+    }
   };
 
   // ===== 开始设计节点 =====
@@ -842,6 +947,99 @@ export default function LeadDetailPage() {
     } catch (e) { console.error(e); alert('上传失败'); }
   };
 
+  // 新的文件上传逻辑（支持文件夹选择）
+  const handleDesignFileUpload = async (folder: string, visibility: 'internal' | 'public') => {
+    if (currentUploadNodeIdx === null || !lead?.designNodes) return;
+    setShowDesignFileFolderModal(false);
+    setUploadingNodeIdx(currentUploadNodeIdx);
+
+    try {
+      const uploadedFiles: any[] = [];
+      const nodes: any[] = JSON.parse(JSON.stringify(lead.designNodes));
+      const nodeIdx = currentUploadNodeIdx;
+      const totalFiles = pendingDesignFiles.length;
+      let successCount = 0;
+
+      for (const file of pendingDesignFiles) {
+        const ext = file.name.split('.').pop() || 'bin';
+        const cloudPath = `project_files/${leadId}/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('path', cloudPath);
+
+        try {
+          const res = await fetch('/api/upload', { method: 'POST', body: formData });
+          if (!res.ok) {
+            console.error(`上传失败: ${file.name}`);
+            continue;
+          }
+          const { fileID } = await res.json();
+
+          const fileObj = {
+            fileID,
+            name: file.name,
+            size: file.size,
+            sizeStr: formatSize(file.size),
+            type: getFileType(file.name),
+            uploader: currentUser?.name || '未知',
+            uploadTime: new Date().toISOString(),
+            folder,
+            isVisible: visibility === 'public'
+          };
+
+          uploadedFiles.push(fileObj);
+          successCount++;
+        } catch (err) {
+          console.error(`上传失败: ${file.name}`, err);
+        }
+      }
+
+      if (successCount === 0) {
+        alert('所有文件上传失败，请重试');
+        return;
+      }
+
+      // 更新设计节点的 files 数组
+      if (!nodes[nodeIdx].files) nodes[nodeIdx].files = [];
+      nodes[nodeIdx].files = [...uploadedFiles, ...nodes[nodeIdx].files];
+
+      await fetch(`/api/leads/${leadId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ designNodes: nodes })
+      });
+
+      // 同步到项目资料系统
+      const filesRes = await fetch(`/api/leads/${leadId}/files`);
+      let allFiles: any[] = [];
+      if (filesRes.ok) {
+        allFiles = await filesRes.json();
+      }
+      allFiles = [...uploadedFiles, ...allFiles];
+      await fetch(`/api/leads/${leadId}/files`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: allFiles })
+      });
+
+      setLead({ ...lead, designNodes: nodes });
+
+      if (successCount === totalFiles) {
+        // 不弹窗
+      } else {
+        alert(`⚠️ 成功上传 ${successCount}/${totalFiles} 个文件，${totalFiles - successCount} 个失败`);
+      }
+    } catch (e) {
+      console.error('上传失败', e);
+      alert('❌ 上传失败，请重试');
+    } finally {
+      setUploadingNodeIdx(null);
+      setPendingDesignFiles([]);
+      setCurrentUploadNodeIdx(null);
+    }
+  };
+
   const deleteDesignNodeImage = async (nodeIdx: number, imgIdx: number) => {
     if (!lead?.designNodes) return;
     const nodes: any[] = JSON.parse(JSON.stringify(lead.designNodes));
@@ -852,6 +1050,105 @@ export default function LeadDetailPage() {
       body: JSON.stringify({ designNodes: nodes })
     });
     setLead({ ...lead, designNodes: nodes });
+  };
+
+  // 删除设计节点文件
+  const deleteDesignNodeFile = async (nodeIdx: number, fileIdx: number) => {
+    if (!lead?.designNodes) return;
+    const nodes: any[] = JSON.parse(JSON.stringify(lead.designNodes));
+    const deletedFile = nodes[nodeIdx].files[fileIdx];
+    nodes[nodeIdx].files = (nodes[nodeIdx].files || []).filter((_: any, i: number) => i !== fileIdx);
+
+    await fetch(`/api/leads/${leadId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ designNodes: nodes })
+    });
+
+    // 同步删除项目资料中的文件
+    const filesRes = await fetch(`/api/leads/${leadId}/files`);
+    if (filesRes.ok) {
+      const allFiles = await filesRes.json();
+      const newFiles = allFiles.filter((f: any) => f.fileID !== deletedFile.fileID);
+      await fetch(`/api/leads/${leadId}/files`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: newFiles })
+      });
+    }
+
+    setLead({ ...lead, designNodes: nodes });
+  };
+
+  // 切换设计节点文件可见性
+  const toggleDesignFileVisibility = async (nodeIdx: number, fileIdx: number) => {
+    if (!lead?.designNodes) return;
+    const nodes: any[] = JSON.parse(JSON.stringify(lead.designNodes));
+    nodes[nodeIdx].files[fileIdx].isVisible = !nodes[nodeIdx].files[fileIdx].isVisible;
+
+    await fetch(`/api/leads/${leadId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ designNodes: nodes })
+    });
+
+    // 同步更新项目资料中的文件
+    const filesRes = await fetch(`/api/leads/${leadId}/files`);
+    if (filesRes.ok) {
+      const allFiles = await filesRes.json();
+      const fileID = nodes[nodeIdx].files[fileIdx].fileID;
+      const newFiles = allFiles.map((f: any) =>
+        f.fileID === fileID ? { ...f, visibility: nodes[nodeIdx].files[fileIdx].isVisible ? 'public' : 'internal' } : f
+      );
+      await fetch(`/api/leads/${leadId}/files`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: newFiles })
+      });
+    }
+
+    setLead({ ...lead, designNodes: nodes });
+  };
+
+  // 下载/预览文件
+  const handleDownloadFile = async (file: any) => {
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileIds: [file.fileID] })
+      });
+      if (!res.ok) throw new Error('无法获取下载链接');
+      const data = await res.json();
+      if (data && data[0] && data[0].download_url) {
+        window.open(data[0].download_url, '_blank');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('下载/预览失败');
+    }
+  };
+
+  // 获取图片临时 URL
+  const getImageUrl = async (fileID: string) => {
+    if (nodeImageUrls[fileID]) return nodeImageUrls[fileID];
+    try {
+      const res = await fetch('/api/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileIds: [fileID] })
+      });
+      if (!res.ok) return '';
+      const data = await res.json();
+      if (data && data[0] && data[0].download_url) {
+        const url = data[0].download_url;
+        setNodeImageUrls(prev => ({ ...prev, [fileID]: url }));
+        return url;
+      }
+    } catch (e) {
+      console.error('获取图片URL失败', e);
+    }
+    return '';
   };
 
   const getStatusColor = (status: string) => {
@@ -1090,15 +1387,13 @@ export default function LeadDetailPage() {
                   >
                     设计进度
                   </button>
-                </div>
-                {activeLeftTab === 'design' && lead.designNodes?.length > 0 && (
                   <button
-                    onClick={openEditDesignModal}
-                    className="text-xs text-primary-500 hover:text-primary-900 flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition-colors"
+                    onClick={() => setActiveLeftTab('files')}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeLeftTab === 'files' ? 'bg-primary-900 text-white' : 'text-primary-600 hover:bg-primary-50'}`}
                   >
-                    <Pencil className="w-3.5 h-3.5" /> 编辑排期
+                    文件资料
                   </button>
-                )}
+                </div>
               </div>
               
               {/* 设计进度 Tab */}
@@ -1123,93 +1418,263 @@ export default function LeadDetailPage() {
                     <div className="space-y-0 relative">
                       {/* 竖线 */}
                       <div className="absolute left-[15px] top-4 bottom-4 w-px bg-primary-100" />
-                      {lead.designNodes.map((node: any, idx: number) => (
+                      {lead.designNodes.map((node: any, idx: number) => {
+                        const isExpanded = expandedNodeIdx === idx;
+                        return (
                         <div key={node.id || idx} className="flex gap-4 pb-6 relative z-10">
                           {/* 状态圆点 */}
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ring-4 ring-white shadow-sm border text-xs font-bold ${
                             node.status === 'completed' ? 'bg-emerald-500 border-emerald-400 text-white' :
-                            node.status === 'current' ? 'bg-primary-900 border-primary-800 text-white' :
+                            node.status === 'current' ? 'bg-amber-500 border-amber-400 text-white' :
                             'bg-white border-primary-200 text-primary-400'
                           }`}>
                             {node.status === 'completed' ? <Check className="w-4 h-4" /> :
                              node.status === 'current' ? <Clock className="w-3.5 h-3.5" /> : null}
                           </div>
                           {/* 内容 */}
-                          <div className={`flex-1 rounded-xl border p-4 ${
-                            node.status === 'completed' ? 'bg-primary-50/50 border-primary-100' :
-                            node.status === 'current' ? 'bg-white border-primary-900 shadow-md ring-1 ring-primary-900/10' :
-                            'bg-white/50 border-primary-100 opacity-60'
+                          <div className={`flex-1 rounded-xl border shadow-sm ${
+                            node.status === 'completed' ? 'bg-emerald-50/30 border-emerald-100' :
+                            node.status === 'current' ? 'bg-amber-50/30 border-amber-200 ring-2 ring-amber-100' :
+                            'bg-white border-primary-100'
                           }`}>
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <h4 className={`font-bold text-base ${node.status === 'completed' ? 'text-primary-900' : 'text-primary-900'}`}>
-                                  {node.name}
-                                </h4>
-                              </div>
-                              
-                              <div className="flex items-center gap-2">
-                                {node.status === 'completed' ? (
-                                  node.actualEndDate <= node.endDate ? (
-                                    <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold">按时完成</span>
-                                  ) : (
-                                    <span className="text-xs px-2 py-1 bg-rose-50 text-rose-600 rounded-full font-bold">
-                                      逾期 {Math.floor((new Date(node.actualEndDate.replace(/-/g, '/')).getTime() - new Date(node.endDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24))} 天
-                                    </span>
-                                  )
-                                ) : node.status === 'current' ? (
-                                  <span className="text-xs px-2 py-1 bg-amber-50 text-amber-600 rounded-full font-bold border border-amber-200">进行中</span>
-                                ) : null}
+                            {/* 节点标题和基本信息 */}
+                            <div className="p-4">
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-3">
+                                  <h4 className={`font-bold text-base ${node.status === 'completed' ? 'text-primary-900' : 'text-primary-900'}`}>
+                                    {node.name}
+                                  </h4>
+                                </div>
 
-                                {node.status === 'current' && (currentUser?.role === 'designer' || currentUser?.role === 'admin') && (
-                                  <button onClick={() => completeDesignNode(idx)}
-                                    className="ml-2 px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-bold hover:bg-emerald-600 transition-colors shadow-sm"
-                                  >
-                                    完成节点
-                                  </button>
+                                <div className="flex items-center gap-2">
+                                  {node.status === 'completed' ? (
+                                    node.actualEndDate && node.actualEndDate <= node.endDate ? (
+                                      <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold">按时完成</span>
+                                    ) : node.actualEndDate ? (
+                                      <span className="text-xs px-2 py-1 bg-rose-50 text-rose-600 rounded-full font-bold">
+                                        逾期 {Math.floor((new Date(node.actualEndDate.replace(/-/g, '/')).getTime() - new Date(node.endDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24))} 天
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs px-2 py-1 bg-emerald-50 text-emerald-600 rounded-full font-bold">已完成</span>
+                                    )
+                                  ) : node.status === 'current' ? (
+                                    <span className="text-xs px-2 py-1 bg-amber-50 text-amber-600 rounded-full font-bold border border-amber-200">进行中</span>
+                                  ) : (
+                                    <span className="text-xs px-2 py-1 bg-primary-50 text-primary-400 rounded-full font-bold">待开始</span>
+                                  )}
+
+                                  {/* 操作按钮 - 始终可见 */}
+                                  {(currentUser?.role === 'designer' || currentUser?.role === 'admin') && (
+                                    <>
+                                      {node.status === 'pending' && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); startDesignNode(idx); }}
+                                          className="px-4 py-1.5 bg-primary-900 text-white border-2 border-primary-900 rounded-full text-xs font-bold hover:bg-primary-800 hover:border-primary-800 transition-colors shadow-sm opacity-100"
+                                        >
+                                          开始
+                                        </button>
+                                      )}
+                                      {node.status === 'current' && (
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); completeDesignNode(idx); }}
+                                          className="px-4 py-1.5 bg-emerald-500 text-white border-2 border-emerald-500 rounded-full text-xs font-bold hover:bg-emerald-600 hover:border-emerald-600 transition-colors shadow-sm opacity-100"
+                                        >
+                                          完成
+                                        </button>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col gap-1.5 text-[13px] text-primary-400 font-mono mt-1">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <span className="w-12">预计：</span>
+                                    <span>{formatDateRange(node.startDate, node.endDate)}</span>
+                                  </div>
+                                  <span className="ml-4 px-1.5 py-0.5 bg-primary-50 text-primary-500 rounded text-[10px] font-medium whitespace-nowrap">计划 {node.duration} 天</span>
+                                </div>
+                                {node.status !== 'pending' && node.actualStartDate && (
+                                  <div className={`flex items-center justify-between`}>
+                                    <div className="flex items-center">
+                                      <span className="w-12">实际：</span>
+                                      <span className="flex items-center">
+                                        {node.actualStartDate} ~ {node.actualEndDate || '进行中'}
+                                      </span>
+                                    </div>
+                                    {node.status === 'completed' && node.actualEndDate && <span className={`ml-4 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap bg-primary-50 text-primary-600`}>用时 {Math.max(1, Math.floor((new Date(node.actualEndDate.replace(/-/g, '/')).getTime() - new Date(node.actualStartDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24)) + 1)} 天</span>}
+                                  </div>
                                 )}
                               </div>
                             </div>
-                            
-                            <div className="flex flex-col gap-1.5 text-[13px] text-primary-400 font-mono mt-1">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <span className="w-12">计划：</span>
-                                  <span>{formatDateRange(node.startDate, node.endDate)}</span>
+
+                            {/* 附件/图片区域 - 只在节点开始后显示 */}
+                            {node.status !== 'pending' && (
+                              <div className="border-t border-primary-100">
+                                {/* 标题栏 - 始终显示，不需要展开 */}
+                                <div className="px-4 py-3 flex items-center justify-between">
+                                  <button
+                                    onClick={() => setExpandedNodeIdx(isExpanded ? null : idx)}
+                                    className="flex items-center gap-2 flex-1 text-left hover:text-primary-600 transition-colors"
+                                  >
+                                    <h5 className="text-sm font-medium text-primary-700">相关附件/图片 ({(node.files?.length || 0) + (node.images?.length || 0)})</h5>
+                                    <ChevronDown className={`w-4 h-4 text-primary-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                  </button>
+
+                                  {/* 上传按钮 - 弹出文件夹选择 */}
+                                  {(currentUser?.role === 'designer' || currentUser?.role === 'admin') && (
+                                    <>
+                                      <button
+                                        className="px-3 py-1.5 bg-primary-900 text-white rounded-lg text-xs font-bold hover:bg-primary-800 transition-colors flex items-center gap-1.5 shadow-sm disabled:opacity-50"
+                                        disabled={uploadingNodeIdx === idx}
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const input = document.createElement('input');
+                                          input.type = 'file';
+                                          input.multiple = true;
+                                          input.accept = 'image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
+                                          input.onchange = (ev: any) => {
+                                            const files = ev.target.files;
+                                            if (files && files.length > 0) {
+                                              setPendingDesignFiles(Array.from(files));
+                                              setCurrentUploadNodeIdx(idx);
+                                              setShowDesignFileFolderModal(true);
+                                            }
+                                          };
+                                          input.click();
+                                        }}
+                                      >
+                                        {uploadingNodeIdx === idx ? (
+                                          <>
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            上传中...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Upload className="w-3.5 h-3.5" />
+                                            上传
+                                          </>
+                                        )}
+                                      </button>
+                                    </>
+                                  )}
                                 </div>
-                                <span className="ml-4 px-1.5 py-0.5 bg-primary-50 text-primary-500 rounded text-[10px] font-medium whitespace-nowrap">计划 {node.duration} 天</span>
-                              </div>
-                              {node.status !== 'pending' && node.actualStartDate && (
-                                <div className={`flex items-center justify-between`}>
-                                  <div className="flex items-center">
-                                    <span className="w-12">实际：</span>
-                                    <span className="flex items-center">
-                                      {formatDateRange(node.actualStartDate, node.actualEndDate || '至今')}
-                                    </span>
-                                  </div>
-                                  {node.status === 'completed' && <span className={`ml-4 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap bg-primary-50 text-primary-600`}>用时 {Math.max(1, Math.floor((new Date(node.actualEndDate.replace(/-/g, '/')).getTime() - new Date(node.actualStartDate.replace(/-/g, '/')).getTime()) / (1000 * 60 * 60 * 24)) + 1)} 天</span>}
-                                </div>
-                              )}
-                            </div>
-                            
-                            {node.status === 'completed' && node.actualEndDate > node.endDate && (
-                              <div className="mt-3">
-                                {node.delayReason ? (
-                                  <div className="text-rose-600 bg-rose-50 p-2.5 rounded-lg border border-rose-100 text-[11px] leading-relaxed break-words">
-                                    <span className="font-bold">逾期原因：</span>{node.delayReason}
-                                  </div>
-                                ) : (
-                                  <div className="text-[11px] text-rose-600">
-                                    * 此工序已逾期，请补充填写逾期原因
-                                    <button onClick={(e) => { e.stopPropagation(); setDesignCompleteIdx(idx); setDesignDelayReason(''); setShowDesignCompleteModal(true); setDesignIsDelayed(true); }} className="ml-2 text-primary-600 underline font-bold">去填写</button>
+
+                                {/* 展开后显示附件列表 */}
+                                {isExpanded && (
+                                  <div className="px-4 pb-4 pt-3 space-y-2">
+                                    {/* 新的 files 数组（详细列表） */}
+                                    {(node.files || []).length > 0 && (
+                                      <div className="space-y-2">
+                                        {(node.files || []).map((file: any, fileIdx: number) => (
+                                          <div key={fileIdx} className="flex items-center gap-3 p-3 bg-primary-50/30 rounded-lg border border-primary-100 hover:bg-primary-50/50 transition-colors group">
+                                            {/* 文件图标 */}
+                                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shrink-0 shadow-sm">
+                                              <FileIcon type={file.type || getFileType(file.name || '')} />
+                                            </div>
+
+                                            {/* 文件信息 */}
+                                            <div className="flex-1 min-w-0 cursor-pointer" onClick={() => handleDownloadFile(file)}>
+                                              <div className="flex items-center gap-2">
+                                                <p className="text-sm font-medium text-primary-900 truncate hover:text-primary-600 transition-colors">{file.name}</p>
+                                                {file.isVisible ? (
+                                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-600 text-xs rounded-full shrink-0">
+                                                    <Eye className="w-3 h-3" />
+                                                    公开
+                                                  </span>
+                                                ) : (
+                                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 text-primary-600 text-xs rounded-full shrink-0">
+                                                    <EyeOff className="w-3 h-3" />
+                                                    内部
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <p className="text-xs text-primary-400 mt-0.5">
+                                                {file.sizeStr || formatSize(file.size)} · {file.uploader || '未知'} · {file.uploadTime ? new Date(file.uploadTime).toISOString().split('T')[0] : ''}
+                                              </p>
+                                            </div>
+
+                                            {/* 操作按钮 */}
+                                            {(currentUser?.role === 'designer' || currentUser?.role === 'admin') && (
+                                              <div className="shrink-0 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                  onClick={() => toggleDesignFileVisibility(idx, fileIdx)}
+                                                  className={`p-2 rounded-lg transition-colors ${
+                                                    file.isVisible
+                                                      ? 'text-green-500 hover:text-green-600 hover:bg-green-50'
+                                                      : 'text-primary-400 hover:text-primary-600 hover:bg-primary-50'
+                                                  }`}
+                                                  title={file.isVisible ? '设为内部' : '设为公开'}
+                                                >
+                                                  {file.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                                </button>
+                                                <button
+                                                  onClick={() => handleDownloadFile(file)}
+                                                  className="p-2 text-primary-300 hover:text-primary-600 hover:bg-white rounded-lg transition-colors"
+                                                  title="下载 / 预览"
+                                                >
+                                                  <Download className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    if (confirm('确定删除这个文件吗？')) {
+                                                      deleteDesignNodeFile(idx, fileIdx);
+                                                    }
+                                                  }}
+                                                  className="p-2 text-primary-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                  title="删除"
+                                                >
+                                                  <Trash2 className="w-4 h-4" />
+                                                </button>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* 兼容旧的 images 数组 */}
+                                    {(node.images || []).length > 0 && (
+                                      <div className="grid grid-cols-3 gap-2 mt-2">
+                                        {(node.images || []).map((imgId: string, imgIdx: number) => (
+                                          <ImagePreview
+                                            key={imgIdx}
+                                            fileID={imgId}
+                                            imgIdx={imgIdx}
+                                            nodeIdx={idx}
+                                            canDelete={currentUser?.role === 'designer' || currentUser?.role === 'admin'}
+                                            onDelete={() => deleteDesignNodeImage(idx, imgIdx)}
+                                            getImageUrl={getImageUrl}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {/* 空状态 */}
+                                    {(node.files || []).length === 0 && (node.images || []).length === 0 && (
+                                      <p className="text-xs text-primary-400 text-center py-4">暂无附件</p>
+                                    )}
                                   </div>
                                 )}
                               </div>
                             )}
                           </div>
                         </div>
-                      ))}
+                      )})}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* 文件资料 Tab */}
+              {activeLeftTab === 'files' && (
+                <div className="flex-1 flex flex-col p-6 relative min-h-0 bg-white" id="files-tab-container">
+                  <CustomerDocuments
+                    leadId={leadId}
+                    canUpload={!!(currentUser?.role === 'admin' || isAssignedToMe(lead))}
+                    uploaderName={currentUser?.name}
+                  />
                 </div>
               )}
 
@@ -1237,6 +1702,9 @@ export default function LeadDetailPage() {
                           <div className="flex items-baseline gap-2">
                             <span className="font-bold text-sm text-primary-900">{item.user}</span>
                             <span className="text-xs text-primary-400 font-mono">{item.time}</span>
+                            {item.editedBy && (
+                              <span className="text-[10px] text-primary-300 italic">(由 {item.editedBy} 编辑)</span>
+                            )}
                           </div>
                           {item.type === 'user' && (currentUser?.role === 'admin' || currentUser?.name === item.user) && (
                             <div className="flex items-center space-x-1 relative">
@@ -1479,112 +1947,100 @@ export default function LeadDetailPage() {
               </div>
             </div>
 
-            {/* 文件与图纸 */}
-            <div className="flex-1 min-h-[400px]">
-              <CustomerDocuments
-                leadId={leadId}
-                canUpload={!!(currentUser?.role === 'admin' || isAssignedToMe(lead))}
-                uploaderName={currentUser?.name}
-              />
-            </div>
-
+            {/* 文件与图纸（已移至左侧） */}
           </div>
         </div>
       </div>
       {/* 开启设计工作流弹窗 */}
       {showStartDesignModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] opacity-100">
             <div className="p-5 border-b border-primary-100 flex items-center justify-between shrink-0">
               <h3 className="text-lg font-bold text-primary-900">开启设计工作流</h3>
               <button onClick={() => setShowStartDesignModal(false)} className="p-1.5 text-primary-400 hover:text-primary-900 rounded-lg hover:bg-primary-50"><X className="w-4 h-4" /></button>
             </div>
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-primary-700 mb-1.5">设计启动日期</label>
-                <div className="w-full px-4 py-2.5 bg-primary-50 border border-primary-200 rounded-lg text-sm focus-within:border-primary-400">
-                  <DatePicker value={designStartDate} onChange={handleDesignStartDateChange} placeholder="选择启动日期" />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-primary-700">自定义工序与周期</label>
-                </div>
+                <label className="block text-sm font-medium text-primary-700 mb-2">自定义工序与周期</label>
                 <div className="space-y-3">
                   {editDesignNodes.map((node, idx) => (
-                    <div key={node.id || idx} className="flex items-center gap-2">
-                      <input type="text" value={node.name} onChange={e => handleDesignNodeNameChange(idx, e.target.value)}
-                        className="flex-1 px-3 py-2 border border-primary-200 rounded-lg text-sm focus:outline-none focus:border-primary-400" placeholder="节点名称" />
-                      <div className="flex items-center gap-1 shrink-0">
-                        <input type="number" value={node.duration} onChange={e => handleDesignNodeDurChange(idx, e.target.value)}
-                          className="w-14 px-2 py-2 border border-primary-200 rounded-lg text-sm text-center focus:outline-none focus:border-primary-400" min={1} />
-                        <span className="text-xs text-primary-400">天</span>
+                    <div key={node.id || idx} className="space-y-2">
+                      {/* 节点名称：下拉选择 + 自定义输入 */}
+                      <div className="relative">
+                        <select
+                          value={node.nameIndex ?? 0}
+                          onChange={e => updateDesignNodeNamePicker(idx, parseInt(e.target.value))}
+                          className="w-full px-3 py-2 pr-10 border border-primary-200 rounded-lg text-sm font-medium focus:outline-none focus:border-primary-400 appearance-none bg-white"
+                        >
+                          {designNodeOptions.map((opt, optIdx) => (
+                            <option key={optIdx} value={optIdx}>{opt}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary-400 pointer-events-none" />
+                        <button
+                          onClick={() => removeDesignNode(idx)}
+                          className="absolute right-10 top-1/2 -translate-y-1/2 p-1 text-primary-300 hover:text-rose-500 rounded transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button onClick={() => removeDesignNode(idx)} className="p-1.5 text-primary-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors shrink-0">
-                        <X className="w-4 h-4" />
-                      </button>
+                      {/* 如果选了"自定义"，显示输入框 */}
+                      {node.isCustom && (
+                        <input
+                          type="text"
+                          value={node.name}
+                          onChange={e => updateDesignNodeName(idx, e.target.value)}
+                          className="w-full px-3 py-2 border border-primary-200 rounded-lg text-sm focus:outline-none focus:border-primary-400"
+                          placeholder="请输入自定义节点名称"
+                        />
+                      )}
+                      {/* 开始日期 + 结束日期 */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <div className="text-xs text-primary-500 mb-1">开始</div>
+                          <div className="px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg text-sm">
+                            <DatePicker
+                              value={node.startDate}
+                              onChange={date => updateDesignNodeStartDate(idx, date)}
+                              placeholder="选择日期"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs text-primary-500 mb-1">结束</div>
+                          <div className="px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg text-sm">
+                            <DatePicker
+                              value={node.endDate}
+                              onChange={date => updateDesignNodeEndDate(idx, date)}
+                              placeholder="选择日期"
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
-                <button onClick={addDesignNode} className="mt-3 w-full py-2 border border-dashed border-primary-200 text-primary-500 rounded-lg text-sm hover:border-primary-400 hover:text-primary-700 transition-colors">
+                <button
+                  onClick={addDesignNode}
+                  className="mt-3 w-full py-2 border border-dashed border-primary-200 text-primary-500 rounded-lg text-sm hover:border-primary-400 hover:text-primary-700 transition-colors"
+                >
                   + 添加新节点
                 </button>
               </div>
             </div>
             <div className="p-5 border-t border-primary-100 flex gap-3 shrink-0">
               <button onClick={() => setShowStartDesignModal(false)} className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-xl font-medium hover:bg-primary-50 transition-colors">取消</button>
-              <button onClick={confirmStartDesign} className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-xl font-medium hover:bg-primary-800 transition-colors">确认开启</button>
+              <button onClick={confirmStartDesign} className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-xl font-bold hover:bg-primary-800 transition-colors opacity-100">确认开启</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 编辑设计排期弹窗 */}
-      {showEditDesignModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
-            <div className="p-5 border-b border-primary-100 flex items-center justify-between shrink-0">
-              <h3 className="text-lg font-bold text-primary-900">编辑出图排期</h3>
-              <button onClick={() => setShowEditDesignModal(false)} className="p-1.5 text-primary-400 hover:text-primary-900 rounded-lg hover:bg-primary-50"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-5">
-              <div className="space-y-3">
-                {editDesignNodes.map((node, idx) => (
-                  <div key={node.id || idx} className="flex items-center gap-2">
-                    <input type="text" value={node.name} onChange={e => handleDesignNodeNameChange(idx, e.target.value)}
-                      disabled={node.status === 'completed'}
-                      className="flex-1 px-3 py-2 border border-primary-200 rounded-lg text-sm focus:outline-none focus:border-primary-400 disabled:bg-primary-50 disabled:text-primary-400" />
-                    <div className="flex items-center gap-1 shrink-0">
-                      <input type="number" value={node.duration} onChange={e => handleDesignNodeDurChange(idx, e.target.value)}
-                        disabled={node.status === 'completed'}
-                        className="w-14 px-2 py-2 border border-primary-200 rounded-lg text-sm text-center focus:outline-none focus:border-primary-400 disabled:bg-primary-50 disabled:text-primary-400" min={1} />
-                      <span className="text-xs text-primary-400">天</span>
-                    </div>
-                    {node.status !== 'completed' && (
-                      <button onClick={() => removeDesignNode(idx)} className="p-1.5 text-primary-300 hover:text-rose-500 rounded-lg hover:bg-rose-50 transition-colors shrink-0">
-                        <X className="w-4 h-4" />
-                      </button>
-                    )}
-                    {node.status === 'completed' && <div className="w-8 shrink-0" />}
-                  </div>
-                ))}
-              </div>
-              <button onClick={addDesignNode} className="mt-3 w-full py-2 border border-dashed border-primary-200 text-primary-500 rounded-lg text-sm hover:border-primary-400 hover:text-primary-700 transition-colors">
-                + 添加新节点
-              </button>
-            </div>
-            <div className="p-5 border-t border-primary-100 flex gap-3 shrink-0">
-              <button onClick={() => setShowEditDesignModal(false)} className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-xl font-medium hover:bg-primary-50 transition-colors">取消</button>
-              <button onClick={confirmEditDesign} className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-xl font-medium hover:bg-primary-800 transition-colors">保存重算</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 更换人员确认弹窗 */}
       {personnelConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 opacity-100">
             <div className="p-6">
               <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center mb-4 mx-auto">
                 <User className="w-6 h-6 text-amber-600" />
@@ -1596,8 +2052,10 @@ export default function LeadDetailPage() {
                 <span className="text-xs text-primary-400">系统将会发送消息通知相关人员。</span>
               </p>
               <div className="flex gap-3">
-                <button onClick={() => setPersonnelConfirm(null)} className="flex-1 px-4 py-2 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium">取消</button>
-                <button onClick={handleConfirmPersonnelChange} className="flex-1 px-4 py-2 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors font-medium">确认更换</button>
+                <button onClick={() => setPersonnelConfirm(null)} disabled={isChangingPersonnel} className="flex-1 px-4 py-2 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">取消</button>
+                <button onClick={handleConfirmPersonnelChange} disabled={isChangingPersonnel} className="flex-1 px-4 py-2 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors font-bold disabled:opacity-50 disabled:cursor-not-allowed opacity-100">
+                  {isChangingPersonnel ? '处理中...' : '确认更换'}
+                </button>
               </div>
             </div>
           </div>
@@ -1620,7 +2078,7 @@ export default function LeadDetailPage() {
       {/* 恭喜签单弹窗 */}
       {signModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 text-center p-8">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200 text-center p-8 opacity-100">
             <div className="w-16 h-16 rounded-full bg-rose-50 flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8 text-rose-600" />
             </div>
@@ -1703,7 +2161,7 @@ export default function LeadDetailPage() {
       {/* 编辑客户信息弹窗 */}
       {isEditModalOpen && editForm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-in fade-in zoom-in duration-200 opacity-100">
             <div className="flex items-center justify-between p-6 border-b border-primary-100 rounded-t-2xl bg-white">
               <h2 className="text-xl font-bold text-primary-900">编辑客户信息</h2>
               <button type="button" onClick={() => setIsEditModalOpen(false)} className="text-primary-400 hover:text-primary-900 transition-colors">
@@ -1805,12 +2263,27 @@ export default function LeadDetailPage() {
                 </div>
               <div className="pt-4 flex gap-3">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="flex-1 px-4 py-2.5 border border-primary-200 text-primary-700 rounded-lg hover:bg-primary-50 transition-colors font-medium">取消</button>
-                <button type="submit" className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors shadow-sm font-medium">保存修改</button>
+                <button type="submit" className="flex-1 px-4 py-2.5 bg-primary-900 text-white rounded-lg hover:bg-primary-800 transition-colors shadow-sm font-bold opacity-100">保存修改</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* 设计节点文件上传 - 文件夹选择模态框 */}
+      <FolderSelectModal
+        isOpen={showDesignFileFolderModal}
+        onClose={() => {
+          setShowDesignFileFolderModal(false);
+          setPendingDesignFiles([]);
+          setCurrentUploadNodeIdx(null);
+        }}
+        onConfirm={handleDesignFileUpload}
+        folders={lead?.fileFolders || ['默认文件夹']}
+        defaultFolder="设计文件"
+        defaultVisibility="internal"
+        leadId={leadId}
+      />
     </MainLayout>
   );
 }

@@ -1,5 +1,6 @@
 <view class="page-container">
-  <!-- 顶部用户信息横幅 -->
+
+  <!-- 顶部用户 Banner -->
   <view class="user-banner" bindtap="goToProfile">
     <view class="banner-avatar-wrap avatar-bg-{{userInfo.role || 'default'}}">
       <image wx:if="{{userInfo.avatarUrl}}" src="{{userInfo.avatarUrl}}" class="banner-avatar-img" mode="aspectFill" />
@@ -7,46 +8,50 @@
     </view>
     <view class="banner-info">
       <view class="banner-greeting">{{greeting}}，{{userInfo.name || ''}}</view>
-      <view class="banner-sub" wx:if="{{userInfo.joinDays > 0}}">入职第 {{userInfo.joinDays}} 天 · 点击进入个人中心</view>
-      <view class="banner-sub" wx:else>点击进入个人中心</view>
+      <view class="banner-sub" wx:if="{{userInfo.joinDays > 0}}">入职第 {{userInfo.joinDays}} 天</view>
     </view>
     <view class="banner-arrow"></view>
   </view>
 
-  <!-- Tab 栏 -->
-  <view class="top-bar">
-    <view class="tabs">
-      <view class="tab {{activeTab === 'unread' ? 'active' : ''}}" bindtap="switchTab" data-tab="unread">未读消息</view>
-      <view class="tab {{activeTab === 'all' ? 'active' : ''}}" bindtap="switchTab" data-tab="all">全部消息</view>
-      <view class="tab {{activeTab === 'starred' ? 'active' : ''}}" bindtap="switchTab" data-tab="starred">收藏</view>
+  <!-- Tab 切换 -->
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab === 'unread' ? 'tab-active' : ''}}" bindtap="switchTab" data-tab="unread">
+      <text>未读消息</text>
+      <view wx:if="{{unreadCount > 0}}" class="tab-badge">{{unreadCount}}</view>
     </view>
+    <view class="tab-item {{activeTab === 'all' ? 'tab-active' : ''}}" bindtap="switchTab" data-tab="all">全部消息</view>
+    <view class="tab-item {{activeTab === 'starred' ? 'tab-active' : ''}}" bindtap="switchTab" data-tab="starred">收藏</view>
   </view>
 
+  <!-- 消息列表 -->
   <view class="list-container">
     <block wx:if="{{notifications.length > 0}}">
       <view class="swipe-wrap" wx:for="{{notifications}}" wx:key="_id" style="transform: translateZ(0);">
         <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{false}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
           <view class="swipe-view" style="display: flex; flex-direction: row; min-width: 100%; align-items: stretch;">
-              <!-- 消息本体内容 -->
-              <view class="notification-item {{item.isRead ? 'read' : 'unread'}}" style="width: calc(100vw - 48rpx); scroll-snap-align: start; flex-shrink: 0; white-space: normal; box-sizing: border-box;" bindtap="handleNotificationClick" data-item="{{item}}">
-              <view class="item-icon">
-                <view class="avatar-circle avatar-bg-{{item.senderRole || 'default'}}" wx:if="{{item.senderName && item.senderName !== '系统'}}">{{item.senderName[0]}}</view>
-                <view class="avatar-circle avatar-bg-system" wx:elif="{{item.senderName === '系统' || !item.senderName}}">系</view>
-                <view class="icon-circle {{item.type}}" wx:else></view>
-              </view>
-              <view class="item-content">
-                <view class="item-header">
-                  <view class="item-title-wrap">
-                    <text class="item-title">{{item.title}}</text>
-                    <text wx:if="{{item.isStarred}}" class="icon-star-filled">★</text>
+
+            <!-- 消息卡片 -->
+            <view class="todo-card {{item.isRead ? 'read' : 'unread-card'}}" style="width: 100%; scroll-snap-align: start; flex-shrink: 0; white-space: normal; box-sizing: border-box;" bindtap="handleNotificationClick" data-item="{{item}}">
+              <view class="card-header">
+                <view class="sender-wrap">
+                  <image wx:if="{{item.senderName && item.senderName !== '系统' && item.senderAvatarUrl}}" src="{{item.senderAvatarUrl}}" class="avatar-circle avatar-circle-img" mode="aspectFill" />
+                  <view wx:elif="{{item.senderName && item.senderName !== '系统'}}" class="avatar-circle avatar-bg-{{item.senderRole || 'default'}}">{{item.senderName[0]}}</view>
+                  <view wx:else class="avatar-circle avatar-bg-system">系</view>
+                  <view class="sender-info">
+                    <text class="sender-name">{{item.senderName || '系统通知'}}</text>
+                    <text class="item-time">{{item.createTimeStr}}</text>
                   </view>
-                  <text class="item-time">{{item.createTimeStr}}</text>
                 </view>
-                <view class="item-desc">{{item.content}}</view>
+                <view class="unread-dot" wx:if="{{!item.isRead}}"></view>
+                <text wx:if="{{item.isStarred}}" class="icon-star-filled">★</text>
+              </view>
+              <view class="card-body-msg">
+                <text class="msg-title">{{item.title}}</text>
+                <text class="msg-desc">{{item.content}}</text>
               </view>
             </view>
 
-            <!-- 右侧滑动按钮区域 (滚动对齐点) -->
+            <!-- 右侧滑动操作 -->
             <view class="swipe-actions" style="width: 280rpx; display: flex; flex-shrink: 0; scroll-snap-align: end; background: transparent;">
               <view class="action-btn btn-star" catchtap="toggleStar" data-id="{{item._id}}" data-index="{{index}}">{{item.isStarred ? '取消收藏' : '收藏'}}</view>
               <view class="action-btn btn-delete" catchtap="deleteNotification" data-id="{{item._id}}" data-index="{{index}}">删除</view>
@@ -64,50 +69,5 @@
 
     <view class="pb-tabbar"></view>
   </view>
-</view>
 
-
-  <view class="list-container">
-    <block wx:if="{{notifications.length > 0}}">
-      <view class="swipe-wrap" wx:for="{{notifications}}" wx:key="_id" style="transform: translateZ(0);">
-        <scroll-view class="swipe-area" scroll-x enhanced show-scrollbar="{{false}}" bounces="{{false}}" paging-enabled="{{false}}" fast-deceleration="{{true}}" style="width: 100%; white-space: nowrap; scroll-snap-type: x mandatory;">
-          <view class="swipe-view" style="display: flex; flex-direction: row; min-width: 100%; align-items: stretch;">
-            
-            <!-- 表面内容卡片 (滚动对齐点) -->
-            <view class="notification-item {{item.isRead ? 'read' : 'unread'}}" style="width: 100%; scroll-snap-align: start; flex-shrink: 0; white-space: normal; box-sizing: border-box;" bindtap="handleNotificationClick" data-item="{{item}}">
-              <view class="item-icon">
-                <view class="avatar-circle avatar-bg-{{item.senderRole || 'default'}}" wx:if="{{item.senderName && item.senderName !== '系统'}}">{{item.senderName[0]}}</view>
-                <view class="avatar-circle avatar-bg-system" wx:elif="{{item.senderName === '系统' || !item.senderName}}">系</view>
-                <view class="icon-circle {{item.type}}" wx:else></view>
-              </view>
-              <view class="item-content">
-                <view class="item-header">
-                  <view class="item-title-wrap">
-                    <text class="item-title">{{item.title}}</text>
-                    <text wx:if="{{item.isStarred}}" class="icon-star-filled">★</text>
-                  </view>
-                  <text class="item-time">{{item.createTimeStr}}</text>
-                </view>
-                <view class="item-desc">{{item.content}}</view>
-              </view>
-            </view>
-            
-            <!-- 右侧滑动按钮区域 (滚动对齐点) -->
-            <view class="swipe-actions" style="width: 280rpx; display: flex; flex-shrink: 0; scroll-snap-align: end; background: transparent;">
-              <view class="action-btn btn-star" catchtap="toggleStar" data-id="{{item._id}}" data-index="{{index}}">{{item.isStarred ? '取消收藏' : '收藏'}}</view>
-              <view class="action-btn btn-delete" catchtap="deleteNotification" data-id="{{item._id}}" data-index="{{index}}">删除</view>
-            </view>
-            
-          </view>
-        </scroll-view>
-      </view>
-    </block>
-    
-    <view class="empty-state" wx:else>
-      <view class="empty-icon"></view>
-      <text>暂无{{activeTab === 'unread' ? '未读' : (activeTab === 'starred' ? '收藏' : '')}}通知消息</text>
-    </view>
-    
-    <view class="pb-tabbar"></view>
-  </view>
 </view>
